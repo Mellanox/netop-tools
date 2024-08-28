@@ -8,7 +8,7 @@
 source ./netop.cfg
 source ./ops/cordon.sh
 cordon
-../install/ins-netop-chart.sh
+#../install/ins-netop-chart.sh
 pushd .
 cd ./netop-chart
 ## if [ ! -d "network-operator" ];then

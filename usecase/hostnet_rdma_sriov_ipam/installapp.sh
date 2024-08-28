@@ -22,6 +22,12 @@ kind: Pod
 metadata:
   name: ${NAME}
   annotations:
+    # In order to create multiple devices on the same IP segment,
+    # additional networks can be added by separating them with a coma
+    # https://docs.openshift.com/container-platform/4.13/networking/multiple_networks/attaching-pod.html
+    #
+    # Number of resources bellow need to be inceased correspondingly
+    #
     k8s.v1.cni.cncf.io/networks: ${NETOP_NETWORK_NAME}-${DEV}
 spec:
   containers:
