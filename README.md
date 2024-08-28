@@ -17,6 +17,9 @@ sriovibnet_rdma_nvipam                SriovIbNetwork network type to define the 
 from netop-tools run:
 ./setsymlinks.sh {usecase}
 
+If you change your usecase, just re-run the setsymlinks.sh
+
+
 Then edit the selected usecase configuration.
 cd ./uc
 edit the netop.cfg file to set your configuration values.
