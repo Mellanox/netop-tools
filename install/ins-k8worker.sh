@@ -2,12 +2,13 @@
 #
 # install a network operator worker node
 #
-./inshelm.sh 
-./insk8repo.sh
-./insgo.sh
-./insk8base.sh
-./insdocker.sh 
-./fixes/fixcontainerd.sh 
+./ins-helm.sh 
+./ins-k8repo.sh
+./ins-go.sh
+./ins-k8base.sh
+./ins-docker.sh 
+./fixes/fixcrtauth.sh
+./fixes/fixcontainerd.sh
 ./configcrictl.sh
 ./insnerdctl.sh
 systemctl mask swap.target # permanently turn off swap
