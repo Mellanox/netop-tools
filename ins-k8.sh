@@ -3,6 +3,7 @@
 # install k8 master for first time
 #
 source ./netop.cfg
+./restart/removek8master.sh
 cd ./install
 ./ins-k8master.sh master
 ./ins-k8master.sh init

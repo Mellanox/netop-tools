@@ -40,7 +40,7 @@ rm -f ./netop.cfg
 ln -s ./uc/netop.cfg ./netop.cfg
 opslinks ops install uninstall upgrade
 cd ./install
-LINKS=( ins-k8base.sh ins-docker.sh ins-go.sh )
+LINKS=( ins-k8repo.sh ins-k8base.sh ins-docker.sh ins-go.sh )
 for LINK in ${LINKS[@]};do
   rm -f ${LINK}
   ln -s ./${HOSTOS}/${LINK} ${LINK}
