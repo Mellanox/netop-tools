@@ -10,7 +10,7 @@ function gpgkeys()
 #
 # Set SELinux in permissive mode (effectively disabling it)
 #
-functio disable_selinux()
+function disable_selinux()
 {
 if [ -d /etc/selinux/config ];then
   setenforce 0
