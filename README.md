@@ -1,6 +1,9 @@
 # netop-tools
 tools to install and configure nvididsa network operator based on use cases
 download repo
+from netop-tools run:
+source ./k8envroot.sh
+
 
 1. ls ./usecase
 Select the usecase configuration example that matches your expected cluster configuration.
@@ -14,11 +17,13 @@ sriovnet_rdma_nvipam                  SriovNetwork network type to define the ne
 sriovibnet_rdma_ipam                  SriovIbNetwork network type to define the network operator networks with the sriovNetworkOperator plugin. Used whereabouts ipam plugin for IP 2ndary network allocaltion, limited to 50 nodes.
 sriovibnet_rdma_nvipam                SriovIbNetwork network type to define the network operator networks with the sriovNetworkOperator. Used nv-ipam plugin for IP 2ndary network allocaltion, scales past 50 nodes.
 
-from netop-tools run:
-./setsymlinks.sh {usecase}
 
+edit ./global_ops.cfg # to set global config, critcial to setr USECASE
+edit ./uc/netop.cfg to set usecase config
+./setuc.sh
+# install system on control plane node
+./ins-k8.sh
 If you change your usecase, just re-run the setsymlinks.sh
-
 
 Then edit the selected usecase configuration.
 cd ./uc
