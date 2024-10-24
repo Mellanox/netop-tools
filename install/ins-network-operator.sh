@@ -15,6 +15,7 @@ ${NETOP_ROOT_DIR}/install/mksecret.sh
 pushd .
 cd ${USECASE_DIR}
 ./mk-values.sh
+./mk-network-cr.sh
 popd
 helm install -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator -f ${USECASE_DIR}/values.yaml
 ${NETOP_ROOT_DIR}/install/applycrds.sh 

@@ -14,24 +14,23 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 for DEVDEF in ${NETOP_NETLIST[@]};do
   NIDX=`echo ${DEVDEF}|cut -d',' -f1`
   NDEV=`echo ${DEVDEF}|cut -d',' -f4-20`
+  ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-node-policy.sh ${NIDX} ${NDEV}
   DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
   FILE="${DIR}/sriovibnet-node-policy-${NIDX}.yaml"
-  kubectl apply -f "${FILE}"
+  echo ${FILE}
+  ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-network-attachment.sh ${NIDX}
 # according to Ivan, this is generated automatically, except in the 
 # The only case you need to do it manually it’s ib-sriov-cni and pkey
-# ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-network-attachment.sh ${NIDX}
 # kubectl apply set-last-applied -f "${DIR}//Network-Attachment-Definitions-${NIDX}.yaml" --create-annotation
+  ${NETOP_ROOT_DIR}/ops/mk-sriovnet-ipam-cr.sh ${NIDX}
   FILE="${DIR}/${NETOP_NETWORK_NAME}-${NIDX}-cr.yaml"
-  kubectl apply -f "${FILE}"
+  echo ${FILE}
 done
 #
-# make sure the ip pool is created
+# create ipam pool
 #
 if [ "${IPAM_TYPE}" = "nv-ipam" ];then
+  ${NETOP_ROOT_DIR}/ops/mk-nvipam-pool.sh
   FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool.yaml"
-  kubectl apply -f ${FILE}
+  echo ${FILE}
 fi
-#
-# verify the network devices
-#
-${NETOP_ROOT_DIR}/ops/getnetwork.sh
