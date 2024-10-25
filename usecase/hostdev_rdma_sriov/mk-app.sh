@@ -44,13 +44,19 @@ for DEVDEF in ${NETOP_NETLIST[@]};do
 cat << HEREDOC2 >> ./${NAME}.yaml
         ${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}: '1'
 HEREDOC2
+done
+
+cat << HEREDOC >> ./${NAME}.yaml
       limits:
+HEREDOC
+
 for DEVDEF in ${NETOP_NETLIST[@]};do
   NIDX=`echo ${DEVDEF}|cut -d',' -f1`
 cat << HEREDOC3 >> ./${NAME}.yaml
         ${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}: '1'
 HEREDOC3
 done
+
 cat << HEREDOC4 >> ./${NAME}.yaml
     command:
     - sh
