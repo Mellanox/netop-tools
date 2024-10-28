@@ -76,6 +76,6 @@ cat <<CNIHEREDOC> /etc/cni/net.d/nv-ipam.d/10-${NETOP_NETWORK_POOL}.conf
 }
 CNIHEREDOC
 }
-mkdir -p  /etc/cni/net.d/nv-ipam.d
 nv_ippool
-cni_ippool
+#mkdir -p  /etc/cni/net.d/nv-ipam.d
+#cni_ippool
