@@ -44,7 +44,8 @@ for DEVDEF in ${NETOP_NETLIST[@]};do
 cat << HEREDOC2 >> ./${NAME}.yaml
         ${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}: '1'
 HEREDOC2
-      limits:
+done
+echo "      limits:" >> ./${NAME}.yaml
 for DEVDEF in ${NETOP_NETLIST[@]};do
   NIDX=`echo ${DEVDEF}|cut -d',' -f1`
 cat << HEREDOC3 >> ./${NAME}.yaml
@@ -64,4 +65,3 @@ cat << NODEDOC >> ./${NAME}.yaml
     kubernetes.io/hostname: ${NODE}
 NODEDOC
 fi
-kubectl apply -f ./${NAME}.yaml
