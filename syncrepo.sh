@@ -1,12 +1,11 @@
 #!/bin/bash
 #
-# sync devi repo into origin repo
+# sync dev repo into origin repo on specified branch
 #
 # Fetch the changes from the first repository and push to the second
 if [ $# -ne 3 ];then
   echo "usage:$0 srcrepo destrepo branch"
-  echo "sync dev repo to origin repo"
-  echo "$0 dev origin"
+  echo "$0 {dev} {origin} master"
   exit
 fi
 # Use the git fetch command to fetch the changes from the second repository.
