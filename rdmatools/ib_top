@@ -1,0 +1,48 @@
+#!/bin/bash
+
+if [ $# -gt 0 ]; then
+	IFLIST="$@"
+else
+	IFLIST="$(cd /sys/class/infiniband/  && ls |  awk -F "_" '{print $2"_"$1}' | sort -n | awk -F "_" '{printf("%s_%s ",$2,$1);}')"
+fi
+
+echo "Interface List:$IFLIST"
+
+#/sys/class/infiniband/mlx5_*/ports/1/counters/port_xmit_data
+
+index=1
+for IF in $IFLIST; do 
+	BASE[index]=$(cat /sys/class/infiniband/$IF/ports/1/counters/port_rcv_data)
+	index=$(( $index + 1 ))
+	BASE[index]=$(cat /sys/class/infiniband/$IF/ports/1/counters/port_xmit_data)
+	index=$(( $index + 1 ))
+done
+
+TMPFN=/tmp/ib_top.$$
+CNT=0
+while [ 1 ]; do
+	if [ $(( $CNT % 25 )) == 0 ]; then
+		echo "" | awk '{printf("%35s ",$1);}'
+		for IF in $IFLIST; do
+			echo $IF | awk '{printf("%07s rd  %07s wr  ",$1,$1);}' 	
+		done
+		echo ""
+	fi
+	index=1
+	declare -a NBASE
+	for IF in $IFLIST; do 
+		NBASE[index]=$(cat /sys/class/infiniband/$IF/ports/1/counters/port_rcv_data)
+		index=$(( $index + 1 ))
+		NBASE[index]=$(cat /sys/class/infiniband/$IF/ports/1/counters/port_xmit_data)
+		index=$(( $index + 1 ))
+	done
+
+	echo -n "$(date): " 
+	for n in $(seq 1 ${#NBASE[@]}); do
+		echo ${BASE[$n]} ${NBASE[$n]} | awk '{printf("%12d",4*($2-$1)/1024);}'
+		BASE[$n]=${NBASE[$n]}
+	done
+	echo ""
+	CNT=$(( $CNT + 1 ))
+	sleep 1
+done
