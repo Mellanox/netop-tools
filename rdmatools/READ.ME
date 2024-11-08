@@ -1,0 +1,22 @@
+To build the 1.3G rdmadgb image:
+./docker.build.sh rdmadbg
+
+The generated rdmadbg:latest image will be placed in the build machine local cricrtl registry.
+The build script will also generate a rdmadbg_latest file that be copied and loaded/imported.
+
+in the mk-app.sh generated app yaml file replace the:
+  image: mellanox/rping-test
+with:
+  image: rdmadbg:latest
+
+if you push the local image to a networked registry it can be pulled by the test nodes in your cluster.
+Otherwise you'll need to copy the rdmadbg_latest file to the worker node and import:
+./nerdctlload.sh rdmadbg_latest
+
+To build the 7.7G rdmadgb_cuda image:a
+follow the same steps for building rdmadbg, replacing the name with rdmadbg_cuda.
+This requires a fairly robust server.
+
+The user must comform to all required licensing.
+Specically CUDA requires licence acceptance.
+

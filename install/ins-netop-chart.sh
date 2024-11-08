@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -x
 #
 # install the network operator chart
 #
@@ -9,14 +9,16 @@ NETOP_CHART_DIR=${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart
 
 cd ${NETOP_CHART_DIR}
 
-X=`helm repo list | grep -c ${HELM_NVIDIA_REPO}`
-if [ "${X}" = "0" ];then
+X=$(helm repo list | cut -d' ' -f1 | grep -c nvidia)
+if [ ${X} -ne 0 ];then
   helm repo remove nvidia
-  if [ "${PROD_VER}" = "0" ];then
-    helm repo add nvidia ${HELM_NVIDIA_REPO} --username='$oauthtoken' --password=${NGC_API_KEY}
-  else
-    helm repo add nvidia ${HELM_NVIDIA_REPO}
-  fi
+fi
+if [ ${PROD_VER} -eq 0 ];then
+  echo "STAGING:${PROD_VER}"
+  helm repo add nvidia ${HELM_NVIDIA_REPO} --username='$oauthtoken' --password=${NGC_API_KEY}
+else
+  echo "PROD:${PROD_VER}"
+  helm repo add nvidia ${HELM_NVIDIA_REPO}
 fi
 helm repo update
 if [ ! -f network-operator-${NETOP_VERSION}.tgz ];then
