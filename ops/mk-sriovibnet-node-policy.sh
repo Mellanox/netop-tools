@@ -13,7 +13,8 @@ shift
 PCI_DEVICE_LST="${1}"
 shift
 
-cat << HEREDOC > ./sriovibnetwork-node-policy-${NDIX}.yaml
+FILE="sriovnetwork-node-policy-${NDIX}.yaml"
+cat << HEREDOC > "${FILE}"
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkNodePolicy
 metadata:
@@ -34,3 +35,4 @@ spec:
     node-role.kubernetes.io/worker: ""
     feature.node.kubernetes.io/pci-15b3.present: "true"
 HEREDOC
+echo ${FILE}

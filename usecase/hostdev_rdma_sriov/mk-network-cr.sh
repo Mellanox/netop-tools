@@ -7,11 +7,12 @@
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
-for NIDXDEF in ${NETOP_NETLIST[@]};do
-  NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
-  ${NETOP_ROOT_DIR}/ops/mk-hostdev-ipam-cr.sh ${NIDX}
-  FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/${NETOP_NETWORK_NAME}-${NIDX}-cr.yaml"
-  echo ${FILE}
+for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
+  for NIDXDEF in ${NETOP_NETLIST[@]};do
+    NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
+    FILE=$(${NETOP_ROOT_DIR}/ops/mk-hostdev-ipam-cr.sh ${NIDX} ${NETOP_APP_NAMESPACE})
+    echo ${FILE}
+  done
 done
 #
 # make sure the ip pool is created
