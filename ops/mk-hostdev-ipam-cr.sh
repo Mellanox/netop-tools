@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2024 NVIDIA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +14,7 @@
 # limitations under the License.
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 source ${NETOP_ROOT_DIR}/ops/mk-ipam-cr.sh
-if [ "$#" -ne 1 ];then
+if [ "$#" -ne 2 ];then
   echo "usage:$0 {NETWORK IDX} {app networkNamespace}"
   echo "example:$0 a"
   exit 1
@@ -22,16 +23,17 @@ NIDX=${1}
 shift
 NETOP_APP_NAMESPACE=${1}
 shift
-FILE="${NETOP_NETWORK_NAME}-${NIDX}-${NETOP_APP_NAMESPACE}-cr.yaml"
+FILE="${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-cr.yaml"
 cat <<HEREDOC> "${FILE}"
 apiVersion: mellanox.com/v1alpha1
 kind: ${NETOP_NETWORK_TYPE}
 metadata:
-  name: ${NETOP_NETWORK_NAME}-${NIDX}
+  name: ${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}
   namespace: ${NETOP_NAMESPACE}
 spec:
   networkNamespace: "${NETOP_APP_NAMESPACE}"
   resourceName: "${NETOP_RESOURCE}_${NIDX}"
 HEREDOC
-  mk_ipam_cr >> "${FILE}"
+mk_ipam_cr >> "${FILE}"
+echo ${FILE}
 # "gateway": "${NETOP_NETWORK_GW}" # for ipam config above may need to set depending on fabric design

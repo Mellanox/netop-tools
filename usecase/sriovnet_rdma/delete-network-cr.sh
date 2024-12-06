@@ -12,10 +12,14 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 
 for DEVDEF in ${NETOP_NETLIST[@]};do
   NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-  DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
-  FILES=( "sriovnet-node-policy-${NIDX}.yaml" "Network-Attachment-Definitions-${NIDX}.yaml" "${NETOP_NETWORK_NAME}-${NIDX}-cr.yaml" )
-  for FILE in ${FILES[@]};do
-    FILE="${DIR}/${FILE}"
+  FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/sriovnet-node-policy-${NIDX}.yaml"
+  if [ -f ${FILE} ];then
+    kubectl delete -f ${FILE}
+  else
+    echo "WARNING:not found:${FILE}"
+  fi
+  for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
+    FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-cr.yaml"
     if [ -f ${FILE} ];then
       kubectl delete -f ${FILE}
     else

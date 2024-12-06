@@ -9,14 +9,16 @@ if [ "$#" -lt 1 ];then
   echo "example:$0 a"
   exit 1
 fi
-for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
-for NIDX in ${*};do
-FILE="${NETOP_NETWORK_NAME}-${NIDX}-${NETOP_APP_NAMESPACE}-cr.yaml"
+NIDX=${1}
+shift
+NETOP_APP_NAMESPACE=${1}
+shift
+FILE="${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-cr.yaml"
 cat <<HEREDOC1> ${FILE}
 apiVersion: sriovnetwork.openshift.io/v1
 kind: ${NETOP_NETWORK_TYPE}
 metadata:
-  name: "${NETOP_NETWORK_NAME}-${NIDX}"
+  name: "${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}"
   namespace: ${NETOP_NAMESPACE}
 spec:
 HEREDOC1
@@ -29,6 +31,5 @@ cat <<HEREDOC2>> ${FILE}
   networkNamespace: "${NETOP_APP_NAMESPACE}"
   resourceName: "${NETOP_RESOURCE}_${NIDX}"
 HEREDOC2
-  mk_ipam_cr >> ${FILE}
-done
-done
+mk_ipam_cr >> ${FILE}
+echo ${FILE}
