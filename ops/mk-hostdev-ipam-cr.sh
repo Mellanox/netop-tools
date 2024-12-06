@@ -14,13 +14,15 @@
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 source ${NETOP_ROOT_DIR}/ops/mk-ipam-cr.sh
 if [ "$#" -ne 1 ];then
-  echo "usage:$0 {NETWORK IDX}"
+  echo "usage:$0 {NETWORK IDX} {app networkNamespace}"
   echo "example:$0 a"
   exit 1
 fi
 NIDX=${1}
 shift
-FILE="${NETOP_NETWORK_NAME}-${NIDX}-cr.yaml"
+NETOP_APP_NAMESPACE=${1}
+shift
+FILE="${NETOP_NETWORK_NAME}-${NIDX}-${NETOP_APP_NAMESPACE}-cr.yaml"
 cat <<HEREDOC> "${FILE}"
 apiVersion: mellanox.com/v1alpha1
 kind: ${NETOP_NETWORK_TYPE}
