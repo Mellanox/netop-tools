@@ -9,8 +9,9 @@ if [ "$#" -lt 1 ];then
   echo "example:$0 a"
   exit 1
 fi
+for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
 for NIDX in ${*};do
-FILE="${NETOP_NETWORK_NAME}-${NIDX}-cr.yaml"
+FILE="${NETOP_NETWORK_NAME}-${NIDX}-${NETOP_APP_NAMESPACE}-cr.yaml"
 cat <<HEREDOC1> ${FILE}
 apiVersion: sriovnetwork.openshift.io/v1
 kind: ${NETOP_NETWORK_TYPE}
@@ -30,7 +31,4 @@ cat <<HEREDOC2>> ${FILE}
 HEREDOC2
   mk_ipam_cr >> ${FILE}
 done
-# "gateway": "${NETOP_NETWORK_GW}" # for ipam config above may need to set depending on fabric design
-#kubectl get sriovnetwork -A
-#kubectl -n ${NETOP_NAMESPACE} get sriovnetworknodestates.sriovnetwork.openshift.io -o yaml
-#kubectl get pod -n ${NETOP_NAMESPACE} | grep sriov
+done
