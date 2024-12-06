@@ -6,7 +6,7 @@ function removek8()
 {
   kubeadm reset --force&
   crictl stop `crictl ps | egrep "calico|network-operator|kube" | cut -d' ' -f1`
-  waitall
+  wait
   systemctl stop docker
   systemctl stop containerd
   systemctl stop kubelet 
