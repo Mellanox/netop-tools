@@ -13,7 +13,7 @@ shift
 PCI_DEVICE_LST="${1}"
 shift
 
-cat << HEREDOC > ./sriovnetwork-node-policy-${NDIX}.yaml
+cat << HEREDOC > ./sriovibnetwork-node-policy-${NDIX}.yaml
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkNodePolicy
 metadata:
