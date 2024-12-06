@@ -3,7 +3,9 @@
 # use ${IPAM_TYPE} install of ipam for small clusters
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
-cat << HEREDOC > ./${IPAM_TYPE}.yaml
+for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
+FILE="./${IPAM_TYPE}-${NETOP_APP_NAMESPACE}.yaml"
+cat << HEREDOC > ${FILE}
 apiVersion: mellanox.com/v1alpha1
 kind: ${NETOP_NETWORK_TYPE}
 metadata:
@@ -24,4 +26,4 @@ spec:
       "log_level" : "info"
     }
 HEREDOC
-cat ./${IPAM_TYPE}.yaml
+cat ${FILE}

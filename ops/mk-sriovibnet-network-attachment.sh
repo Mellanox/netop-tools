@@ -2,23 +2,23 @@
 #
 #
 #
+source ${NETOP_ROOT_DIR}/global_ops.cfg
 if [ "$#" -lt 1 ];then
-  echo "usage:$0 {NETWORK_DEV}"
-  echo "example:$0 a"
+  echo "usage:$0 {NETWORK NDX} {NETOP_APP_NAMESPACE}"
+  echo "example:$0 a default"
   exit 1
 fi
-DEV=${1}
+NDX=${1}
 shift
-source ${NETOP_ROOT_DIR}/global_ops.cfg
-FILE="./Network-Attachment-Definitions-${DEV}.yaml"
-# Copyright (c) NVIDIA Corporation 2023
-# https://github.com/k8snetworkplumbingwg/multus-cni/tree/master/examples#passing-down-device-information
+NETOP_APP_NAMESPACE=${1}
+shift
+FILE="./Network-Attachment-Definitions-${NDX}-${NETOP_APP_NAMESPACE}.yaml"
 cat << HEREDOC > ${FILE}
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: ${NETOP_NETWORK_NAME}-${DEV}
+  name: ${NETOP_NETWORK_NAME}-${NDX}
   namespace: ${NETOP_APP_NAMESPACE}
   annotations:
     k8s.v1.cni.cncf.io/resourceName: nvidia.com/${NETOP_RESOURCE}
@@ -26,7 +26,7 @@ spec:
   config: |-
     {
       "cniVersion": "0.3.1",
-      "name": "${NETOP_NETWORK_NAME}-${DEV}",
+      "name": "${NETOP_NETWORK_NAME}-${NDX}",
       "plugins": [
         {
           "type": "ib-sriov",
@@ -40,4 +40,3 @@ spec:
       ]
     }
 HEREDOC
-#kubectl apply set-last-applied -f ./Network-Attachment-Definitions.yaml --create-annotation
