@@ -4,12 +4,13 @@
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
-for NIDXDEF in ${NETOP_NETLIST[@]};do
-  NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
-  NDEV=`echo ${NIDXDEF}|cut -d',' -f4`
-  ${NETOP_ROOT_DIR}/ops/mk-macvlan-ipam-cr.sh ${NDEV} ${NIDX}
-  FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/${NETOP_NETWORK_NAME}-${NIDX}-cr.yaml"
-  echo ${FILE}
+for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
+  for NIDXDEF in ${NETOP_NETLIST[@]};do
+    NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
+    NDEV=`echo ${NIDXDEF}|cut -d',' -f4`
+    FILE=$( ${NETOP_ROOT_DIR}/ops/mk-macvlan-ipam-cr.sh ${NDEV} ${NIDX} ${NETOP_APP_NAMESPACE} )
+    echo ${FILE}
+  done
 done
 #
 # create ipam pool

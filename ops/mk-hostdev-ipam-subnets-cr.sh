@@ -20,6 +20,8 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 NETWORK_NAME=${1}
 shift
 RESOURCE=`echo ${NETWORK_NAME}|cut -d'-' -f2-99|sed 's/-/_/g'`
+for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
+FILE="${NETOP_NETWORK_NAME}-${NIDX}-${NETOP_APP_NAMESPACE}-cr.yaml"
 IDX=0
 for DEV in ${*};do
 cat <<HEREDOC> "${NETWORK_NAME}-${DEV}"-cr.yaml
@@ -44,4 +46,5 @@ spec:
     }
 HEREDOC
 let IDX=IDX+1
+done
 done
