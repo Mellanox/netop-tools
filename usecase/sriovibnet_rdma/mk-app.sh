@@ -3,21 +3,27 @@
 # pod.yaml configuration file for such a deployment:
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
-
+function usage()
+{
+  echo "usage:$0 {podname} {app namespace}"
+  echo "usage:$0 {podname} {app namespace} {worker node}"
+  exit 1
+}
 NAME=${1}
+shift
+NETOP_APP_NAMESPACE=${1:-'default'}
 shift
 NODE=${1}
 shift
 if [ "${NAME}" = "" ];then
-	echo "usage:$0 {podname}"
-	echo "usage:$0 {podname} {worker node}"
-	exit 1
+  usage
 fi
+
 mkdir -p apps
 cd apps
 for DEVDEF in ${NETOP_NETLIST[@]};do
   NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-  NETWORKS=${NETWORKS},${NETOP_NETWORK_NAME}-${NIDX}
+  NETWORKS=${NETWORKS},${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}
 done
 # trim leading ,
 NETWORKS=`echo "${NETWORKS}" | sed 's/,//'`
