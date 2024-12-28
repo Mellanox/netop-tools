@@ -18,16 +18,22 @@ spec:
     config: |
       {
         "resourceList": [
-          {
-            "resourcePrefix": "nvidia.com",
 HEREDOC1
+NETWORKS=${#NETOP_NETLIST[@]}
+COMMA=","
 for DEVDEF in ${NETOP_NETLIST[@]};do
   NIDX=`echo ${DEVDEF}|cut -d',' -f1`
   DEVICEID=`echo ${DEVDEF}|cut -d',' -f2`
   NETOP_HCAMAX=`echo ${DEVDEF}|cut -d',' -f3`
   DEVNAMES=`echo ${DEVDEF}|cut -d',' -f4-12`
   DEVNAMES=`echo ${DEVNAMES} | sed 's/,/","/g'`
+  let NETWORKS=NETWORKS-1
+  if [ ${NETWORKS} -le 0 ];then
+	  COMMA=""
+  fi
 cat << HEREDOC2 >> ${FILE}
+          {
+            "resourcePrefix": "nvidia.com",
             "resourceName": "${NETOP_RESOURCE}_${NIDX}",
             "selectors": {
               "vendors": ["${NETOP_VENDOR}"],
@@ -38,11 +44,11 @@ cat << HEREDOC2 >> ${FILE}
               "rootDevices": [],
               "linkTypes": [],
               "isRdma": true
-            },
+            }
+          }${COMMA}
 HEREDOC2
 done
 cat << HEREDOC3 >> ${FILE}
-          }
         ]
       }
   secondaryNetwork:
