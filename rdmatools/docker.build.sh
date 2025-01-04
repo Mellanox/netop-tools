@@ -17,5 +17,5 @@ fi
 docker save ${IMAGE}:latest > ${IMAGE}_latest
 #ctr --namespace=k8s.io image import ${IMAGE}_latest
 #./nerdctlload.sh ${IMAGE}_latest
-ctr --namespace=k8s.io image load ${IMAGE}_latest
+ctr --namespace=k8s.io image import ${IMAGE}_latest
 docker rmi ${IMAGE}:latest
