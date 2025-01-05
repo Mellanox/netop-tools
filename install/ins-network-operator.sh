@@ -17,5 +17,7 @@ cd ${USECASE_DIR}
 ./mk-values.sh
 ./mk-network-cr.sh
 popd
-helm install -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator -f ${USECASE_DIR}/values.yaml
+cd ${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart/network-operator
+#CHART_VALUES="${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart/network-operator/values.yaml"
+helm install -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator --version ${NETOP_VERSION} -f ./values.yaml -f ${USECASE_DIR}/values.yaml
 ${NETOP_ROOT_DIR}/install/applycrds.sh 

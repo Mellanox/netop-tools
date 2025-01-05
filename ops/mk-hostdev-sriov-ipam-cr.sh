@@ -34,6 +34,6 @@ spec:
   networkNamespace: "${NETOP_APP_NAMESPACE}"
   resourceName: "${NETOP_RESOURCE}_${NIDX}"
 HEREDOC
-mk_ipam_cr >> "${FILE}"
+mk_ipam_cr ${NIDX} >> "${FILE}"
 echo ${FILE}
 # "gateway": "${NETOP_NETWORK_GW}" # for ipam config above may need to set depending on fabric design

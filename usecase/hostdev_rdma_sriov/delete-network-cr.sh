@@ -20,10 +20,13 @@ done
 #
 kubectl get ${NETOP_NETWORK_TYPE}
 if [ "${IPAM_TYPE}" = "nv-ipam" ];then
-  FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool.yaml"
-  if [ -f ${FILE} ];then
-    kubectl delete -f ${FILE}
-  else
-    echo "WARNING:not found:${FILE}"
-  fi
+  for NIDXDEF in ${NETOP_NETLIST[@]};do
+    NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
+    FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}.yaml"
+    if [ -f ${FILE} ];then
+      kubectl delete -f ${FILE}
+    else
+      echo "WARNING:not found:${FILE}"
+    fi
+  done
 fi

@@ -19,8 +19,11 @@ done
 #
 kubectl get ${NETOP_NETWORK_TYPE}
 if [ "${IPAM_TYPE}" = "nv-ipam" ];then
-  FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool.yaml"
-  kubectl apply -f "${FILE}"
+  for NIDXDEF in ${NETOP_NETLIST[@]};do
+    NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
+    FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}.yaml"
+    kubectl apply -f "${FILE}"
+  done
 fi
 #
 # verify the network devices

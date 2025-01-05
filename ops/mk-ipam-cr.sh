@@ -2,7 +2,7 @@
 #
 # make the ipam config based on IPAM_TYPE
 #
-function ipam_config()
+function whereabouts()
 {
 cat <<HEREDOC1
   ipam: |
@@ -21,6 +21,8 @@ HEREDOC1
 }
 function nv_ipam_config()
 {
+NIDX=${1}
+shift
 cat <<HEREDOC2
   ipam: |
     {
@@ -31,7 +33,7 @@ cat <<HEREDOC2
       },
       "log_file": "/var/log/${NETWORK_TYPE}_${IPAM_TYPE}.log",
       "log_level": "debug",
-      "poolName": "${NETOP_NETWORK_POOL}"
+      "poolName": "${NETOP_NETWORK_POOL}-${NIDX}"
     }
 HEREDOC2
 }
@@ -61,13 +63,13 @@ function mk_ipam_cr()
 {
   case ${IPAM_TYPE} in
   whereabouts)
-    ipam_config
+    whereabouts${1}
     ;;
   nv-ipam)
-    nv_ipam_config
+    nv_ipam_config ${1}
     ;;
   dhcp)
-    dhcp_config
+    dhcp_config ${1}
     ;;
   esac
 }
