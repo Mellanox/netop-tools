@@ -4,6 +4,8 @@
 #
 function whereabouts()
 {
+NIDX=${1}
+shift
 cat <<HEREDOC1
   ipam: |
     {
@@ -31,7 +33,7 @@ cat <<HEREDOC2
       "kubernetes": {
         "kubeconfig": "/etc/cni/net.d/${IPAM_TYPE}.d/${IPAM_TYPE}.kubeconfig"
       },
-      "log_file": "/var/log/${NETWORK_TYPE}_${IPAM_TYPE}.log",
+      "log_file": "/var/log/${NETOP_NETWORK_TYPE}_${IPAM_TYPE}.log",
       "log_level": "debug",
       "poolName": "${NETOP_NETWORK_POOL}-${NIDX}"
     }
@@ -39,6 +41,8 @@ HEREDOC2
 }
 function dhcp_config()
 {
+NIDX=${1}
+shift
 cat <<HEREDOC3
   ipam: |
     {
@@ -63,7 +67,7 @@ function mk_ipam_cr()
 {
   case ${IPAM_TYPE} in
   whereabouts)
-    whereabouts${1}
+    whereabouts ${1}
     ;;
   nv-ipam)
     nv_ipam_config ${1}

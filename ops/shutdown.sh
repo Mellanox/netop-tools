@@ -3,7 +3,7 @@
 # https://yourdevopsmentor.com/blog/how-to-stop-all-kubernetes-deployments/
 # https://www.bmc.com/blogs/kubernetes-daemonset/
 #
-NAMESPACES=( "default nvidia-network-operator" "calico-system"  "kube-system" )
+NAMESPACES=( "default" "${NETOP_NAMESPACE}" "calico-system"  "kube-system" )
 #
 # delete all depolyments
 #

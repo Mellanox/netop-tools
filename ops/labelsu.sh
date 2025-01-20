@@ -1,9 +1,8 @@
 #!/bin/bash
 #
 #
-if [ $# -ne 2 ];then
-  echo "usage:$0 {node-name} {key=value}"
-  echo "example: $0 ub2204-worker1 node.su=su-1"
+if [ "$#" -lt 1 ];then
+  echo "usage:$0 {NODENAME} {SU}"
   exit 1
 fi
-kubectl label node ${1} "${2}"
+kubectl label node ${1} node.su/${2}=""

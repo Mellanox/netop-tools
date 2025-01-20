@@ -31,5 +31,5 @@ cat <<HEREDOC2>> ${FILE}
   networkNamespace: "${NETOP_APP_NAMESPACE}"
   resourceName: "${NETOP_RESOURCE}_${NIDX}"
 HEREDOC2
-mk_ipam_cr >> ${FILE}
+mk_ipam_cr ${NIDX} >> ${FILE}
 echo ${FILE}

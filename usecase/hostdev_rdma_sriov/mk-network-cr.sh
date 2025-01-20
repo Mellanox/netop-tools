@@ -7,24 +7,35 @@
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
-for NIDXDEF in ${NETOP_NETLIST[@]};do
-  for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
-    NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
-    FILE=$(${NETOP_ROOT_DIR}/ops/mk-hostdev-ipam-cr.sh ${NIDX} ${NETOP_APP_NAMESPACE})
-    echo ${FILE}
+for NETOP_SU in ${NETOP_SULIST[@]};do
+  for NIDXDEF in ${NETOP_NETLIST[@]};do
+    for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
+      NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
+      FILE=$(${NETOP_ROOT_DIR}/ops/mk-hostdev-sriov-ipam-cr.sh ${NIDX} ${NETOP_SU} ${NETOP_APP_NAMESPACE})
+      echo ${FILE}
+    done
   done
 done
 #
 # make sure the ip pool is created
 #
 if [ "${IPAM_TYPE}" = "nv-ipam" ];then
-  for NIDXDEF in ${NETOP_IPPOOLS[@]};do
-    NIDX=$(echo ${NIDXDEF}|cut -d',' -f1)
-    RANGE=$(echo ${NIDXDEF}|cut -d',' -f2)
-    GW=$(echo ${NIDXDEF}|cut -d',' -f3)
-    BLOCKSIZE=$(echo ${NIDXDEF}|cut -d',' -f4)
-    FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}.yaml"
-    ${NETOP_ROOT_DIR}/ops/mk-nvipam-pool.sh ${FILE} ${NIDX} ${RANGE} ${GW} ${BLOCKSIZE}
-    echo ${FILE}
+  for NETOP_SU in ${NETOP_SULIST[@]};do
+    echo "NETOP_SU:${NETOP_SU}"
+    IPPOOLS_KEY=NETOP_IPPOOLS[${NETOP_SU}]
+    for IPPOOL_KEY in ${IPPOOLS_KEY[@]};do
+      echo "IPPOOL_KEY:${IPPOOL_KEY}"
+      IPPOOL=${!IPPOOL_KEY}
+      echo "IPPOOL:${IPPOOL}"
+      for NIDXDEF in ${IPPOOL[@]};do
+        NIDX=$(echo ${NIDXDEF}|cut -d',' -f1)
+        RANGE=$(echo ${NIDXDEF}|cut -d',' -f2)
+        GW=$(echo ${NIDXDEF}|cut -d',' -f3)
+        BLOCKSIZE=$(echo ${NIDXDEF}|cut -d',' -f4)
+        FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}-${NETOP_SU}.yaml"
+        ${NETOP_ROOT_DIR}/ops/mk-nvipam-pool.sh ${FILE} ${NIDX} ${NETOP_SU} ${RANGE} ${GW} ${BLOCKSIZE}
+        echo ${FILE}
+      done
+    done
   done
 fi

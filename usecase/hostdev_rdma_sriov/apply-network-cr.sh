@@ -7,11 +7,13 @@
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
-for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
-  for NIDXDEF in ${NETOP_NETLIST[@]};do
-    NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
-    FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-cr.yaml"
-    kubectl apply -f "${FILE}"
+for NETOP_SU in ${NETOP_SULIST[@]};do
+  for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
+    for NIDXDEF in ${NETOP_NETLIST[@]};do
+      NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
+      FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}-cr.yaml"
+      kubectl apply -f "${FILE}"
+    done
   done
 done
 #
@@ -19,10 +21,12 @@ done
 #
 kubectl get ${NETOP_NETWORK_TYPE}
 if [ "${IPAM_TYPE}" = "nv-ipam" ];then
-  for NIDXDEF in ${NETOP_NETLIST[@]};do
-    NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
-    FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}.yaml"
-    kubectl apply -f "${FILE}"
+  for NETOP_SU in ${NETOP_SULIST[@]};do
+    for NIDXDEF in ${NETOP_NETLIST[@]};do
+      NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
+      FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}-${NETOP_SU}.yaml"
+      kubectl apply -f "${FILE}"
+    done
   done
 fi
 #
