@@ -35,7 +35,8 @@ cat <<HEREDOC2
       },
       "log_file": "/var/log/${NETOP_NETWORK_TYPE}_${IPAM_TYPE}.log",
       "log_level": "debug",
-      "poolName": "${NETOP_NETWORK_POOL}-${NIDX}"
+      "poolName": "${NETOP_NETWORK_POOL}-${NIDX}",
+      "poolType": "${IPAM_POOL_TYPE}"
     }
 HEREDOC2
 }

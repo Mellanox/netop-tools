@@ -18,14 +18,21 @@ for NETOP_SU in ${NETOP_SULIST[@]};do
   done
 done
 #
-# delete ippool 
+# delete ippool/cidrpool 
 #
 kubectl get ${NETOP_NETWORK_TYPE}
 if [ "${IPAM_TYPE}" = "nv-ipam" ];then
   for NETOP_SU in ${NETOP_SULIST[@]};do
     for NIDXDEF in ${NETOP_NETLIST[@]};do
       NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
-      FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}-${NETOP_SU}.yaml"
+      case "${IPAM_POOL_TYPE}" in
+      IPPool)
+        FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}-${NETOP_SU}.yaml"
+        ;;
+      CIDRPool)
+        FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/cidrpool-${NIDX}-${NETOP_SU}.yaml"
+        ;;
+      esac
       if [ -f ${FILE} ];then
         kubectl delete -f ${FILE}
       else
