@@ -179,6 +179,15 @@ function 24_10_0()
   values_yaml
   sriovNetworkOperator
   pullSecrets
-  ofedDriver
+# ofedDriver
 }
-24_7_0 > ./values.yaml
+function 24_10_1()
+{
+  ipamType
+  values_yaml
+  sriovNetworkOperator
+  pullSecrets
+# ofedDriver
+}
+NETOP_FUNCT=$(echo ${NETOP_VERSION} | sed 's/\./_/g')
+${NETOP_FUNCT} > ./values.yaml

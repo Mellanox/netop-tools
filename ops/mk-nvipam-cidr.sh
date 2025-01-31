@@ -32,8 +32,8 @@ spec:
     - matchExpressions:
         - key: node-role.kubernetes.io/worker
           operator: Exists
-        - key: node.su/${NETOP_SU}
-          operator: Exists
+#       - key: node.su/${NETOP_SU}
+#         operator: Exists
 POOLHEREDOC
 }
 nv_cidrpool ${*}

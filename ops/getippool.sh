@@ -2,6 +2,7 @@
 #
 # get ippool resource
 #
+source ${NETOP_ROOT_DIR}/global_ops.cfg
 case $# in
 1|2)
   ;;

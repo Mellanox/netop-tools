@@ -3,13 +3,32 @@
 # nic cluster plocy file has migrated outof the values.yaml file
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
+case ${NETOP_VERSION} in
+24.10.0)
+  DOCA_VERSION="24.10-0.7.0.0-0"
+  SRIOV_DP_VERSION="v3.8.0"
+  RDMA_SDP_VERSION="v1.5.2"
+  CNI_PLUGINS_VERSION="v1.5.0"
+  MULTUS_VERSION="v4.1.0"
+  WHEREABOUTS_VERSION="v0.7.0"
+  NVIPAM_VERSION="v0.2.0"
+  ;;
+24.10.1)
+  DOCA_VERSION="24.10-0.7.0.0-0"
+  SRIOV_DP_VERSION="v3.8.0"
+  CNI_PLUGINS_VERSION="v1.5.0"
+  MULTUS_VERSION="v4.1.0"
+  WHEREABOUTS_VERSION="v0.7.0"
+  NVIPAM_VERSION="v0.2.0"
+  ;;
+esac
 function ofedDriver()
 {
 cat << OFED_DRIVER
   ofedDriver:
     image: doca-driver
     repository: nvcr.io/nvidia/mellanox
-    version: 24.10-0.7.0.0-0
+    version: ${DOCA_VERSION}
     forcePrecompiled: false
     imagePullSecrets: []
     terminationGracePeriodSeconds: 300
@@ -40,7 +59,7 @@ cat << SRIOV_DEV_PLUGIN1
   sriovDevicePlugin:
     image: sriov-network-device-plugin
     repository: ghcr.io/k8snetworkplumbingwg
-    version: v3.8.0
+    version: ${SRIOV_DP_VERSION}
     imagePullSecrets: []
     config: |
       {
@@ -80,6 +99,53 @@ cat << SRIOV_DEV_PLUGIN3
       }
 SRIOV_DEV_PLUGIN3
 }
+function rdmaSharedDevicePlugin()
+{
+cat << RDMA_SDP1
+rdmaSharedDevicePlugin:
+     # [map[ifNames:[ibs1f0] name:rdma_shared_device_a]]
+     image: k8s-rdma-shared-dev-plugin
+     repository: ghcr.io/mellanox
+     version: ${RDMA_SDP_VERSION}
+     imagePullSecrets: []
+     # The config below directly propagates to k8s-rdma-shared-device-plugin configuration.
+     # Replace 'devices' with your (RDMA capable) netdevice name.
+     config: |
+       {
+RDMA_SDP1
+NETWORKS=${#NETOP_NETLIST[@]}
+COMMA=","
+for DEVDEF in ${NETOP_NETLIST[@]};do
+  NIDX=`echo ${DEVDEF}|cut -d',' -f1`
+  DEVICEID=`echo ${DEVDEF}|cut -d',' -f2`
+  NETOP_HCAMAX=`echo ${DEVDEF}|cut -d',' -f3`
+  DEVNAMES=`echo ${DEVDEF}|cut -d',' -f4-12`
+  DEVNAMES=`echo ${DEVNAMES} | sed 's/,/","/g'`
+  let NETWORKS=NETWORKS-1
+  if [ ${NETWORKS} -le 0 ];then
+    COMMA=""
+  fi
+cat << RDMA_SDP2
+         "configList": [
+          {
+            "resourcePrefix": "nvidia.com",
+            "resourceName": "${NETOP_RESOURCE}_${NIDX}",
+            "rdmaHcaMax": 63,
+            "selectors": {
+              "vendors": ["${NETOP_VENDOR}"],
+              "drivers": [],
+              "ifNames": [${DEVNAMES}],
+              "linkTypes": [],
+              "isRdma": true
+            }
+          }${COMMA}
+RDMA_SDP2
+done
+cat << SRIOV_DEV_PLUGIN3
+        ]
+      }
+SRIOV_DEV_PLUGIN3
+}
 function secondaryNetwork()
 {
 cat << SECONDARY_NETWORK1
@@ -87,22 +153,22 @@ cat << SECONDARY_NETWORK1
     cniPlugins:
       image: plugins
       repository: ghcr.io/k8snetworkplumbingwg
-      version: v1.5.0
+      version: ${CNI_PLUGINS_VERSION}
       imagePullSecrets: []
     multus:
       image: multus-cni
       repository: ghcr.io/k8snetworkplumbingwg
-      version: v4.1.0
+      version: ${MULTUS_VERSION}
       imagePullSecrets: []
 SECONDARY_NETWORK1
 if [ "${IPAM_TYPE}" = "whereabouts" ];then
-cat << SECONDARY_NETWORK24 >> ${FILE}
+cat << SECONDARY_NETWORK2 >> ${FILE}
     ipamPlugin:
       image: whereabouts
       repository: ghcr.io/k8snetworkplumbingwg
-      version: v0.7.0
+      version: ${WHEREABOUTS_VERSION}
       imagePullSecrets: []
-SECONDARY_NETWORK24
+SECONDARY_NETWORK2
 fi
 }
 function nvIpam()
@@ -113,7 +179,7 @@ cat << NVIPAM
     image: nvidia-k8s-ipam
     imagePullSecrets: []
     repository: ghcr.io/mellanox
-    version: v0.2.0
+    version: ${NVIPAM_VERSION}
     enableWebhook: false
 NVIPAM
 fi
@@ -128,5 +194,6 @@ spec:
 HEREDOC1
 ofedDriver >> ${FILE}
 sriovDevicePlugin >> ${FILE}
+rdmaSharedDevicePlugin >> ${FILE}
 secondaryNetwork >> ${FILE}
 nvIpam >> ${FILE}
