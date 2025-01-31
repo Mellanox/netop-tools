@@ -85,6 +85,7 @@ systemctl stop ufw
 #
 rm -f /etc/containerd/config.toml
 systemctl restart containerd
+../fixes/fixcontainerd.sh
 swapoff -a
 #
 # install go

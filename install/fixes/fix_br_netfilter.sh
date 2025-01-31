@@ -2,5 +2,7 @@
 #
 #
 modprobe br_netfilter
-echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
-echo 1 > /proc/sys/net/ipv4/ip_forward
+sysctl net.bridge.bridge-nf-call-ip6tables=1
+sysctl net.bridge.bridge-nf-call-iptables=1
+sysctl net.ipv4.ip_forward=1
+sysctl net.ipv6.ip_forward=1

@@ -2,8 +2,10 @@
 #
 # make the ipam config based on IPAM_TYPE
 #
-function ipam_config()
+function whereabouts()
 {
+NIDX=${1}
+shift
 cat <<HEREDOC1
   ipam: |
     {
@@ -21,6 +23,8 @@ HEREDOC1
 }
 function nv_ipam_config()
 {
+NIDX=${1}
+shift
 cat <<HEREDOC2
   ipam: |
     {
@@ -29,14 +33,17 @@ cat <<HEREDOC2
       "kubernetes": {
         "kubeconfig": "/etc/cni/net.d/${IPAM_TYPE}.d/${IPAM_TYPE}.kubeconfig"
       },
-      "log_file": "/var/log/${NETWORK_TYPE}_${IPAM_TYPE}.log",
+      "log_file": "/var/log/${NETOP_NETWORK_TYPE}_${IPAM_TYPE}.log",
       "log_level": "debug",
-      "poolName": "${NETOP_NETWORK_POOL}"
+      "poolName": "${NETOP_NETWORK_POOL}-${NIDX}",
+      "poolType": "${IPAM_POOL_TYPE}"
     }
 HEREDOC2
 }
 function dhcp_config()
 {
+NIDX=${1}
+shift
 cat <<HEREDOC3
   ipam: |
     {
@@ -61,13 +68,13 @@ function mk_ipam_cr()
 {
   case ${IPAM_TYPE} in
   whereabouts)
-    ipam_config
+    whereabouts ${1}
     ;;
   nv-ipam)
-    nv_ipam_config
+    nv_ipam_config ${1}
     ;;
   dhcp)
-    dhcp_config
+    dhcp_config ${1}
     ;;
   esac
 }

@@ -5,77 +5,35 @@
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 function nv_ippool()
 {
-cat <<POOLHEREDOC > ./ippool.yaml
+FILE=${1}
+shift
+NIDX=${1}
+shift
+NETOP_SU=${1}
+shift
+NETWORK_RANGE=${1}
+shift
+NETWORK_GW=${1}
+shift
+PERNODE_BLOCKSIZE=${1}
+shift
+cat <<POOLHEREDOC > ${FILE}
 apiVersion: nv-ipam.nvidia.com/v1alpha1
 kind: IPPool
 metadata:
-# name: ${NETOP_NETWORK}
-  name: ${NETOP_NETWORK_POOL}
+  name: ${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}
   namespace: ${NETOP_NAMESPACE}
 spec:
-  subnet: ${NETOP_NETWORK_RANGE}
-  perNodeBlockSize: ${NETOP_PERNODE_BLOCKSIZE}
-  gateway: ${NETOP_NETWORK_GW}
+  subnet: ${NETWORK_RANGE}
+  perNodeBlockSize: ${PERNODE_BLOCKSIZE}
+  gateway: ${NETWORK_GW}
   nodeSelector:
     nodeSelectorTerms:
     - matchExpressions:
-        - key: node-role.kubernetes.io/worker
-          operator: Exists
+      - key: node-role.kubernetes.io/worker
+        operator: Exists
+#     - key: node.su/${NETOP_SU}
+#       operator: Exists
 POOLHEREDOC
 }
-function configmap()
-{
-cat << CONFHEREDOC >./nv-ipam.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nvidia-k8s-ipam-config
-  namespace: ${NETOP_NAMESPACE}
-data:
-  config: |
-    {
-      "pools": {
-        "${NETOP_NETWORK_POOL}": {"subnet": ${NETOP_NETWORK_RANGE}, "perNodeBlockSize": ${NVNOP_PERNODE_BLOCKSIZE}, "gateway": ${NETOP_NETWORK_GW}}
-      },
-      "nodeSelector": {"kubernetes.io/os": "linux"}
-    }
-CONFHEREDOC
-}
-# Create CNI configuration
-# 
-# Example config for bridge CNI:
-#
-function cni_bridge()
-{ 
-cat <<CNIBRIDGEHEREDOC> /etc/cni/net.d/nv-ipam.d/10-${NETOP_NETWORK}.conf
-{
-    "cniVersion": "0.4.0",
-    "name": "${NETOP_NETWORK}",
-    "type": "bridge",
-    "bridge": "mytestbr",
-    "isGateway": true,
-    "ipMasq": true,
-    "ipam": {
-        "type": "nv-ipam",
-        "poolName": "${NETOP_NETWORK_POOL}"
-    }
-}
-CNIBRIDGEHEREDOC
-}
-function cni_ippool()
-{
-cat <<CNIHEREDOC> /etc/cni/net.d/nv-ipam.d/10-${NETOP_NETWORK_POOL}.conf
-{
-    "type": "nv-ipam",
-    "poolName": "${NETOP_NETWORK_POOL}",
-    "daemonSocket": "unix:///var/lib/cni/nv-ipam/daemon.sock",
-    "daemonCallTimeoutSeconds": 5,
-    "confDir": "/etc/cni/net.d/nv-ipam.d",
-    "logFile": "/var/log/nv-ipam-cni.log",
-    "logLevel": "info"
-}
-CNIHEREDOC
-}
-nv_ippool
-#mkdir -p  /etc/cni/net.d/nv-ipam.d
-#cni_ippool
+nv_ippool ${*}

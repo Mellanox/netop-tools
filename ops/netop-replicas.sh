@@ -8,4 +8,4 @@ if [ "$#" -lt 1 ];then
   echo "usage:$0 {NUM_REPLICAS}"
   exit 1
 fi
-kubectl -n nvidia-network-operator scale deployment network-operator --replicas ${1}
+kubectl -n ${NETOP_NAMESPACE} scale deployment network-operator --replicas ${1}

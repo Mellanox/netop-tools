@@ -28,8 +28,8 @@ popd
 #
 # the yaml file needs to be the custom network operator configuration to overider the defaults
 #
-cd ${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart
+cd ${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart/network-operator
 #helm upgrade -n ${NETOP_NAMESPACE} network-operator network-operator -f ./network-operator-values.yaml
 #helm upgrade -n ${NETOP_NAMESPACE} network-operator network-operator -f ${NETOP_ROOT_DIR}/usecase/${USECASE}/values.yaml
-helm upgrade -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator -f ${NETOP_ROOT_DIR}/usecase/${USECASE}/values.yaml
+helm upgrade -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator --version ${NETOP_VERSION} -f ./values.yaml -f ${NETOP_ROOT_DIR}/usecase/${USECASE}/values.yaml
 uncordon
