@@ -14,7 +14,8 @@ fi
 ${NETOP_ROOT_DIR}/install/mksecret.sh
 pushd .
 cd ${USECASE_DIR}
-./mk-values.sh
+${NETOP_ROOT_DIR}/ops/mk-values.sh
+${NETOP_ROOT_DIR}/ops/mk-nic-cluster-policy.sh
 ./mk-network-cr.sh
 popd
 cd ${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart/network-operator
