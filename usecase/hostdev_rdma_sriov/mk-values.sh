@@ -67,18 +67,18 @@ OFED_DRIVER
 function rdmaSharedDevicePlugin()
 {
 case ${USECASE} in
-macvlan_rdma_shared_device)
-cat << RDMA_SHARED_DEVICE_PLUGIN1
+ipoib_rdma_shared_device|macvlan_rdma_shared_device)
+cat << RDMA_SDP1
 rdmaSharedDevicePlugin:
   deploy: true
   resources:
-RDMA_SHARED_DEVICE_PLUGIN1
+RDMA_SDP1
   ;;
 *)
-cat << RDMA_SHARED_DEVICE_PLUGIN2
+cat << RDMA_SDP2
 rdmaSharedDevicePlugin:
   deploy: false
-RDMA_SHARED_DEVICE_PLUGIN2
+RDMA_SDP2
   return
   ;;
 esac
@@ -103,7 +103,7 @@ echo "      rdmaHcaMax: ${NETOP_HCAMAX}"
       echo "PCIe:BFD device id not supported by rdmaSharedDevicePlugin"
     else
 echo "      ifNames: [\"${DEVNAMES}\"]"
-echo "      linkTypes: [\"ether\"]"
+echo "      linkTypes: [\"${LINK_TYPES}\"]"
     fi
   fi
 done
@@ -112,17 +112,17 @@ function sriovDevicePlugin()
 {
 case ${USECASE} in
 hostdev_rdma_sriov)
-cat << SRIOV_DEVICE_PLUGIN1
+cat << SRIOV_DP1
 sriovDevicePlugin:
   deploy: true
   resources:
-SRIOV_DEVICE_PLUGIN1
+SRIOV_DP1
   ;;
 *)
-cat << SRIOV_DEVICE_PLUGIN2
+cat << SRIOV_DP2
 sriovDevicePlugin:
   deploy: false
-SRIOV_DEVICE_PLUGIN2
+SRIOV_DP2
   return
   ;;
 esac
@@ -169,8 +169,19 @@ function 24_7_0()
   sriovNetworkOperator
   pullSecrets
   ofedDriver
-  rdmaSharedDevicePlugin
-  sriovDevicePlugin
+  case ${USECASE} in
+  ipoib_rdma_shared_device)
+    LINK_TYPES="IB"
+    rdmaSharedDevicePlugin
+    ;;
+  macvlan_rdma_shared_device)
+    LINK_TYPES="ether"
+    rdmaSharedDevicePlugin
+    ;;
+  hostdev_rdma_sriov)
+    sriovDevicePlugin
+    ;;
+  esac
   secondaryNetwork
 }
 function 24_10_0()

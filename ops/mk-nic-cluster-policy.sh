@@ -88,7 +88,7 @@ cat << SRIOV_DEV_PLUGIN2
               "pfNames": [],
               "pciAddresses": ["${DEVNAMES}"],
               "rootDevices": [],
-              "linkTypes": [],
+              "linkTypes": ["${LINK_TYPES}],
               "isRdma": true
             }
           }${COMMA}
@@ -130,21 +130,21 @@ cat << RDMA_SDP2
           {
             "resourcePrefix": "nvidia.com",
             "resourceName": "${NETOP_RESOURCE}_${NIDX}",
-            "rdmaHcaMax": 63,
+            "rdmaHcaMax": ${NETOP_HCAMAX},
             "selectors": {
               "vendors": ["${NETOP_VENDOR}"],
               "drivers": [],
               "ifNames": [${DEVNAMES}],
-              "linkTypes": [],
+              "linkTypes": ["${LINK_TYPES}"],
               "isRdma": true
             }
           }${COMMA}
 RDMA_SDP2
 done
-cat << SRIOV_DEV_PLUGIN3
+cat << RDMA_SDP3
         ]
       }
-SRIOV_DEV_PLUGIN3
+RDMA_SDP3
 }
 function secondaryNetwork()
 {
@@ -193,7 +193,18 @@ metadata:
 spec:
 HEREDOC1
 ofedDriver >> ${FILE}
-sriovDevicePlugin >> ${FILE}
-rdmaSharedDevicePlugin >> ${FILE}
+case ${USECASE} in
+ipoib_rdma_shared_device)
+  LINK_TYPES="IB"
+  rdmaSharedDevicePlugin >> ${FILE}
+  ;;
+macvlan_rdma_shared_device)
+  LINK_TYPES="ether"
+  rdmaSharedDevicePlugin >> ${FILE}
+  ;;
+hostdev_rdma_sriov)
+  sriovDevicePlugin >> ${FILE}
+  ;;
+esac
 secondaryNetwork >> ${FILE}
 nvIpam >> ${FILE}
