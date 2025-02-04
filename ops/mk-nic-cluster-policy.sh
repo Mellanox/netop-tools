@@ -8,7 +8,7 @@ case ${NETOP_VERSION} in
   DOCA_VERSION="24.10-0.7.0.0-0"
   SRIOV_DP_VERSION="v3.8.0"
   RDMA_SDP_VERSION="v1.5.2"
-  IPOIB_VERSION="v1.2.0"
+  IPOIB_VERSION="428715a57c0b633e48ec7620f6e3af6863149ccf"
   CNI_PLUGINS_VERSION="v1.5.0"
   MULTUS_VERSION="v4.1.0"
   WHEREABOUTS_VERSION="v0.7.0"
@@ -18,7 +18,7 @@ case ${NETOP_VERSION} in
   DOCA_VERSION="24.10-0.7.0.0-0"
   SRIOV_DP_VERSION="v3.8.0"
   RDMA_SDP_VERSION="v1.5.2"
-  IPOIB_VERSION="v1.2.0"
+  IPOIB_VERSION="428715a57c0b633e48ec7620f6e3af6863149ccf"
   CNI_PLUGINS_VERSION="v1.5.0"
   MULTUS_VERSION="v4.1.0"
   WHEREABOUTS_VERSION="v0.7.0"
@@ -171,14 +171,23 @@ cat << SECONDARY_NETWORK1
       version: ${MULTUS_VERSION}
       imagePullSecrets: []
 SECONDARY_NETWORK1
+if [ "${NETOP_NETWORK_TYPE}" = "IPoIBNetwork" ];then
+cat << SECONDARY_NETWORK2
+    ipoib:
+      image: ipoib-cni
+      repository: ghcr.io/mellanox
+      version: ${IPOIB_VERSION}
+      imagePullSecrets: []
+SECONDARY_NETWORK2
+fi
 if [ "${IPAM_TYPE}" = "whereabouts" ];then
-cat << SECONDARY_NETWORK2 >> ${FILE}
+cat << SECONDARY_NETWORK3 >> ${FILE}
     ipamPlugin:
       image: whereabouts
       repository: ghcr.io/k8snetworkplumbingwg
       version: ${WHEREABOUTS_VERSION}
       imagePullSecrets: []
-SECONDARY_NETWORK2
+SECONDARY_NETWORK3
 fi
 }
 function nvIpam()
