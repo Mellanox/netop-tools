@@ -20,9 +20,11 @@ if [ "${NAME}" = "" ];then
 fi
 mkdir -p apps
 cd apps
-for DEVDEF in ${NETOP_NETLIST[@]};do
-  NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-  NETWORKS=${NETWORKS},${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}
+for NETOP_SU in ${NETOP_SULIST[@]};do
+  for DEVDEF in ${NETOP_NETLIST[@]};do
+    NIDX=`echo ${DEVDEF}|cut -d',' -f1`
+    NETWORKS=${NETWORKS},${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}
+  done
 done
 # trim leading ,
 NETWORKS=`echo "${NETWORKS}" | sed 's/,//'`
