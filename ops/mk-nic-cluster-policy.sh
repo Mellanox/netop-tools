@@ -112,17 +112,17 @@ SRIOV_DEV_PLUGIN3
 function rdmaSharedDevicePlugin()
 {
 cat << RDMA_SDP1
-   rdmaSharedDevicePlugin:
-     # [map[ifNames:[ibs1f0] name:rdma_shared_device_a]]
-     image: k8s-rdma-shared-dev-plugin
-     repository: ghcr.io/mellanox
-     version: ${RDMA_SDP_VERSION}
-     imagePullSecrets: []
-     # The config below directly propagates to k8s-rdma-shared-device-plugin configuration.
-     # Replace 'devices' with your (RDMA capable) netdevice name.
-     config: |
-       {
-         "configList": [
+  rdmaSharedDevicePlugin:
+    # [map[ifNames:[ibs1f0] name:rdma_shared_device_a]]
+    image: k8s-rdma-shared-dev-plugin
+    repository: ghcr.io/mellanox
+    version: ${RDMA_SDP_VERSION}
+    imagePullSecrets: []
+    # The config below directly propagates to k8s-rdma-shared-device-plugin configuration.
+    # Replace 'devices' with your (RDMA capable) netdevice name.
+    config: |
+      {
+        "configList": [
 RDMA_SDP1
 NETWORKS=${#NETOP_NETLIST[@]}
 COMMA=","
@@ -138,22 +138,22 @@ for DEVDEF in ${NETOP_NETLIST[@]};do
   fi
 #           "resourcePrefix": "nvidia.com",
 cat << RDMA_SDP2
-         {
-           "resourceName": "${NETOP_RESOURCE}_${NIDX}",
-           "rdmaHcaMax": ${NETOP_HCAMAX},
-           "selectors": {
-             "vendors": ["${NETOP_VENDOR}"],
-             "drivers": [],
-             "ifNames": [${DEVNAMES}],
-             "linkTypes": ["${LINK_TYPES}"],
-             "isRdma": true
-           }
-         }${COMMA}
+          {
+            "resourceName": "${NETOP_RESOURCE}_${NIDX}",
+            "rdmaHcaMax": ${NETOP_HCAMAX},
+            "selectors": {
+              "vendors": ["${NETOP_VENDOR}"],
+              "drivers": [],
+              "ifNames": [${DEVNAMES}],
+              "linkTypes": ["${LINK_TYPES}"],
+              "isRdma": true
+            }
+          }${COMMA}
 RDMA_SDP2
 done
 cat << RDMA_SDP3
         ]
-       }
+      }
 RDMA_SDP3
 }
 function secondaryNetwork()
