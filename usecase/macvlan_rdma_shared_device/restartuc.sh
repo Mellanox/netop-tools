@@ -4,7 +4,7 @@
 #
 NS="nvidia-network-operator"
 ./delete-network-cr.sh
-./mk-values.sh
+${NETOP_ROOT_DIR}/ops/mk-values.sh
 cd ..
 ./upgrade/upgrade-network-operator.sh
 cd uc

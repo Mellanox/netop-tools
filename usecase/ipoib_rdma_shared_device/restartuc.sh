@@ -3,7 +3,7 @@
 # apply config changes, upgrade network-operator, apply network
 #
 NS="nvidia-network-operator"
-./mk-values.sh
+${NETOP_ROOT_DIR}/ops/mk-values.sh
 cd ..
 ./upgrade/upgrade-network-operator.sh
 cd uc
