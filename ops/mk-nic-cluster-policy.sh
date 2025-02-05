@@ -113,7 +113,6 @@ function rdmaSharedDevicePlugin()
 {
 cat << RDMA_SDP1
   rdmaSharedDevicePlugin:
-    # [map[ifNames:[ibs1f0] name:rdma_shared_device_a]]
     image: k8s-rdma-shared-dev-plugin
     repository: ghcr.io/mellanox
     version: ${RDMA_SDP_VERSION}
@@ -144,8 +143,8 @@ cat << RDMA_SDP2
             "selectors": {
               "vendors": ["${NETOP_VENDOR}"],
               "drivers": [],
-              "ifNames": [${DEVNAMES}],
-              "linkTypes": ["${LINK_TYPES}"],
+              "ifNames": ["${DEVNAMES}"],
+              "linkTypes": [],
               "isRdma": true
             }
           }${COMMA}
