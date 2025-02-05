@@ -26,7 +26,7 @@ if [ "${IPAM_TYPE}" = "nv-ipam" ];then
   for NETOP_SU in ${NETOP_SULIST[@]};do
     for NIDXDEF in ${NETOP_NETLIST[@]};do
       NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
-      case "${IPAM_POOL_TYPE}" in
+      case "${NVIPAM_POOL_TYPE}" in
       IPPool)
         FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}-${NETOP_SU}.yaml"
         ;;

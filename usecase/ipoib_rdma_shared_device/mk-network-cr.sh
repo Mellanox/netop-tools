@@ -33,7 +33,7 @@ if [ "${IPAM_TYPE}" = "nv-ipam" ];then
         RANGE=$(echo ${NIDXDEF}|cut -d',' -f2)
         GW=$(echo ${NIDXDEF}|cut -d',' -f3)
         BLOCKSIZE=$(echo ${NIDXDEF}|cut -d',' -f4)
-        case "${IPAM_POOL_TYPE}" in
+        case "${NVIPAM_POOL_TYPE}" in
         IPPool)
           FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}-${NETOP_SU}.yaml"
           ${NETOP_ROOT_DIR}/ops/mk-nvipam-pool.sh ${FILE} ${NIDX} ${NETOP_SU} ${RANGE} ${GW} ${BLOCKSIZE}
