@@ -78,10 +78,7 @@ SRIOV_DEV_PLUGIN1
 NETWORKS=${#NETOP_NETLIST[@]}
 COMMA=","
 for DEVDEF in ${NETOP_NETLIST[@]};do
-  NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-  DEVICEID=`echo ${DEVDEF}|cut -d',' -f2`
-  NETOP_HCAMAX=`echo ${DEVDEF}|cut -d',' -f3`
-  DEVNAMES=`echo ${DEVDEF}|cut -d',' -f4-12`
+  IFS=',' read NIDX DEVICEID NETOP_HCAMAX DEVNAMES <<< ${DEVDEF}
   DEVNAMES=`echo ${DEVNAMES} | sed 's/,/","/g'`
   let NETWORKS=NETWORKS-1
   if [ ${NETWORKS} -le 0 ];then
@@ -126,10 +123,7 @@ RDMA_SDP1
 NETWORKS=${#NETOP_NETLIST[@]}
 COMMA=","
 for DEVDEF in ${NETOP_NETLIST[@]};do
-  NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-  DEVICEID=`echo ${DEVDEF}|cut -d',' -f2`
-  NETOP_HCAMAX=`echo ${DEVDEF}|cut -d',' -f3`
-  DEVNAMES=`echo ${DEVDEF}|cut -d',' -f4-12`
+  IFS=',' read NIDX DEVICEID NETOP_HCAMAX DEVNAMES <<< ${DEVDEF}
   DEVNAMES=`echo ${DEVNAMES} | sed 's/,/","/g'`
   let NETWORKS=NETWORKS-1
   if [ ${NETWORKS} -le 0 ];then
