@@ -2,6 +2,8 @@
 #
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
+NFD_ENABLE=${NFD_ENABLE:-true}
+
 set -x
 function sriovNetworkOperator()
 {
@@ -43,7 +45,7 @@ function values_yaml()
 {
 cat <<VALUES_YAML
 nfd:
-  enabled: true
+  enabled: ${NFD_ENABLE}
 # NicClusterPolicy CR values
 deployCR: true
 nvIpam:
