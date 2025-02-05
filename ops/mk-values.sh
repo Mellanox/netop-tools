@@ -83,10 +83,7 @@ RDMA_SDP2
   ;;
 esac
 for DEVDEF in ${NETOP_NETLIST[@]};do
-  NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-  DEVICEID=`echo ${DEVDEF}|cut -d',' -f2`
-  NETOP_HCAMAX=`echo ${DEVDEF}|cut -d',' -f3`
-  DEVNAMES=`echo ${DEVDEF}|cut -d',' -f4-12`
+  IFS=',' read NIDX DEVICEID NETOP_HCAMAX DEVNAMES <<< ${DEVDEF}
   DEVNAMES=`echo ${DEVNAMES} | sed 's/,/","/g'`
 echo "    - name: ${NETOP_RESOURCE}_${NIDX}"
   if [ "${NETOP_VENDOR}" != "" ];then
@@ -103,7 +100,7 @@ echo "      rdmaHcaMax: ${NETOP_HCAMAX}"
       echo "PCIe:BFD device id not supported by rdmaSharedDevicePlugin"
     else
 echo "      ifNames: [\"${DEVNAMES}\"]"
-echo "      linkTypes: [\"${LINK_TYPES}\"]"
+echo "      linkTypes: [${LINK_TYPES}]"
     fi
   fi
 done
@@ -127,10 +124,7 @@ SRIOV_DP2
   ;;
 esac
 for DEVDEF in ${NETOP_NETLIST[@]};do
-  NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-  DEVICEID=`echo ${DEVDEF}|cut -d',' -f2`
-  NETOP_HCAMAX=`echo ${DEVDEF}|cut -d',' -f3`
-  DEVNAMES=`echo ${DEVDEF}|cut -d',' -f4-12`
+  IFS=',' read NIDX DEVICEID NETOP_HCAMAX DEVNAMES <<< ${DEVDEF}
   DEVNAMES=`echo ${DEVNAMES} | sed 's/,/","/g'`
 echo "    - name: ${NETOP_RESOURCE}_${NIDX}"
   if [ "${NETOP_VENDOR}" != "" ];then
@@ -171,11 +165,12 @@ function 24_7_0()
   ofedDriver
   case ${USECASE} in
   ipoib_rdma_shared_device)
-    LINK_TYPES="IB"
+    #LINK_TYPES='"IB"' # breaks plugin
+    LINK_TYPES=""
     rdmaSharedDevicePlugin
     ;;
   macvlan_rdma_shared_device)
-    LINK_TYPES="ether"
+    LINK_TYPES='"ether"'
     rdmaSharedDevicePlugin
     ;;
   hostdev_rdma_sriov)

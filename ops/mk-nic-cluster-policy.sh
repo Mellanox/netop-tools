@@ -95,7 +95,7 @@ cat << SRIOV_DEV_PLUGIN2
               "pfNames": [],
               "pciAddresses": ["${DEVNAMES}"],
               "rootDevices": [],
-              "linkTypes": ["${LINK_TYPES}],
+              "linkTypes": [${LINK_TYPES}],
               "isRdma": true
             }
           }${COMMA}
@@ -138,7 +138,7 @@ cat << RDMA_SDP2
               "vendors": ["${NETOP_VENDOR}"],
               "drivers": [],
               "ifNames": ["${DEVNAMES}"],
-              "linkTypes": [],
+              "linkTypes": [${LINK_TYPES}],
               "isRdma": true
             }
           }${COMMA}
@@ -207,11 +207,12 @@ HEREDOC1
 ofedDriver >> ${FILE}
 case ${USECASE} in
 ipoib_rdma_shared_device)
-  LINK_TYPES="IB"
+  #LINK_TYPES='"IB"' breaks plugin
+  LINK_TYPES=""
   rdmaSharedDevicePlugin >> ${FILE}
   ;;
 macvlan_rdma_shared_device)
-  LINK_TYPES="ether"
+  LINK_TYPES='"ether"'
   rdmaSharedDevicePlugin >> ${FILE}
   ;;
 hostdev_rdma_sriov)
