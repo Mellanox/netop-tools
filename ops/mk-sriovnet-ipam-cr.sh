@@ -4,12 +4,14 @@
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 source ${NETOP_ROOT_DIR}/ops/mk-ipam-cr.sh
-if [ "$#" -lt 1 ];then
-  echo "usage:$0 {NETWORK INDEX}"
-  echo "example:$0 a"
+if [ "$#" -ne 3 ];then
+  echo "usage:$0 {NETWORK INDEX} {NETOP_SU} {NETOP_APP_NAMESPACE}"
+  echo "example:$0 a su-1 default"
   exit 1
 fi
 NIDX=${1}
+shift
+NETOP_SU=${1}
 shift
 NETOP_APP_NAMESPACE=${1}
 shift
