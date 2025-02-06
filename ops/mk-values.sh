@@ -158,8 +158,13 @@ secondaryNetwork:
     deploy: ${IPAMVAL}
 SECONDARY_NETWORK
 }
+function version()
+{
+  echo "# VERSION:${NETOP_VERSION}"
+}
 function 24_7_0()
 {
+  version
   ipamType
   values_yaml
   sriovNetworkOperator
@@ -183,6 +188,7 @@ function 24_7_0()
 }
 function 24_10_0()
 {
+  version
   ipamType
   values_yaml
   sriovNetworkOperator
@@ -191,6 +197,7 @@ function 24_10_0()
 }
 function 24_10_1()
 {
+  version
   ipamType
   values_yaml
   sriovNetworkOperator
