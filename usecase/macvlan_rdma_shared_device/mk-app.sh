@@ -18,12 +18,13 @@ shift
 if [ "${NAME}" = "" ];then
   usage
 fi
-
 mkdir -p apps
 cd apps
-for DEVDEF in ${NETOP_NETLIST[@]};do
-  NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-  NETWORKS=${NETWORKS},${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}
+for NETOP_SU in ${NETOP_SULIST[@]};do
+  for DEVDEF in ${NETOP_NETLIST[@]};do
+    NIDX=`echo ${DEVDEF}|cut -d',' -f1`
+    NETWORKS=${NETWORKS},${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}
+  done
 done
 # trim leading ,
 NETWORKS=`echo "${NETWORKS}" | sed 's/,//'`
@@ -51,21 +52,21 @@ cat << HEREDOC2 >> ./${NAME}.yaml
         ${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}: '1'
 HEREDOC2
 done
-cat << HEREDOC >> ./${NAME}.yaml
+cat <<HEREDOC3 >> ./${NAME}.yaml
       limits:
-HEREDOC
+HEREDOC3
 for DEVDEF in ${NETOP_NETLIST[@]};do
   NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-cat << HEREDOC3 >> ./${NAME}.yaml
-        ${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}: '1'
-HEREDOC3
-done
 cat << HEREDOC4 >> ./${NAME}.yaml
+        ${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}: '1'
+HEREDOC4
+done
+cat << HEREDOC5 >> ./${NAME}.yaml
     command:
     - sh
     - -c
     - sleep inf
-HEREDOC4
+HEREDOC5
 if [ "${NODE}" != "" ];then
 cat << NODEDOC >> ./${NAME}.yaml
   nodeSelector:
