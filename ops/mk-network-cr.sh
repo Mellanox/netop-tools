@@ -64,7 +64,6 @@ for NETOP_SU in ${NETOP_SULIST[@]};do
       echo ${FILE}
       ;;
     esac
-    FILE=$( ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-node-policy.sh ${NIDX} ${NDEV} )
     for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
       case ${NETOP_NETWORK_TYPE} in
       HostDeviceNetwork)
