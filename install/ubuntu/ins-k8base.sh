@@ -83,4 +83,4 @@ apt autoremove
 #
 # run restart code
 #
-./${NETOP_ROOT_DIR}/install/${OS}/k8srestart.sh
+./${NETOP_ROOT_DIR}/install/${HOST_OS}/k8srestart.sh
