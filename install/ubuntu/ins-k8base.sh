@@ -76,22 +76,11 @@ PLUGINS="cni-plugins-linux-amd64-${CNIPLUGINS_VERSION}.tgz"
 curl -L --insecure -o - https://github.com/containernetworking/plugins/releases/download/${CNIPLUGINS_VERSION}/${PLUGINS} | tar xfz - -C /opt/cni/bin
 
 #
-# config details here:
-# https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
-#
-systemctl enable --now kubelet
-systemctl disable ufw
-systemctl stop ufw
-#
-rm -f /etc/containerd/config.toml
-systemctl restart containerd
-../fixes/fixcontainerd.sh
-swapoff -a
-#
 # install go
 #
 apt install -y golang-go
-#
-#
-#
 apt autoremove
+#
+# run restart code
+#
+./${NETOP_ROOT_DIR}/install/${OS}/k8srestart.sh
