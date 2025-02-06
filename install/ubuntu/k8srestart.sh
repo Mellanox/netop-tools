@@ -11,7 +11,7 @@ function restart()
   #
   rm -f /etc/containerd/config.toml
   systemctl restart containerd
-  ../fixes/fixcontainerd.sh
+  ${NETOP_ROOT_DIR}/install/fixes/fixcontainerd.sh
   swapoff -a
 }
 restart
