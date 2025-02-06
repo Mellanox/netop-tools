@@ -19,7 +19,7 @@ USECASE_DIR="${USECASE_DIR}"
 cd ${USECASE_DIR}
 ${NETOP_ROOT_DIR}/ops/mk-values.sh
 ${NETOP_ROOT_DIR}/ops/mk-nic-cluster-policy.sh
-./mk-network-cr.sh
+${NETOP_ROOT_DIR}/ops/mk-network-cr.sh
 kubectl apply -f NicClusterPolicy.yaml
 popd
 #helm upgrade
