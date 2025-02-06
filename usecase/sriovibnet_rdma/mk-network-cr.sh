@@ -14,10 +14,9 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 for DEVDEF in ${NETOP_NETLIST[@]};do
   NIDX=`echo ${DEVDEF}|cut -d',' -f1`
   NDEV=`echo ${DEVDEF}|cut -d',' -f4-20`
-  ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-node-policy.sh ${NIDX} ${NDEV}
-  FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/sriovibnet-node-policy-${NIDX}.yaml"
+  FILE=$( ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-node-policy.sh ${NIDX} ${NDEV} )
   echo ${FILE}
-# this is generated automatically, 
+# the NetworkAttachmentDefintiion generated automatically, 
 # except for ib-sriov-cni and pkey
 # ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-network-attachment.sh ${NIDX}
 # kubectl apply set-last-applied -f "${DIR}//Network-Attachment-Definitions-${NIDX}.yaml" --create-annotation
