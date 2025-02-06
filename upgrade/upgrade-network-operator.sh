@@ -15,7 +15,7 @@ cd ${NETOP_CHART_DIR}
 kubectl scale deployment --replicas=0 -n ${NETOP_NAMESPACE} network-operator
 popd
 pushd .
-USECASE_DIR="${USECASE_DIR}"
+USECASE_DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
 cd ${USECASE_DIR}
 ${NETOP_ROOT_DIR}/ops/mk-values.sh
 ${NETOP_ROOT_DIR}/ops/mk-nic-cluster-policy.sh

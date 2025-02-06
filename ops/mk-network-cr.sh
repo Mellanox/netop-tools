@@ -84,4 +84,4 @@ for NETOP_SU in ${NETOP_SULIST[@]};do
     done
   done
 done
-mkNetworkIPPoolCRDs
+mkIPPoolCRDs
