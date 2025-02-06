@@ -10,4 +10,4 @@ if [ "${NAME}" = "" ];then
   echo "usage:$0 {podname}"
   exit 1
 fi
-kubectl apply -f ./apps/${NAME}.yaml
+kubectl apply -f ${NETOP_ROOT_DIR}/uc/apps/${NAME}.yaml
