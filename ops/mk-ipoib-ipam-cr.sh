@@ -36,7 +36,7 @@ cat <<HEREDOC> "${FILE}"
 apiVersion: mellanox.com/v1alpha1
 kind: ${NETOP_NETWORK_TYPE}
 metadata:
-  name: ${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}
+  name: ${FILE%%-cr.yaml}
   namespace: ${NETOP_NAMESPACE}
 spec:
   networkNamespace: "${NETOP_APP_NAMESPACE}"

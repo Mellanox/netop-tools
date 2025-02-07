@@ -48,18 +48,20 @@ function cmdIPAM_CRDs()
 }
 function cmdSriovNodePolicy()
 {
-  for NIDXDEF in ${NETOP_NETLIST[@]};do
-    NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
-    FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/sriov-node-policy-${NIDX}.yaml"
-    if [ -f ${FILE} ];then
-      kubectl ${1} -f "${FILE}"
-    else
-      echo "ERROR:${FILE} not found"
-    fi
-# according to Ivan,
-# Network-Attachment-Definition generated automatically, except for ib-sriov-cni and pkey
-#   ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-network-attachment.sh ${NIDX}
-#   kubectl ${1} set-last-applied -f "${DIR}/Network-Attachment-Definitions-${NIDX}.yaml" --create-annotation
-#   kubectl ${1} -f "${DIR}/Network-Attachment-Definitions-${NIDX}.yaml"
+  for NETOP_SU in ${NETOP_SULIST[@]};do
+    for NIDXDEF in ${NETOP_NETLIST[@]};do
+      NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
+      FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/${NETOP_NETWORK_NAME}-node-policy-${NIDX}-${NETOP_SU}.yaml"
+      if [ -f ${FILE} ];then
+        kubectl ${1} -f "${FILE}"
+      else
+        echo "ERROR:${FILE} not found"
+      fi
+  # according to Ivan,
+  # Network-Attachment-Definition generated automatically, except for ib-sriov-cni and pkey
+  #   ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-network-attachment.sh ${NIDX}
+  #   kubectl ${1} set-last-applied -f "${DIR}/Network-Attachment-Definitions-${NIDX}.yaml" --create-annotation
+  #   kubectl ${1} -f "${DIR}/Network-Attachment-Definitions-${NIDX}.yaml"
+  done
   done
 }
