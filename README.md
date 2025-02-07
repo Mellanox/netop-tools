@@ -37,13 +37,13 @@ ready
 
 **cd ./uc**
 
-**./apply-network-cr.sh** \# use global\_ops.cfg (includes
+**${NETOP_ROOT_DIR}/ops/apply-network-cr.sh** \# use global\_ops.cfg (includes
 {USECASE}/netop.cfg)
 
 \# to apply the use case specific network resources
 
-**./mk-app.sh test** \# make the sample app
+**${NETOP_ROOT_DIR}/ops/mk-app.sh test** \# make the sample app
 
-**./run-app.sh test** \# run the created pod test app
+**${NETOP_ROOT_DIR}/ops/run-app.sh test** \# run the created pod test app
 
 \# use kubectl get pods --A to check the pod status
