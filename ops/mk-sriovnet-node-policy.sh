@@ -32,6 +32,6 @@ spec:
   resourceName: ${NETOP_RESOURCE}_${NDIX}
   nodeSelector:
     node-role.kubernetes.io/worker: ""
-     feature.node.kubernetes.io/pci-15b3.present: "true"
+    feature.node.kubernetes.io/pci-15b3.present: "true"
 HEREDOC
 echo ${FILE}
