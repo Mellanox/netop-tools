@@ -10,17 +10,15 @@ if [ "$#" -ne 3 ];then
   exit 1
 fi
 NIDX=${1}
-shift
-NETOP_SU=${1}
-shift
-NETOP_APP_NAMESPACE=${1}
-shift
-FILE="${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-cr.yaml"
+NETOP_SU=${2}
+NETOP_APP_NAMESPACE=${3}
+
+FILE="${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}-cr.yaml"
 cat <<HEREDOC1> ${FILE}
 apiVersion: sriovnetwork.openshift.io/v1
 kind: ${NETOP_NETWORK_TYPE}
 metadata:
-  name: "${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}"
+  name: "${FILE%%-cr.yaml}"
   namespace: ${NETOP_NAMESPACE}
 spec:
 HEREDOC1
@@ -33,5 +31,5 @@ cat <<HEREDOC2>> ${FILE}
   networkNamespace: "${NETOP_APP_NAMESPACE}"
   resourceName: "${NETOP_RESOURCE}_${NIDX}"
 HEREDOC2
-mk_ipam_cr ${NIDX} >> ${FILE}
+mk_ipam_cr ${NIDX} ${NETOP_SU} >> ${FILE}
 echo ${FILE}

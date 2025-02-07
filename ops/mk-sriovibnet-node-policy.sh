@@ -2,23 +2,22 @@
 #
 # https://github.com/k8snetworkplumbingwg/sriov-network-operator/tree/master
 #
-if [ "$#" -lt 2 ];then
-  echo "usage:$0 {NETWORK_NDIX} {PCI_DEVICE_LST}"
-  echo "example:$0 a 0000:24:00.0"
+if [ "$#" -lt 3 ];then
+  echo "usage:$0 {NETWORK_NDIX} {PCI_DEVICE_LST} ${NETOP_SU}"
+  echo "example:$0 a 0000:24:00.0 su-1"
   exit 1
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 NDIX="${1}"
-shift
-PCI_DEVICE_LST="${1}"
-shift
+PCI_DEVICE_LST="${2}"
+NETOP_SU="${3}"
 
-FILE="sriovnetwork-node-policy-${NDIX}.yaml"
-cat << HEREDOC > "${FILE}"
+FILE="${NETOP_NETWORK_NAME}-node-policy-${NDIX}-${NETOP_SU}.yaml"
+cat << HEREDOC > ${FILE}
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkNodePolicy
 metadata:
-  name: sriovibnet-node-policy-${NDIX}
+  name: ${FILE%%.yaml}
   namespace: ${NETOP_NAMESPACE}
 spec:
   deviceType: netdevice

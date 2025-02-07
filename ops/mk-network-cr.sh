@@ -56,11 +56,11 @@ for NETOP_SU in ${NETOP_SULIST[@]};do
     NDEV=`echo ${NIDXDEF}|cut -d',' -f4`
     case ${NETOP_NETWORK_TYPE} in
     SriovIBNetwork)
-      FILE=$( ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-node-policy.sh ${NIDX} ${NDEV} )
+      FILE=$( ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-node-policy.sh ${NIDX} ${NDEV} ${NETOP_SU})
       echo ${FILE}
       ;;
     SriovNetwork)
-      FILE=$( ${NETOP_ROOT_DIR}/ops/mk-sriovnet-node-policy.sh ${NIDX} ${NDEV} )
+      FILE=$( ${NETOP_ROOT_DIR}/ops/mk-sriovnet-node-policy.sh ${NIDX} ${NDEV} ${NETOP_SU})
       echo ${FILE}
       ;;
     esac
