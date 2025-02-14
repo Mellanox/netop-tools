@@ -31,9 +31,10 @@ spec:
           "type": "sriov",
           "ipam": {
             "type": "${IPAM_TYPE}",
-            "poolName": "${NETOP_NETWORK_POOL}"
+            "poolName": "${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}"
           }
         }
       ]
     }
 HEREDOC
+done
