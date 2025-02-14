@@ -42,7 +42,7 @@ function mkIPPoolCRDs()
 # the NetworkAttachmentDefintion generated automatically, 
 # except for ib-sriov-cni and pkey
 #
-function mkNetworkAttachmentDefiniotion()
+function mkNetworkAttachmentDefinition()
 {
   ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-network-attachment.sh ${NIDX}
   kubectl apply set-last-applied -f "${DIR}//Network-Attachment-Definitions-${NIDX}.yaml" --create-annotation
