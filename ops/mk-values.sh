@@ -204,5 +204,19 @@ function 24_10_1()
   pullSecrets
 # ofedDriver
 }
-NETOP_FUNCT=$(echo ${NETOP_VERSION} | sed 's/\./_/g')
+
+case ${NETOP_VERSION} in
+  24.10.0|24.10.1|25.1.0)
+    NETOP_FUNCT=24_10_1
+    ;;
+  24.7.0|24.1.1)
+    NETOP_FUNCT=24_7_0
+    ;;
+  *)
+    echo "Cannot detect function to execute for ${NETOP_VERSION}"
+    exit 1
+    ;;
+esac
+
+#NETOP_FUNCT=$(echo ${NETOP_VERSION} | sed 's/\./_/g')
 ${NETOP_FUNCT} > ./values.yaml
