@@ -15,12 +15,18 @@ case ${NETOP_VERSION} in
   MULTUS_VERSION="v4.1.0"
   RDMA_SDP_VERSION="v1.5.2"
   SRIOV_DP_VERSION="v3.8.0"
+  IPOIB_VERSION="v1.2.0"
+  NIC_FEATURE_VERSION="v0.0.1"
+  MAINTENANCE_OPERATOR_VERSION="v0.2.0"
   ;;&
 25.1.0)
   DOCA_VERSION="25.01-0.6.0.0-0"
   RDMA_SDP_VERSION="v1.5.2"
   SRIOV_DP_VERSION="v3.9.0"
   MULTUS_VERSION="v4.1.0"
+  IPOIB_VERSION="v1.2.1"
+  NIC_FEATURE_VERSION="v0.0.1"
+  MAINTENANCE_OPERATOR_VERSION="v0.2.0"
   ;;&
 *)
   DOCA_VERSION=${DOCA_VERSION:-"24.10-0.7.0.0-0"}
@@ -28,6 +34,8 @@ case ${NETOP_VERSION} in
   CNI_PLUGINS_VERSION=${CNI_PLUGINS_VERSION:-"v1.5.0"}
   WHEREABOUTS_VERSION=${WHEREABOUTS_VERSION:-"v0.7.0"}
   NVIPAM_VERSION=${NVIPAM_VERSION:-"v0.2.0"}
+  IB_KUBERNETES_VERSION=${IB_KUBERNETES:-"v1.1.0"}
+  #NODE_FEATURE_VERSION=${NODE_FEATURE_VERSION:-"v0.15.6"}
   ;;
 esac
 function ofedDriver()
@@ -201,6 +209,39 @@ cat << NVIPAM
 NVIPAM
 fi
 }
+function nicFeatureDiscovery()
+{
+  if [ "${NIC_FEATURE_VERSION}" != "" ];then
+cat << NIC_FEATURE_DISCOVERY
+  nicFeatureDiscovery:
+    image: nic-feature-discovery
+    repository: ghcr.io/mellanox
+    version: ${NIC_FEATURE_VERSION}
+NIC_FEATURE_DISCOVERY
+  fi
+}
+function nodeFeatureDiscovery()
+{
+  if [ "${NODE_FEATURE_VERSION}" != "" ];then
+cat << NODE_FEATURE_DISCOVERY
+  nodeFeatureDiscovery:
+    image: node-feature-discovery
+    repository: registry.k8s.io/nfd
+    version: ${NODE_FEATURE_VERSION}
+NODE_FEATURE_DISCOVERY
+  fi
+}
+function maintenanceOperator()
+{
+  if [ "${MAINTENANCE_OPERATOR_VERSION}" != "" ];then
+cat << MAINTENANCE_OPERATOR
+  nodeFeatureDiscovery:
+    image: maintenance-operator
+    repository: ghcr.io/mellanox
+    version: ${MAINTENANCE_OPERATOR_VERSION}
+MAINTENANCE_OPERATOR
+  fi
+}
 FILE="NicClusterPolicy.yaml"
 cat << HEREDOC1 > ${FILE}
 apiVersion: mellanox.com/v1alpha1
@@ -226,3 +267,4 @@ hostdev_rdma_sriov)
 esac
 secondaryNetwork >> ${FILE}
 nvIpam >> ${FILE}
+nicFeatureDiscovery >> ${FILE}
