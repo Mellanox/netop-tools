@@ -4,36 +4,36 @@
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 if $# -lt 1 ];then
-  echo "usage:$0 connectx4|connectx4lx|connectx5|connectx5-ex|connectx6|connectx6dx|connectx6lx|connect7|connectx8|bf2|bf3"
+  echo "usage:$0 connectx-4|connectx-4lx|connectx-5|connectx-5-ex|connectx-6|connectx-6dx|connectx-6lx|connectx-7|connectx-8|bf2|bf3"
   exit 1
 fi
-for DEVICE_TYPE in ${*};do
+for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
   case ${DEVICE_TYPE} in
-  connectx4)
+  connectx-4)
     NIC_TYPE=1013
     ;;
-  connectx4lx)
+  connectx-4lx)
     NIC_TYPE=1015
     ;;
-  connectx5)
+  connectx-5)
     NIC_TYPE=1017
     ;;
-  connectx5-ex)
+  connectx-5-ex)
     NIC_TYPE=1019
     ;;
-  connectx6)
+  connectx-6)
     NIC_TYPE=101b
     ;;
-  connectx6dx)
+  connectx-6dx)
     NIC_TYPE=101d
     ;;
-  connectx6lx)
+  connectx-6lx)
     NIC_TYPE=101f
     ;;
-  connectx7)
+  connectx-7)
     NIC_TYPE=1021
     ;;
-  connectx8)
+  connectx-8)
     NIC_TYPE=1023
     ;;
   bf2)
