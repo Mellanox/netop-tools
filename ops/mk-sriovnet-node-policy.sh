@@ -25,7 +25,7 @@ spec:
   nicSelector:
     vendor: "15b3"
     rootDevices: [ "${PCI_DEVICE_LST}" ]
-  numVfs: 8
+  numVfs: ${NUM_VFS}
   linkType: ETH
   priority: 90    # used to resolve multiple policy definitions, lower value, higher priority
   isRdma: true
