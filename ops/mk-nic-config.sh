@@ -3,10 +3,6 @@
 #
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
-if $# -lt 1 ];then
-  echo "usage:$0 connectx-4|connectx-4lx|connectx-5|connectx-5-ex|connectx-6|connectx-6dx|connectx-6lx|connectx-7|connectx-8|bf2|bf3"
-  exit 1
-fi
 for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
   case ${DEVICE_TYPE} in
   connectx-4)
