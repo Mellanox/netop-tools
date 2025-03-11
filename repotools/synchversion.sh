@@ -2,4 +2,4 @@
 #
 #
 #
-./syncmaster.sh master "24.10.1"
+./syncmaster.sh master "${NETOP_VERSION}"
