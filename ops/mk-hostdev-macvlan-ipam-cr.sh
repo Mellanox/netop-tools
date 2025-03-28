@@ -43,6 +43,6 @@ spec:
   mode: "bridge"
   mtu: 1500
 HEREDOC
-mk_ipam_cr ${NIDX}-${NETOP_SU} >> "${FILE}"
+mk_ipam_cr ${NIDX} ${NETOP_SU} >> "${FILE}"
 echo ${FILE}
 # "gateway": "${NETOP_NETWORK_GW}" # for ipam config above may need to set depending on fabric design
