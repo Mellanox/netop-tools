@@ -25,7 +25,9 @@ HEREDOC1
 function nv_ipam_config()
 {
 NIDX=${1}
-NETOP_SU=${2}
+shift
+NETOP_SU=${1}
+shift
 
 cat <<HEREDOC2
   ipam: |
@@ -45,7 +47,9 @@ HEREDOC2
 function dhcp_config()
 {
 NIDX=${1}
-NETOP_SU=${2}
+shift
+NETOP_SU=${1}
+shift
 
 cat <<HEREDOC3
   ipam: |
