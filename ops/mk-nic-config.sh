@@ -1,44 +1,24 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 #
 #
+declare -A NIC_TYPE_MAP
+NIC_TYPE_MAP=(
+  [connectx-4]=1013
+  [connectx-4lx]=1015
+  [connectx-5]=1017
+  [connectx-5-ex]=1019
+  [connectx-6]=101b
+  [connectx-6dx]=101d
+  [connectx-6lx]=101f
+  [connectx-7]=1021
+  [connectx-8]=1023
+  [bf2]=a2d6
+  [bf3]=a2dc
+)
+
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
-  case ${DEVICE_TYPE} in
-  connectx-4)
-    NIC_TYPE=1013
-    ;;
-  connectx-4lx)
-    NIC_TYPE=1015
-    ;;
-  connectx-5)
-    NIC_TYPE=1017
-    ;;
-  connectx-5-ex)
-    NIC_TYPE=1019
-    ;;
-  connectx-6)
-    NIC_TYPE=101b
-    ;;
-  connectx-6dx)
-    NIC_TYPE=101d
-    ;;
-  connectx-6lx)
-    NIC_TYPE=101f
-    ;;
-  connectx-7)
-    NIC_TYPE=1021
-    ;;
-  connectx-8)
-    NIC_TYPE=1023
-    ;;
-  bf2)
-    NIC_TYPE=a2d6
-    ;;
-  bf3)
-    NIC_TYPE=a2dc
-    ;;
-  esac
   case ${USECASE} in
   hostdev_rdma_sriov|sriovnet_rdma|macvlan_rdma_shared_device)
     LINK_TYPE="Ethernet"
@@ -62,7 +42,7 @@ spec:
       feature.node.kubernetes.io/network-sriov.capable: "true"
    nicSelector:
       # nicType selector is mandatory the rest are optional. Only a single type can be specified.
-      nicType: ${NIC_TYPE}
+      nicType: ${NIC_TYPE_MAP[${DEVICE_TYPE}]}
 #      pciAddresses:
 #         - "0000:07:00.0"
 #         - “0000:08:00.0”
