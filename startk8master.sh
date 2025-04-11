@@ -11,4 +11,4 @@ cd ${NETOP_ROOT_DIR}/install
 ./ins-k8master.sh init
 ./ins-k8master.sh calico
 ./ins-k8master.sh netop
-kubectl get nodes
+${K8CL} get nodes

@@ -18,4 +18,4 @@ IPPOOL=${1}
 shift
 NS=${1:-${NETOP_NAMESPACE}}
 shift
-kubectl -n ${NS} get ippool.nv-ipam.nvidia.com/${IPPOOL} -o yaml
+${K8CL} -n ${NS} get ippool.nv-ipam.nvidia.com/${IPPOOL} -o yaml

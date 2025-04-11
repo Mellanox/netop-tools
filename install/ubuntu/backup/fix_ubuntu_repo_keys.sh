@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 #
+source ${NETOP_ROOT_DIR}/global_ops.cfg
 function fix1()
 {
 curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
@@ -18,7 +19,7 @@ curl -4 -s https://dl.k8s.io/apt/doc/apt-key.gpg | apt-key add -
 touch /etc/apt/sources.list.d/kubernetes.list
 echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list
 apt-get update
-apt-get install -y kubectl
+apt-get install -y ${K8CL}
 }
 function fix4()
 {

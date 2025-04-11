@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # install packages needed to use the Kubernetes repository:
-# https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-using-native-package-management
+# https://kubernetes.io/docs/tasks/tools/install-${K8CL}-linux/#install-using-native-package-management
 #
 # install default plugins
 #
@@ -48,10 +48,10 @@ lldpcli show neighbors
 #
 #
 setup_repo
-dnf install -y kubectl kubelet kubeadm --disableexcludes=kubernetes
+dnf install -y ${K8CL} kubelet kubeadm --disableexcludes=kubernetes
 #
 # config details here:
-# https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
+# https://kubernetes.io/docs/tasks/tools/install-${K8CL}-linux/
 #
 systemctl enable --now kubelet
 #systemctl disable ufw

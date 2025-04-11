@@ -9,4 +9,4 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 #./insk8master.sh calico
 #./insk8master.sh netop
 #./insk8master.sh debug
-kubectl get nodes
+${K8CL} get nodes

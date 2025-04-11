@@ -14,5 +14,5 @@ cmdNetworkCRDs apply
 #
 # verify the network devices
 #
-${docmd} kubectl get ${NETOP_NETWORK_TYPE}
+${docmd} ${K8CL} get ${NETOP_NETWORK_TYPE}
 ${NETOP_ROOT_DIR}/ops/getnetwork.sh

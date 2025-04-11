@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # config details here:
-# https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
+# https://kubernetes.io/docs/tasks/tools/install-${K8CL}-linux/
 #
 function restart()
 {

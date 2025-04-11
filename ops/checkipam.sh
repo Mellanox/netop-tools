@@ -1,5 +1,6 @@
 #!/bin/bash
 #
 #
-kubectl get nodes -o=custom-columns='NAME:metadata.name,ANNOTATION:metadata.annotations.ipam\.nvidia\.com/ip-blocks'
-kubectl get nodes -o=custom-columns='NAME:metadata.name,ANNOTATION:metadata.annotations.'
+source ${NETOP_ROOT_DIR}/global_ops.cfg
+${K8CL} get nodes -o=custom-columns='NAME:metadata.name,ANNOTATION:metadata.annotations.ipam\.nvidia\.com/ip-blocks'
+${K8CL} get nodes -o=custom-columns='NAME:metadata.name,ANNOTATION:metadata.annotations.'

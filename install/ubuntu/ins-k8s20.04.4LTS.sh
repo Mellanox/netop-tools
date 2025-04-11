@@ -33,8 +33,8 @@ apt-get update -y
 apt-get install -y apt-transport-https ca-certificates curl gnupg
 keyring2004
 #Note:
-#To upgrade kubectl to another minor release, you'll need to bump the version in /etc/apt/sources.list.d/kubernetes.list before running apt-get update and apt-get upgrade. This procedure is described in more detail in Changing The Kubernetes Package Repository.
-# Update apt package index, then install kubectl:
+#To upgrade ${K8CL} to another minor release, you'll need to bump the version in /etc/apt/sources.list.d/kubernetes.list before running apt-get update and apt-get upgrade. This procedure is described in more detail in Changing The Kubernetes Package Repository.
+# Update apt package index, then install ${K8CL}:
 
 apt-get update -y
-apt-get install -y kubectl kubelet kubeadm jq
+apt-get install -y ${K8CL} kubelet kubeadm jq

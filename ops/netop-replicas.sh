@@ -8,4 +8,5 @@ if [ "$#" -lt 1 ];then
   echo "usage:$0 {NUM_REPLICAS}"
   exit 1
 fi
-kubectl -n ${NETOP_NAMESPACE} scale deployment network-operator --replicas ${1}
+source ${NETOP_ROOT_DIR}/global_ops.cfg
+${K8CL} -n ${NETOP_NAMESPACE} scale deployment network-operator --replicas ${1}

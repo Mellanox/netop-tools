@@ -2,6 +2,7 @@
 #
 # get ippool resource
 #
+source ${NETOP_ROOT_DIR}/global_ops.cfg
 case $# in
 1|2)
   ;;
@@ -17,4 +18,4 @@ CIDRPOOL=${1}
 shift
 NS=${1:-${NETOP_NAMESPACE}}
 shift
-kubectl -n ${NS} get cidrpool.nv-ipam.nvidia.com/${CIDRPOOL} -o yaml
+${K8CL} -n ${NS} get cidrpool.nv-ipam.nvidia.com/${CIDRPOOL} -o yaml

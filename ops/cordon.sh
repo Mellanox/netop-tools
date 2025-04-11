@@ -4,10 +4,10 @@
 #
 function cordon()
 {
-  NODES=`kubectl get nodes | grep worker | grep -v SchedulingDisabled | cut -d' ' -f1`
+  NODES=`${K8CL} get nodes | grep worker | grep -v SchedulingDisabled | cut -d' ' -f1`
   for NODE in ${NODES};do
     echo "cordon ${NODE}"
-    kubectl cordon ${NODE}
+    ${K8CL} cordon ${NODE}
   done
 }
 #
@@ -15,9 +15,9 @@ function cordon()
 #
 function uncordon()
 {
-  NODES=`kubectl get nodes | grep worker | grep SchedulingDisabled | cut -d' ' -f1`
+  NODES=`${K8CL} get nodes | grep worker | grep SchedulingDisabled | cut -d' ' -f1`
   for NODE in ${NODES};do
     echo "uncordon ${NODE}"
-    kubectl uncordon ${NODE}
+    ${K8CL} uncordon ${NODE}
   done
 }

@@ -1,4 +1,5 @@
 #!/bin/bash
 #
 #
-kubectl get endpoints kubernetes
+source ${NETOP_ROOT_DIR}/global_ops.cfg
+${K8CL} get endpoints kubernetes

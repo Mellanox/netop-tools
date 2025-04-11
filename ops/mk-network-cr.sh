@@ -45,7 +45,7 @@ function mkIPPoolCRDs()
 function mkNetworkAttachmentDefinition()
 {
   ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-network-attachment.sh ${NIDX}
-  kubectl apply set-last-applied -f "${DIR}//Network-Attachment-Definitions-${NIDX}.yaml" --create-annotation
+  ${docmd} ${K8CL} apply set-last-applied -f "${DIR}//Network-Attachment-Definitions-${NIDX}.yaml" --create-annotation
 }
 #
 # based on the NETOP_NETWORK_TYPE define the network CRDs
