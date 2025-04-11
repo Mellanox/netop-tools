@@ -2,7 +2,7 @@
 #
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
-echo NetworkAttachmentDefinitions
+echo "NetworkAttachmentDefinitions"
 kubectl get Network-Attachment-Definitions -A
 echo "NETOP_NETWORK_TYPE:${NETOP_NETWORK_TYPE}"
 kubectl get ${NETOP_NETWORK_TYPE} -A
