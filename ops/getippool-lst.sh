@@ -17,5 +17,5 @@ esac
 shift
 NS=${1:-${NETOP_NAMESPACE}}
 shift
-#kubectl -n ${NS} get ippool.nv-ipam.nvidia.com -o yaml
-kubectl -n ${NS} get ippool.nv-ipam.nvidia.com
+#${K8CL} -n ${NS} get ippool.nv-ipam.nvidia.com -o yaml
+${K8CL} -n ${NS} get ippool.nv-ipam.nvidia.com

@@ -1,4 +1,5 @@
 #!/bin/bash
 #
 #
-kubectl get crds
+source ${NETOP_ROOT_DIR}/global_ops.cfg
+${K8CL} get crds

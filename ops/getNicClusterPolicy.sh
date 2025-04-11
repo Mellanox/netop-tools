@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 #
+source ${NETOP_ROOT_DIR}/global_ops.cfg
 # produces the same output
-#kubectl get nicclusterpolicies.mellanox.com nic-cluster-policy -o yaml
-kubectl get NicClusterPolicy nic-cluster-policy -o yaml
+#${K8CL} get nicclusterpolicies.mellanox.com nic-cluster-policy -o yaml
+${K8CL} get NicClusterPolicy nic-cluster-policy -o yaml

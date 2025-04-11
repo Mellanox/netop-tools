@@ -10,7 +10,7 @@
 # and replace it with '~1'
 
 #Running the script
-# Before running the script, run 'kubectl proxy' to create a local proxy to the Kubernetes API
+# Before running the script, run '${K8CL} proxy' to create a local proxy to the Kubernetes API
 # Then run the script with the node name and resource name as arguments
 # Example: ./delete_capacity.sh node1 nvidia.com/sriov_resource_a
 

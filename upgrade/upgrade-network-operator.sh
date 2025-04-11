@@ -12,7 +12,7 @@ cordon
 pushd .
 export NETOP_CHART_DIR="${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart"
 cd ${NETOP_CHART_DIR}
-kubectl scale deployment --replicas=0 -n ${NETOP_NAMESPACE} network-operator
+${K8CL} scale deployment --replicas=0 -n ${NETOP_NAMESPACE} network-operator
 popd
 pushd .
 USECASE_DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
@@ -20,11 +20,11 @@ cd ${USECASE_DIR}
 ${NETOP_ROOT_DIR}/ops/mk-values.sh
 ${NETOP_ROOT_DIR}/ops/mk-nic-cluster-policy.sh
 ${NETOP_ROOT_DIR}/ops/mk-network-cr.sh
-kubectl apply -f NicClusterPolicy.yaml
+${K8CL} apply -f NicClusterPolicy.yaml
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
   ${NETOP_ROOT_DIR}/ops/mk-nic-config.sh
   for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
-    kubectl appy -f ${USECASE_DIR}/nic-config-crd-${DEVICE_TYPE}.yaml
+    ${K8CL} appy -f ${USECASE_DIR}/nic-config-crd-${DEVICE_TYPE}.yaml
   done
 fi
 popd

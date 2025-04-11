@@ -69,7 +69,7 @@ source ./cordon.sh
 source ./netchartlnks.sh
 cordon
 cd netop-chart
-kubectl scale deployment --replicas=0 -n ${NETOP_NAMESPACE} network-operator
+${K8CL} scale deployment --replicas=0 -n ${NETOP_NAMESPACE} network-operator
 ../applycrds.sh
 helm upgrade -n ${NETOP_NAMESPACE}  network-operator network-operator  -f ../network-operator-values-${NETOP_VERSION}.yaml
 uncordon

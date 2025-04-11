@@ -1,6 +1,7 @@
 #!/bin/bash
 #
+source ${NETOP_ROOT_DIR}/global_ops.cfg
 # get the node resources
-#kubectl get no -o json | jq -r '[.items[] | {name:.metadata.name, allocable:.status.allocatable}]'
-kubectl get no -o json | jq -r '[.items[] | {name:.metadata.name, allocable:.status}]'
+#${K8CL} get no -o json | jq -r '[.items[] | {name:.metadata.name, allocable:.status.allocatable}]'
+${K8CL} get no -o json | jq -r '[.items[] | {name:.metadata.name, allocable:.status}]'
 

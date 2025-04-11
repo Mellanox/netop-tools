@@ -40,7 +40,7 @@ function keyring2204()
 }
 keyring2204
 #
-# Update apt package index with the new repository and install kubectl:
+# Update apt package index with the new repository and install ${K8CL}:
 #
 apt-get update
 #
@@ -67,7 +67,7 @@ fi
 # apt install -y podman-docker
 # We are using containerd, not podman
 #
-apt-get install -y kubectl kubelet kubeadm jq
+apt-get install -y ${K8CL} kubelet kubeadm jq
 #
 # install default plugins
 #

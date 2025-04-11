@@ -23,7 +23,7 @@ fi
 apt-get update
 apt-get install -y apt-transport-https ca-certificates curl
 #gpgkeys done in other script
-# Update apt package index with the new repository and install kubectl:
+# Update apt package index with the new repository and install ${K8CL}:
 #
 apt-get update
 #
@@ -39,7 +39,7 @@ apt install -y net-tools
 apt-get install -y kubectl kubelet kubeadm jq
 #
 # config details here:
-# https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
+# https://kubernetes.io/docs/tasks/tools/install-${K8CL}-linux/
 #
 systemctl enable --now kubelet
 #

@@ -2,4 +2,4 @@
 #
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
-kubectl edit Network-Attachment-Definitions -o yaml -n ${NETOP_NAMESPACE}
+${K8CL} edit Network-Attachment-Definitions -o yaml -n ${NETOP_NAMESPACE}
