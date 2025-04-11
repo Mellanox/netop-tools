@@ -9,8 +9,9 @@ SriovNetwork|SriovIBNetwork)
   cmdSriovNodePolicy apply
   ;;
 esac 
-cmdIPAM_CRDs apply
 cmdNetworkCRDs apply
+sleep 5
+cmdIPAM_CRDs apply
 #
 # verify the network devices
 #
