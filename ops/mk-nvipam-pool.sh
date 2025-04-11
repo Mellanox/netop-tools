@@ -1,4 +1,4 @@
-#!/bin/bash -xe
+#!/bin/bash
 #
 # define nvipam resources
 #

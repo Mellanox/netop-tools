@@ -1,4 +1,4 @@
-#!/bin/bash -xe
+#!/bin/bash
 #
 # install packages needed to use the Kubernetes repository:
 # https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-using-native-package-management

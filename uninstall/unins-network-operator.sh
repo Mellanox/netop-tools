@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # uninstall the network-operator and remove the namespace
 #

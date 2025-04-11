@@ -1,4 +1,4 @@
-#!/bin/bash -xe
+#!/bin/bash
 #
 # Update the apt package index and install packages needed to use the Kubernetes apt repository:
 #

@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # apply config changes, upgrade network-operator, apply network
 #
