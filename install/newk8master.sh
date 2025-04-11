@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # restart k8 master
 #

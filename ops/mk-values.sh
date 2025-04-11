@@ -5,7 +5,6 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 NFD_ENABLE=${NFD_ENABLE:-true}
 NIC_CONFIG_ENABLE=${NIC_CONFIG_ENABLE:-true}
 
-set -x
 function sriovNetworkOperator()
 {
 case ${USECASE} in

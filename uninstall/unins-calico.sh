@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # https://docs.tigera.io/calico/3.25/getting-started/kubernetes/helm
 #

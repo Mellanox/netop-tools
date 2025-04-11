@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # https://yourdevopsmentor.com/blog/how-to-stop-all-kubernetes-deployments/
 # https://www.bmc.com/blogs/kubernetes-daemonset/

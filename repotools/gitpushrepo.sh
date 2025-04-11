@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # for the current commits:
 #  create a branch

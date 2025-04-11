@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # ${1}=client pod
 # ${2}=target server pod

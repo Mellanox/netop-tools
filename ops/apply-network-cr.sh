@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # create the 2ndary networks, ip pools, sriov policy files
 # typically in a GPU/NIC system you'll deploy multiple parallel 2ndary networks.

@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # run on the worker nodes
 #

@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # rm k8 master
 #

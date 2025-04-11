@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # use ${IPAM_TYPE} install of ipam for small clusters
 #
