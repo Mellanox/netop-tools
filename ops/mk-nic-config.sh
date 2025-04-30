@@ -19,6 +19,7 @@ NIC_TYPE_MAP=(
 
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
+  NIC_TYPE=${NIC_TYPE_MAP[${DEVICE_TYPE}]:-"unknown"}
   case ${USECASE} in
   hostdev_rdma_sriov|sriovnet_rdma|macvlan_rdma_shared_device)
     LINK_TYPE="Ethernet"
@@ -42,7 +43,7 @@ spec:
       feature.node.kubernetes.io/network-sriov.capable: "true"
    nicSelector:
       # nicType selector is mandatory the rest are optional. Only a single type can be specified.
-      nicType: ${NIC_TYPE_MAP[${DEVICE_TYPE}]}
+      nicType: ${NIC_TYPE}
 #      pciAddresses:
 #         - "0000:07:00.0"
 #         - “0000:08:00.0”
