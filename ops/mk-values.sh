@@ -17,6 +17,13 @@ esac
 cat << SRIOV_NETWORK_OPERATOR
 sriovNetworkOperator:
   enabled: ${SRIOVNET}
+sriov-network-operator:
+  sriovOperatorConfig:
+    configDaemonNodeSelector:
+      node-role.kubernetes.io/worker: ""
+    featureGates:
+      parallelNicConfig: true
+      mellanoxFirmwareReset: false
 SRIOV_NETWORK_OPERATOR
 }
 function pullSecrets()
