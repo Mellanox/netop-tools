@@ -13,3 +13,4 @@ export CUDA_H_PATH="/usr/local/cuda/include/cuda.h"
 make -j "$(($(nproc) + 1))"
 make install
 source /root/perftestenv.sh
+./install_perftest_cuda.sh
