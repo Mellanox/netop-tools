@@ -1,0 +1,41 @@
+name: default
+
+on: [push]
+
+jobs:
+#  hostdev_rdma_sriov:
+#    env:
+#      NETOP_ROOT_DIR: ./
+#      USECASE: hostdev_rdma_sriov
+#    runs-on: ubuntu-22.04
+#    defaults:
+#      run:
+#        shell: bash
+#        working-directory: ./
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Create config files
+#        run: |
+#          source $NETOP_ROOT_DIR/global_ops.cfg
+#          source NETOP_ROOT_DIR.sh
+#          echo "USECASE: $USECASE"
+#          echo "NETOP_ROOT_DIR: $NETOP_ROOT_DIR"
+#          echo "NETOP_NETLIST: $NETOP_NETLIST"
+#          $NETOP_ROOT_DIR/install/ins-network-operator.sh
+#          ls -la uc/
+  all-tests:
+    env:
+      NETOP_ROOT_DIR: ./
+      USECASE: sriovnet_rdma
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create config files
+        run: |
+          source NETOP_ROOT_DIR.sh
+          ${NETOP_ROOT_DIR}/tests/unitest.sh
+

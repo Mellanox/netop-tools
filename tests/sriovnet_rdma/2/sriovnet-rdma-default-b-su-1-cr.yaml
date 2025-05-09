@@ -1,0 +1,21 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: "sriovnet-rdma-default-b-su-1"
+  namespace: nvidia-network-operator
+spec:
+  vlan: 0
+  networkNamespace: "default"
+  resourceName: "sriov_resource_b"
+  ipam: |
+    {
+      "type": "whereabouts",
+      "datastore": "kubernetes",
+      "kubernetes": {
+        "kubeconfig": "/etc/cni/net.d/whereabouts.d/whereabouts.kubeconfig"
+      },
+      "range": "192.169.0.0/16",
+      "exclude": [],
+      "log_file": "/var/log/whereabouts.log",
+      "log_level": "info"
+    }
