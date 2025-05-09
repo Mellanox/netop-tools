@@ -7,7 +7,7 @@ ${NETOP_ROOT_DIR}/setuc.sh
 USECASE_DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
 ${docmd} systemctl restart kubelet
 #helm install -n ${NETOP_NAMESPACE} --create-namespace network-operator ./network-operator
-X=`${K8CL} get ns | grep -c "^${NETOP_NAMESPACE} "`
+X=`${docmd} ${K8CL} get ns | grep -c "^${NETOP_NAMESPACE} "`
 if [ "${X}" = "0" ];then 
   ${docmd} ${K8CL} create ns ${NETOP_NAMESPACE}
 fi
