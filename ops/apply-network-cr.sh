@@ -15,5 +15,8 @@ cmdIPAM_CRDs apply
 #
 # verify the network devices
 #
-${docmd} ${K8CL} get ${NETOP_NETWORK_TYPE}
-${NETOP_ROOT_DIR}/ops/getnetwork.sh
+
+if [ "${CREATE_CONFIG_ONLY}" != "1" ];then
+  ${K8CL} get ${NETOP_NETWORK_TYPE}
+  ${NETOP_ROOT_DIR}/ops/getnetwork.sh
+fi
