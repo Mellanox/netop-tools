@@ -10,7 +10,9 @@ SriovNetwork|SriovIBNetwork)
   ;;
 esac 
 cmdNetworkCRDs apply
-sleep 5
+if [ "${CREATE_CONFIG_ONLY}" != "1" ];then
+  sleep 5
+fi
 cmdIPAM_CRDs apply
 #
 # verify the network devices
