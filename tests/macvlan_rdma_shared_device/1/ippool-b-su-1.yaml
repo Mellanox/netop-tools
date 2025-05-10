@@ -1,0 +1,16 @@
+apiVersion: nv-ipam.nvidia.com/v1alpha1
+kind: IPPool
+metadata:
+  name: macvlan-pool-b-su-1
+  namespace: nvidia-network-operator
+spec:
+  subnet: 192.170.0.0/16
+  perNodeBlockSize: 32
+  gateway: 192.170.0.1
+  nodeSelector:
+    nodeSelectorTerms:
+    - matchExpressions:
+      - key: node-role.kubernetes.io/worker
+        operator: Exists
+#     - key: node.su/su-1
+#       operator: Exists
