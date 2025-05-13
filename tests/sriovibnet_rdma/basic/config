@@ -1,0 +1,18 @@
+NETOP_VERSION=25.1.0
+
+#IPAM_TYPE="whereabouts"
+
+IPAM_TYPE="nv-ipam"
+#export NVIPAM_POOL_TYPE="CIDRPool"
+NVIPAM_POOL_TYPE="IPPool"
+
+USECASE="sriovibnet_rdma"
+NETOP_NETLIST=( a,,,0000:81:00.0 )
+
+
+
+CREATE_CONFIG_ONLY="1"
+NIC_CONFIG_ENABLE="false"
+DEVICE_TYPES=( "Connectx-5 Ex")
+NUM_VFS=4
+#RDMASHAREDMODE=false
