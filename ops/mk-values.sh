@@ -13,6 +13,7 @@ sriovnet_rdma|sriovibnet_rdma)
   ;;
 *)
   SRIOVNET="false"
+  return
 esac
 cat << SRIOV_NETWORK_OPERATOR
 sriovNetworkOperator:
