@@ -15,6 +15,6 @@ NVIPAM_POOL_TYPE="IPPool"
 #USECASE="macvlan_rdma_shared_device"
 #NETOP_NETLIST=( a,,16,ens2f0np0 b,,16,ens2f1np1 )
 
-NIC_CONFIG_ENABLE="false"
+#NIC_CONFIG_ENABLE="false"
 #DEVICE_TYPES=( "Connectx-5 Ex")
 #RDMASHAREDMODE=false
