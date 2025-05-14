@@ -55,6 +55,8 @@ cat << OFED_DRIVER
       value: "true"
     - name: CREATE_IFNAMES_UDEV
       value: "true"
+    - name: OFED_BLACKLIST_MODULES_FILE
+      value: "/host/etc/modprobe.d/blacklist-ofed-modules.conf"
     startupProbe:
       initialDelaySeconds: 10
       periodSeconds: 20
