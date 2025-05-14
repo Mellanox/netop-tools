@@ -21,7 +21,7 @@ metadata:
   namespace: ${NETOP_NAMESPACE}
 spec:
   deviceType: netdevice
-  mtu: 1500
+  mtu: ${NETOP_MTU}
   nicSelector:
     vendor: "15b3"
     rootDevices: [ "${PCI_DEVICE_LST}" ]

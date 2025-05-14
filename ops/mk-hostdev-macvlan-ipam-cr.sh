@@ -41,7 +41,7 @@ spec:
   networkNamespace: "${NETOP_APP_NAMESPACE}"
   master: "${NDEV}"
   mode: "bridge"
-  mtu: 1500
+  mtu: ${NETOP_MTU}
 HEREDOC
 mk_ipam_cr ${NIDX} ${NETOP_SU} >> "${FILE}"
 echo ${FILE}
