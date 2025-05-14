@@ -2,7 +2,7 @@ ARG D_CUDA_IMAGE=nvidia/cuda:12.6.2-devel-ubuntu24.04
 #FROM ubuntu:24.04
 FROM ${D_CUDA_IMAGE} as build
  
-COPY ./ib_top ./getpkgs.sh ./rdmadebug.sh ./mlnx_tools.sh ./rdma-core.sh ./perftestcuda.sh ./perftestenv.sh ./tcpdumprdma.sh ./install_perftest_cuda.sh /root/
+COPY ./ib_top ./getpkgs.sh ./rdmadebug.sh ./mlnx_tools.sh ./rdma-core.sh ./perftestcuda.sh ./perftestenv.sh ./tcpdumprdma.sh ./install_perftest_cuda.sh ./k8s-netdev-mapping.sh /root/
 RUN DEBIAN_FRONTEND=noninteractive /root/getpkgs.sh && /root/rdmadebug.sh && /root/perftestcuda.sh
 #RUN for F in /usr/bin/ib_*;do setcap cap_ipc_lock=+ep $F;done
 WORKDIR /home/perftest
