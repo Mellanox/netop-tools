@@ -54,6 +54,7 @@ function values_yaml()
 cat <<VALUES_YAML
 nfd:
   enabled: ${NFD_ENABLE}
+  NodeFeatureRule: ${NFD_ENABLE}
 nicConfigurationOperator:
   enabled: ${NIC_CONFIG_ENABLE}
 maintenanceOperator:
