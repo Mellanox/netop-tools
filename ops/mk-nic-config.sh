@@ -56,7 +56,7 @@ spec:
       linkType: ${LINK_TYPE}
       pciPerformanceOptimized:
          enabled: true
-         maxAccOutRead: 44
+         maxAccOutRead: 0 # see https://github.com/Mellanox/nic-configuration-operator/blob/main/README.md for details
          maxReadRequest: 4096
       roceOptimized:
          enabled: ${ROCE_OPTIMIZED}
