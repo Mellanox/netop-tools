@@ -27,13 +27,13 @@ echo -e "-------\t--------\t-------\t---------\t---------------\t---------------
 
 
 # Loop over available netdevs 'net1', 'net2', etc
-./show_gids | grep v2 | grep -v fe80 | cut -f 7 | while read NET_DEV;do
+/root/show_gids | grep v2 | grep -v fe80 | cut -f 7 | while read NET_DEV;do
   # print net dev
   #echo "For net dev:  ${NET_DEV}"
 
   # Get rdma netdev
   #RDMA_DEV=$(rdma link | grep netdev | grep ${NET_DEV} | cut -d ' ' -f2 | cut -d '/' -f1)
-  RDMA_DEV=$(./show_gids | grep -i ${NET_DEV} | grep v2 | grep -v fe80 | cut -f1)
+  RDMA_DEV=$(/root/show_gids | grep -i ${NET_DEV} | grep v2 | grep -v fe80 | cut -f1)
   #echo ${NET_DEV} = ${RDMA_DEV}
   
   # Check dmesg for the vf

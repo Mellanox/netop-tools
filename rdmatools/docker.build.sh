@@ -7,6 +7,7 @@ if [ $? != 0 ];then
   echo "usage:$0 Dockerfile.{rdmadbg|rdmadbg_cuda}"
   exit 1
 fi
+chmod +x *.sh show_gids
 CTR=$(which ctr)
 if [ "${CTR}" = "" ];then
   echo "missing ctr tool in '$PATH'"
