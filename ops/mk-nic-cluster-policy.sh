@@ -40,7 +40,7 @@ case ${NETOP_VERSION} in
 esac
 function ofedDriver()
 {
-cat << OFED_DRIVER
+cat << OFED_DRIVER0
   ofedDriver:
     image: doca-driver
     repository: nvcr.io/nvidia/mellanox
@@ -55,6 +55,17 @@ cat << OFED_DRIVER
       value: "true"
     - name: CREATE_IFNAMES_UDEV
       value: "true"
+OFED_DRIVER0
+    #
+    # should be fixed in 25.4.0
+    #
+    if [ "${BLACKLIST}" = "true" ];then
+cat << OFED_DRIVER1
+    - name: OFED_BLACKLIST_MODULES_FILE
+      value: "/host/etc/modprobe.d/blacklist-ofed-modules.conf"
+OFED_DRIVER1
+fi
+cat << OFED_DRIVER2
     startupProbe:
       initialDelaySeconds: 10
       periodSeconds: 20
@@ -74,7 +85,7 @@ cat << OFED_DRIVER
         podSelector: ""
         timeoutSeconds: 300
         deleteEmptyDir: true
-OFED_DRIVER
+OFED_DRIVER2
 }
 function sriovDevicePlugin()
 {
