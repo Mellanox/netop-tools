@@ -71,6 +71,26 @@ cat <<HEREDOC3
     }
 HEREDOC3
 }
+#
+# define meta plugins for shared RDMA and SBR (source based routing)
+#
+function meta_plugins()
+{
+METAPLUGIN_STR="  metaPlugins: |"
+if [ "${RDMASHAREDMODE}" == "false" ];then
+cat <<HEREDOC4
+${METAPLUGIN_STR}
+    { "type" : "rdma" }
+HEREDOC4
+METAPLUGIN_STR=","
+fi
+if [ "${SBRMODE}" = "true" ];then
+cat <<HEREDOC5
+${METAPLUGIN_STR}
+    { "type": "sbr" }
+HEREDOC5
+fi
+}
 function mk_ipam_cr()
 {
   case ${IPAM_TYPE} in

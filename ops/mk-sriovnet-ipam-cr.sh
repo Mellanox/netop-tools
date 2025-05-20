@@ -27,17 +27,10 @@ if [ "${NETOP_NETWORK_TYPE}" = "SriovNetwork" ];then
 else
   echo "  linkState: enable" >> ${FILE}
 fi
-
-if [ "${RDMASHAREDMODE}" == "false" ];then
-cat <<HEREDOC2>> ${FILE}
-  metaPlugins: |
-    { "type" : "rdma" }
-HEREDOC2
-fi
-
-cat <<HEREDOC2>> ${FILE}
+meta_plugins >> ${FILE}
+cat <<HEREDOC4>> ${FILE}
   networkNamespace: "${NETOP_APP_NAMESPACE}"
   resourceName: "${NETOP_RESOURCE}_${NIDX}"
-HEREDOC2
+HEREDOC4
 mk_ipam_cr ${NIDX} ${NETOP_SU} >> ${FILE}
 echo ${FILE}
