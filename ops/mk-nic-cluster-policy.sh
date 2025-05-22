@@ -62,7 +62,7 @@ OFED_DRIVER0
     #
     # should be fixed in 25.4.0
     #
-    if [ ${OFED_BLACKLIST_ENABLE} = false ];then
+    if [ "${OFED_BLACKLIST_ENABLE}" = "true" ];then
 cat << OFED_DRIVER1
     - name: OFED_BLACKLIST_MODULES_FILE
       value: "/host/etc/modprobe.d/blacklist-ofed-modules.conf"
