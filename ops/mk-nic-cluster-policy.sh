@@ -40,6 +40,9 @@ case ${NETOP_VERSION} in
 esac
 function ofedDriver()
 {
+if [ ${OFED_ENABLE} = false ];then
+  return
+fi
 cat << OFED_DRIVER0
   ofedDriver:
     image: doca-driver
@@ -59,7 +62,7 @@ OFED_DRIVER0
     #
     # should be fixed in 25.4.0
     #
-    if [ "${BLACKLIST}" = "true" ];then
+    if [ "${OFED_BLACKLIST_ENABLE}" = "true" ];then
 cat << OFED_DRIVER1
     - name: OFED_BLACKLIST_MODULES_FILE
       value: "/host/etc/modprobe.d/blacklist-ofed-modules.conf"
