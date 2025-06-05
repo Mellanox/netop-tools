@@ -21,9 +21,15 @@ if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
   ${NETOP_ROOT_DIR}/ops/mk-nic-config.sh
 fi
 
+RELEASE_VALUES=${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart/network-operator/values.yaml
+# if the release values file exists, use it, otherwise use an empty string
+# and install network-operator according to documentation
+[[ -r ${RELEASE_VALUES} ]] && RELEASE_VALUES="-f ${RELEASE_VALUES}" || RELEASE_VALUES=""
+
 ${docmd} helm install -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator --version ${NETOP_VERSION} \
-  -f ${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart/network-operator/values.yaml \
+  ${RELEASE_VALUES} \
   -f ${USECASE_DIR}/values.yaml
+
 ${NETOP_ROOT_DIR}/install/applycrds.sh
 ${docmd} ${K8CL} apply -f ${USECASE_DIR}/NicClusterPolicy.yaml
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
