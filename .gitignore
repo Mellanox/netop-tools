@@ -5,7 +5,6 @@ release
 calico
 netop-chart
 uc
-values.yaml
 install/insgo.sh
 install/insdocker.sh
 install/insk8base.sh
