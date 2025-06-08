@@ -76,19 +76,22 @@ HEREDOC3
 #
 function meta_plugins()
 {
-METAPLUGIN_STR="  metaPlugins: |"
-if [ "${RDMASHAREDMODE}" == "false" ];then
+if [ "${RDMASHAREDMODE}" = "false" ] && [ "${SBRMODE}" = "true" ];then
 cat <<HEREDOC4
-${METAPLUGIN_STR}
-    { "type" : "rdma" }
+  metaPlugins: |
+    { "type" : "rdma", "type": "sbr" }
 HEREDOC4
-METAPLUGIN_STR=","
-fi
-if [ "${SBRMODE}" = "true" ];then
+elif [ "${RDMASHAREDMODE}" = "false" ];then
 cat <<HEREDOC5
-${METAPLUGIN_STR}
-    { "type": "sbr" }
+  metaPlugins: |
+    { "type" : "rdma" }
 HEREDOC5
+METAPLUGIN_STR=","
+elif [ "${SBRMODE}" = "true" ];then
+cat <<HEREDOC6
+  metaPlugins: |
+    { "type" : "sbr" }
+HEREDOC6
 fi
 }
 function mk_ipam_cr()
