@@ -24,7 +24,7 @@ ${K8CL} apply -f NicClusterPolicy.yaml
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
   ${NETOP_ROOT_DIR}/ops/mk-nic-config.sh
   for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
-    ${K8CL} appy -f ${USECASE_DIR}/nic-config-crd-${DEVICE_TYPE}.yaml
+    ${K8CL} apply -f ${USECASE_DIR}/nic-config-crd-${DEVICE_TYPE}.yaml
   done
 fi
 popd
