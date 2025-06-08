@@ -73,7 +73,7 @@ case ${SPEED}${XVAL} in
 *)
   echo "invalid setting speed=[${SPEED}] X=[${XVAL}] for script"
   exit 1
-esace
+esac
 mlxconfig -d ${DEV} -y set PHY_RATE_MASK_P1=${PHY_RATE_MASK}  # For ${SPEED}_4X
 mlxconfig -d ${DEV} -y set PHY_RATE_MASK_OVERRIDE_P1=TRUE
 mlxconfig -d ${DEV} -y set PHY_FEC_OVERRIDE_P1=0x2  # For RS-FEC
