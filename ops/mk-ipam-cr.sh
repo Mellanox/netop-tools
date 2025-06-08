@@ -84,13 +84,13 @@ HEREDOC4
 elif [ "${RDMASHAREDMODE}" = "false" ];then
 cat <<HEREDOC5
   metaPlugins: |
-    { "type" : "rdma" } 
+    { "type" : "rdma" }
 HEREDOC5
 METAPLUGIN_STR=","
 elif [ "${SBRMODE}" = "true" ];then
 cat <<HEREDOC6
   metaPlugins: |
-    { "type" : "sbr" } 
+    { "type" : "sbr" }
 HEREDOC6
 fi
 }
