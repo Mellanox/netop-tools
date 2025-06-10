@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 #
 if [ $# -lt 2 ];then
@@ -27,6 +27,7 @@ mlxconfig -d ${DEV} -y set PHY_AUTO_NEG_P1=AUTO_NEG_DISABLED
 # 40G	0x4
 # 50G_1X	0x8
 # 50G_2X	0x10
+# 100G_2X	0x100
 # 100G_4X	0x200
 # 200G_4X	0x400
 # 400G_8X	0x800
@@ -51,8 +52,13 @@ case ${SPEED}${XVAL} in
   PHY_RATE_MASK=0x8
   XVAL="_2X"
   ;;
+100G2X)
+  PHY_RATE_MASK=0x100
+  XVAL="_2X"
+  ;;
 100G4X)
   PHY_RATE_MASK=0x200
+  XVAL="_4X"
   ;;
 200G|200G4X)
   PHY_RATE_MASK=0x400
@@ -73,14 +79,14 @@ case ${SPEED}${XVAL} in
 *)
   echo "invalid setting speed=[${SPEED}] X=[${XVAL}] for script"
   exit 1
-esace
+esac
 mlxconfig -d ${DEV} -y set PHY_RATE_MASK_P1=${PHY_RATE_MASK}  # For ${SPEED}_4X
 mlxconfig -d ${DEV} -y set PHY_RATE_MASK_OVERRIDE_P1=TRUE
 mlxconfig -d ${DEV} -y set PHY_FEC_OVERRIDE_P1=0x2  # For RS-FEC
 #
 # Then use mlxlink to apply and verify:
 
-mlxlink -d ${DEV} --speeds ${SPEED}_4X
+mlxlink -d ${DEV} --speeds ${SPEED}${XVAL}
 mlxlink -d ${DEV} --link_mode_force --speeds ${SPEED}${XVAL}
 mlxlink -d ${DEV} --fec RS --fec_speed ${SPEED}
 # (Replace ${SPEED}_4X and RS with your desired speed and FEC.)
@@ -89,15 +95,17 @@ mlxlink -d ${DEV} --fec RS --fec_speed ${SPEED}
 # To ensure changes take effect:
 
 mlxlink -d ${DEV} --port_state DN
+sleep 1
 mlxlink -d ${DEV} --port_state UP
 # Or use the toggle command:
 
-mlxlink -d ${DEV} -a TG
+#mlxlink -d ${DEV} -a TG
 #
 # 5. Verify Settings
 # Check the current settings:
 
-mlxlink -d ${DEV} --show_module --show_device --show_fec -c -e | egrep 'Auto Negotiation:|Speed:|FEC:'
+mlxlink -d ${DEV} --show_module --show_device --show_fec -c -e | \
+	egrep -i 'Auto Negotiation|Speed|FEC'
 
 #Look for:
 
