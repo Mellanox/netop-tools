@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 #
 if [ $# -lt 2 ];then
@@ -58,6 +58,7 @@ case ${SPEED}${XVAL} in
   ;;
 100G4X)
   PHY_RATE_MASK=0x200
+  XVAL="_4X"
   ;;
 200G|200G4X)
   PHY_RATE_MASK=0x400
@@ -85,7 +86,7 @@ mlxconfig -d ${DEV} -y set PHY_FEC_OVERRIDE_P1=0x2  # For RS-FEC
 #
 # Then use mlxlink to apply and verify:
 
-mlxlink -d ${DEV} --speeds ${SPEED}_4X
+mlxlink -d ${DEV} --speeds ${SPEED}${XVAL}
 mlxlink -d ${DEV} --link_mode_force --speeds ${SPEED}${XVAL}
 mlxlink -d ${DEV} --fec RS --fec_speed ${SPEED}
 # (Replace ${SPEED}_4X and RS with your desired speed and FEC.)
@@ -94,10 +95,11 @@ mlxlink -d ${DEV} --fec RS --fec_speed ${SPEED}
 # To ensure changes take effect:
 
 mlxlink -d ${DEV} --port_state DN
+sleep 1
 mlxlink -d ${DEV} --port_state UP
 # Or use the toggle command:
 
-mlxlink -d ${DEV} -a TG
+#mlxlink -d ${DEV} -a TG
 #
 # 5. Verify Settings
 # Check the current settings:
