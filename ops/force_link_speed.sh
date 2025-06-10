@@ -104,8 +104,7 @@ mlxlink -d ${DEV} --port_state UP
 # 5. Verify Settings
 # Check the current settings:
 
-mlxlink -d ${DEV} --show_module --show_device --show_fec -c -e | \
-	egrep -i 'Auto Negotiation|Speed|FEC'
+mlxlink -d ${DEV} --show_module --show_device --show_fec -c -e | egrep -i 'Auto Negotiation|Speed|FEC'
 
 #Look for:
 
