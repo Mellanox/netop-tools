@@ -1,9 +1,10 @@
 FROM ubuntu:24.04
  
-COPY ./ib_top ./getpkgs.sh ./rdmadebug.sh ./mlnx_tools.sh ./rdma-core.sh ./perftest.sh ./perftestenv.sh ./tcpdumprdma.sh./show_gids /root/
+COPY ./ib_top ./getpkgs.sh ./rdmadebug.sh ./mlnx_tools.sh ./rdma-core.sh ./perftest.sh ./perftestenv.sh ./tcpdumprdma.sh./show_gids ./entrypoint.sh /root/
 RUN DEBIAN_FRONTEND=noninteractive /root/getpkgs.sh && /root/rdmadebug.sh && /root/perftest.sh
 RUN for F in /usr/bin/ib_*;do setcap cap_ipc_lock=+ep $F;done
 WORKDIR /home/perftest
  
 #ADD ./entrypoint.sh ./
-ENTRYPOINT ["/bin/sh", "-c", "sleep", "inf"]
+#ENTRYPOINT ["/bin/sh", "-c", "sleep", "inf"]
+ENTRYPOINT [ "./entrypoint.sh" ]

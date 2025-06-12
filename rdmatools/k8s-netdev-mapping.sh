@@ -1,6 +1,10 @@
 #!/usr/bin/bash 
 # Maps pcie/pf/vf/pod netdev & associated gpu
 
+function gid_info()
+{
+  awk --assign net="${1}" '{ if ( $7 == net ) {print $1, $2, $3, $4, $5, $6, $7 }}' ${2} | grep v2 | grep -v fe80
+}
 function get_gpu_priority()
 {
   idx=-1
@@ -27,30 +31,35 @@ echo -e "-------\t--------\t-------\t---------\t---------------\t---------------
 
 
 # Loop over available netdevs 'net1', 'net2', etc
-/root/show_gids | grep v2 | grep -v fe80 | cut -f 7 | while read NET_DEV;do
+/root/show_gids > gid_info.$$
+cat gid_info.$$ | grep v2 | grep -v fe80 | cut -f 7 | while read NET_DEV;do
   # print net dev
   #echo "For net dev:  ${NET_DEV}"
 
   # Get rdma netdev
   #RDMA_DEV=$(rdma link | grep netdev | grep ${NET_DEV} | cut -d ' ' -f2 | cut -d '/' -f1)
-  RDMA_DEV=$(/root/show_gids | grep -i ${NET_DEV} | grep v2 | grep -v fe80 | cut -f1)
-  #echo ${NET_DEV} = ${RDMA_DEV}
+  #RDMA_DEV=$(/root/show_gids | grep -i ${NET_DEV} | grep v2 | grep -v fe80 | cut -f1)
+  #echo ${NET_DEV} = ${RDMA_DEV}a
+  GID_INFO=$(gid_info ${NET_DEV} gid_info.$$)
+  RDMA_DEV=$(echo $GID_INFO |cut -d' ' -f1)
+  GID_IDX=$(echo $GID_INFO |cut -d' ' -f3)
   
   # Check dmesg for the vf
-  VF_PCI=$(dmesg | grep ${NET_DEV} | grep 'Link up' | tail -n 1 | cut -d ' ' -f3)
+  VF_PCI=$(dmesg | grep ${NET_DEV} | grep 'Link up' | tail -n 1 | cut -d']' -f2 | cut -d' ' -f3)
   #echo ${NET_DEV} = ${VF_PCI}
   if [ "${VF_PCI}" == "" ]; then
     VF_PCI="na"
   fi
   
   # Get nvidia-smi vf to Nic mapping
-  GPU_NIC=$(nvidia-smi topo -m | grep ${RDMA_DEV} | cut -d ' ' -f3 | cut -d ':' -f1)
+  nvidia-smi topo -m > smi_topo_info.$$
+  GPU_NIC=$(cat smi_topo_info.$$ | grep ${RDMA_DEV} | cut -d ' ' -f3 | cut -d ':' -f1)
   #echo ${NET_DEV} nvidia-smi Nic = ${GPU_NIC}
   
   # Get the GPU
   # TODO: NV needs to be a substring, but it probably won't come up much
   CONNECTION_PRIORITY=( "NV" "PIX" "PXB" "PHB" "NODE" "SYS" )
-  CONNECTION_LIST=$(nvidia-smi topo -m | grep "^${GPU_NIC}" | tr '\t' ' ' ) 
+  CONNECTION_LIST=$(cat smi_topo_info.$$ | grep "^${GPU_NIC}" | tr '\t' ' ' ) 
   #echo ${CONNECTION_LIST}
   for PRIORITY in ${CONNECTION_PRIORITY[@]}; do
       GPU=$(get_gpu_priority "${PRIORITY} ") 
@@ -58,10 +67,11 @@ echo -e "-------\t--------\t-------\t---------\t---------------\t---------------
       if [ "${GPU}" != "" ]; then
         #echo ${NET_DEV} best GPU link = ${PRIORITY}
 	#echo ${NET_DEV} best GPU = CUDA device ${GPU}
-	echo -e "${NET_DEV}\t${RDMA_DEV}\t${VF_PCI}\t${GPU_NIC}\t${PRIORITY}\t${GPU}"
+	echo -e "${NET_DEV},${RDMA_DEV},${VF_PCI},${GPU_NIC},${PRIORITY},${GPU}"
         break
       fi
   done
-
-echo " " 
+  if [ "${GPU}" = "" ];then
+     echo -e "${NET_DEV},${RDMA_DEV},${VF_PCI},${GPU_NIC},${PRIORITY},NA"
+  fi
 done
