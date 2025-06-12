@@ -33,10 +33,10 @@ for arg in "$@"; do
   esac
 done
 
-GID_INFO=$(${K8CL} exec ${CLIENT_POD} -- sh -c "./show_gids" | gid_info ${NET_DEV})
+GID_INFO=$(${K8CL} exec ${CLIENT_POD} -- sh -c "/root/show_gids" | gid_info ${NET_DEV})
 RDMA_DEV=$(echo $GID_INFO |cut -d' ' -f1)
 GID_IDX=$(echo $GID_INFO |cut -d' ' -f3)
-GID_INFO=$(${K8CL} exec ${SERVER_POD} -- sh -c "./show_gids" | gid_info ${NET_DEV})
+GID_INFO=$(${K8CL} exec ${SERVER_POD} -- sh -c "/root/show_gids" | gid_info ${NET_DEV})
 IP=$(echo $GID_INFO |cut -d' ' -f5)
 
 if [ "${GDR}" == false ];then
@@ -47,8 +47,8 @@ fi
 
 if [ "${GDR}" == true ];then
   echo "--gdr flag Provided. Determining optimal CUDA device. This may take a few seconds ..."
-  CUDA_DEV=`${K8CL} exec ${SERVER_POD} -- bash -c "./k8s-netdev-mapping.sh | grep ${NET_DEV} | cut -f 6"`
-  BEST_GPU_LINK=`${K8CL} exec ${SERVER_POD} -- bash -c "./k8s-netdev-mapping.sh | grep ${NET_DEV} | cut -f 5"`
+  CUDA_DEV=`${K8CL} exec ${SERVER_POD} -- bash -c "/root/k8s-netdev-mapping.sh | grep ${NET_DEV} | cut -f 6"`
+  BEST_GPU_LINK=`${K8CL} exec ${SERVER_POD} -- bash -c "/root/k8s-netdev-mapping.sh | grep ${NET_DEV} | cut -f 5"`
   echo "Using CUDA device ${CUDA_DEV} via ${BEST_GPU_LINK}. Performing GDR perftest."
   ${K8CL} exec ${CLIENT_POD} -- bash -c "ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a ${IP}"
 fi
