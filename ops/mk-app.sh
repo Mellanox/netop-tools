@@ -9,6 +9,14 @@ function usage()
   echo "usage:$0 {podname} {app namespace} {worker node}"
   exit 1
 }
+function set_gpus
+{
+if [ "${NUM_GPUS}" != "" ] && [ "${NUM_GPUS}" -gt 0 ];then
+cat << HEREDOC0
+        nvidia.com/gpu: '${NUM_GPUS}'
+HEREDOC0
+fi
+}
 NAME=${1}
 shift
 NETOP_APP_NAMESPACE=${1:-'default'}
@@ -38,14 +46,17 @@ metadata:
 spec:
   containers:
   - name: appcntr1
-    image: mellanox/rping-test
+    #image: mellanox/rping-test
+    image: harbor.runailabs-ps.com/nvidia/rdmadbg_cuda:latest
     imagePullPolicy: IfNotPresent
     securityContext:
+      privileged: true
       capabilities:
         add: ["IPC_LOCK"]
     resources:
       requests:
 HEREDOC1
+set_gpus >> ./${NAME}.yaml
 for DEVDEF in ${NETOP_NETLIST[@]};do
   NIDX=`echo ${DEVDEF}|cut -d',' -f1`
 cat << HEREDOC2 >> ./${NAME}.yaml
@@ -55,6 +66,7 @@ done
 cat <<HEREDOC3 >> ./${NAME}.yaml
       limits:
 HEREDOC3
+set_gpus >> ./${NAME}.yaml
 for DEVDEF in ${NETOP_NETLIST[@]};do
   NIDX=`echo ${DEVDEF}|cut -d',' -f1`
 cat << HEREDOC4 >> ./${NAME}.yaml
