@@ -10,12 +10,12 @@ function mkIPPoolCRDs()
 {
   if [ "${IPAM_TYPE}" = "nv-ipam" ];then
     for NETOP_SU in ${NETOP_SULIST[@]};do
-      echo "NETOP_SU:${NETOP_SU}"
+      #echo "NETOP_SU:${NETOP_SU}"
       IPPOOLS_KEY=NETOP_IPPOOLS[${NETOP_SU}]
       for IPPOOL_KEY in ${IPPOOLS_KEY[@]};do
-        echo "IPPOOL_KEY:${IPPOOL_KEY}"
+        #echo "IPPOOL_KEY:${IPPOOL_KEY}"
         IPPOOL=${!IPPOOL_KEY}
-        echo "IPPOOL:${IPPOOL}"
+        #echo "IPPOOL:${IPPOOL}"
         for NIDXDEF in ${IPPOOL[@]};do
           NIDX=$(echo ${NIDXDEF}|cut -d',' -f1)
           RANGE=$(echo ${NIDXDEF}|cut -d',' -f2)
