@@ -2,4 +2,6 @@
 #
 # --creds "{username}:{password}"
 #
-sudo crictl pull --creds "${1}:${2}" harbor.runailabs-ps.com/nvidia/rdmadbg_cuda:latest
+source ./harbor.cfg
+#sudo crictl pull --creds "${1}:${2}" ${HARBOR_URL}
+sudo crictl pull ${HARBOR_URL}
