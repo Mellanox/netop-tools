@@ -3,4 +3,4 @@
 # --creds "{username}:{password}"
 #
 source ./harbor.cfg
-sudo ctr images pull ${HARBOR_URL}
+sudo ctr --namespace k8s.io images pull ${HARBOR_URL}

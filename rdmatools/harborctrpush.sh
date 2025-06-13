@@ -3,4 +3,4 @@
 # --creds "{username}:{password}"
 #
 source ./harbor.cfg
-sudo ctr images push --user "${1}:${2}" ${HARBOR_URL}
+sudo ctr --namespace k8s.io images push --user "${1}:${2}" ${HARBOR_URL}
