@@ -83,8 +83,14 @@ cat << OFED_DRIVER1
     - name: OFED_BLACKLIST_MODULES_FILE
       value: "/host/etc/modprobe.d/blacklist-ofed-modules.conf"
 OFED_DRIVER1
-fi
+    fi
+    if [ "${OFED_BLACKLIST_ADD}" != "" ];then
 cat << OFED_DRIVER2
+    -- name:  OFED_BLACKLIST_MODULES
+       value: "mlx5_core:mlx5_ib:ib_umad:ib_uverbs:ib_ipoib:rdma_cm:rdma_ucm:ib_core:ib_cm:${OFED_BLACKLIST_ADD}"
+OFED_DRIVER2
+    fi
+cat << OFED_DRIVER3
     startupProbe:
       initialDelaySeconds: 10
       periodSeconds: 20
@@ -104,7 +110,7 @@ cat << OFED_DRIVER2
         podSelector: ""
         timeoutSeconds: 300
         deleteEmptyDir: true
-OFED_DRIVER2
+OFED_DRIVER3
 }
 function sriovDevicePlugin()
 {
