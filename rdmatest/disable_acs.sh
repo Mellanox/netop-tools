@@ -9,6 +9,11 @@ if [ "$EUID" -ne 0 ]; then
  exit 1
 fi
 
+#
+# note: this script is turning off ACS for all PCI devices that support it.
+# but a better version would just turn off for the NIC/GPU pairs
+# and the PCIe bridge that is above NIC/GPU pairs
+#
 for BDF in `lspci -d "*:*:*" | awk '{print $1}'`; do
   # skip if it doesn't support ACS
   setpci -v -s ${BDF} ECAP_ACS+0x6.w > /dev/null 2>&1
@@ -17,7 +22,7 @@ for BDF in `lspci -d "*:*:*" | awk '{print $1}'`; do
     continue
   fi
 
-  logger "Enabling ACS on `lspci -s ${BDF}`"
+  logger "Disabling ACS on `lspci -s ${BDF}`"
   setpci -v -s ${BDF} ECAP_ACS+0x6.w
   setpci -v -s ${BDF} ECAP_ACS+0x6.w=0x0
   setpci -v -s ${BDF} ECAP_ACS+0x6.w
