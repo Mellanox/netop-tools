@@ -133,6 +133,13 @@ for DEVDEF in ${NETOP_NETLIST[@]};do
   if [ ${NETWORKS} -le 0 ];then
 	  COMMA=""
   fi
+  if [[ "${DEVNAMES}" == *:* ]];then
+     PCI_ADDRS='"pciAddresses": [ "'${DEVNAMES}'" ]'
+     PF_NAMES='"pfNames": []'
+  else
+     PCI_ADDRS='"pciAddresses": []'
+     PF_NAMES='"pfNames": [ "'${DEVNAMES}'" ]'
+  fi
 cat << SRIOV_DEV_PLUGIN2
           {
             "resourcePrefix": "nvidia.com",
@@ -141,8 +148,8 @@ cat << SRIOV_DEV_PLUGIN2
               "vendors": ["${NETOP_VENDOR}"],
               "devices": [],
               "drivers": [],
-              "pfNames": [],
-              "pciAddresses": ["${DEVNAMES}"],
+              ${PF_NAMES},
+              ${PCI_ADDRS},
               "rootDevices": [],
               "linkTypes": [${LINK_TYPES}],
               "isRdma": true
