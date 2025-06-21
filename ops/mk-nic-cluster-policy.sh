@@ -134,7 +134,7 @@ for DEVDEF in ${NETOP_NETLIST[@]};do
 	  COMMA=""
   fi
   if [[ "${DEVNAMES}" == *:* ]];then
-     PCI_ADDRS='"pciAddresses": [ "'${DEVNAMES}'" ]'
+     PCI_ADDRS='"pciAddresses": ["'${DEVNAMES}'"]'
      PF_NAMES='"pfNames": []'
   else
      PCI_ADDRS='"pciAddresses": []'
