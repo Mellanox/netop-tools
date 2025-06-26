@@ -6,6 +6,14 @@ function gid_info()
 {
   gawk --assign net="${1}" '{ if ( $7 == net ) {print $1, $2, $3, $4, $5, $6, $7 }}' | grep v2 | grep -v fe80
 }
+function get_cmdstr()
+{
+  if [ "${GDR}" == false ];then
+    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=0;ping -I ${NET_DEV} -c2 ${IP};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a"
+  else
+    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=0;ping -I ${NET_DEV} -c2 ${IP};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a"
+  fi
+}
 if [ $# -lt 1 ];then
   echo "usage:${0} <server_pod> --net <netdev> [--gdr]"
   exit 1
@@ -39,8 +47,9 @@ GID_IDX=$(echo $GID_INFO |cut -d' ' -f3)
 
 if [ "${GDR}" == false ];then
   echo "--gdr flag not provided. Performing rdma perftest. Waiting for client to connect ..."
-  echo "ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a"
-  ${K8CL} exec ${SERVER_POD} -- bash -c "ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a"
+  CMDSTR=$(get_cmdstr)
+  echo "${CMDSTR}"
+  ${K8CL} exec ${SERVER_POD} -- bash -c "${CMDSTR}"
 fi
 
 if [ "${GDR}" == true ];then
@@ -49,6 +58,8 @@ if [ "${GDR}" == true ];then
   CUDA_DEV=$(grep ${NET_DEV}, ${CUDA_INFO_FILE}| cut  -d',' -f6)
   BEST_GPU_LINK=$(grep ${NET_DEV}, ${CUDA_INFO_FILE}| cut  -d',' -f5)
   echo "Using CUDA device ${CUDA_DEV} via ${BEST_GPU_LINK}. Performing GDR perftest. Waiting for client to connect ..."
-  ${K8CL} exec ${SERVER_POD} -- bash -c "ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a"
+  CMDSTR=$(get_cmdstr)
+  echo "${CMDSTR}"
+  ${K8CL} exec ${SERVER_POD} -- bash -c "${CMDSTR}"
 fi
 rm -f ${CUDA_INFO_FILE}
