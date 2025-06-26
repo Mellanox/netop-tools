@@ -9,9 +9,9 @@ function gid_info()
 function get_cmdstr()
 {
   if [ "${GDR}" == false ];then
-    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=0;ping -I ${NET_DEV} -c2 ${IP};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a"
+    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=0;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a"
   else
-    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=0;ping -I ${NET_DEV} -c2 ${IP};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a"
+    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=0;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a"
   fi
 }
 if [ $# -lt 1 ];then
