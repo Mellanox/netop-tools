@@ -10,9 +10,11 @@ function gid_info()
 function get_cmdstr()
 {
   if [ "${GDR}" == false ];then
-    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=0;ping -I ${NET_DEV} -c2 ${IP};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a ${IP}"
+    #echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=1;ping -I ${NET_DEV} -c2 ${IP};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a ${IP}"
+    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=1;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a ${IP}"
   else
-    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=0;ping -I ${NET_DEV} -c2 ${IP};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a ${IP}"
+    #echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=1;ping -I ${NET_DEV} -c2 ${IP};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a ${IP}"
+    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=1;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a ${IP}"
   fi
 }
 if [ $# -lt 2 ];then
@@ -44,6 +46,7 @@ GID_INFO_FILE_SRVR="/tmp/gid_info_srvr.$$"
 GID_INFO_FILE_CLNT="/tmp/gid_info_clnt.$$"
 CUDA_INFO_FILE="/tmp/cuda_info.$$"
 
+${NETOP_ROOT_DIR}/rdmatest/getarps.sh ${SRVR_POD} ${CLNT_POD} ${NET_DEV}
 ${K8CL} exec ${CLNT_POD} -- sh -c "/root/show_gids" > ${GID_INFO_FILE_CLNT}
 GID_INFO=$(gid_info ${NET_DEV} ${GID_INFO_FILE_CLNT})
 RDMA_DEV=$(echo $GID_INFO |cut -d' ' -f1)
