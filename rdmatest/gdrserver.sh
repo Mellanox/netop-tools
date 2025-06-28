@@ -6,12 +6,15 @@ function gid_info()
 {
   gawk --assign net="${1}" '{ if ( $7 == net ) {print $1, $2, $3, $4, $5, $6, $7 }}' | grep v2 | grep -v fe80
 }
-function get_cmdstr()
+function get_cmdstr() 
 {
+  RP_FILTER="sysctl net.ipv4.conf.all.rp_filter=0"
+  ARP_ANNOUNCE="sysctl net.ipv4.conf.all.arp_announce=2"
+  ARP_IGNORE="sysctl net.ipv4.conf.all.arp_ignore=1"
   if [ "${GDR}" == false ];then
-    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=1;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a"
+    echo "${RP_FILTER};${ARP_ANNOUNCE};${ARP_IGNORE};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a" 
   else
-    echo "sysctl net.ipv4.conf.${NET_DEV}.rp_filter=1;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a"
+    echo "${RP_FILTER};${ARP_ANNOUNCE};${ARP_IGNORE};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a"
   fi
 }
 if [ $# -lt 1 ];then
@@ -59,7 +62,7 @@ if [ "${GDR}" == true ];then
   BEST_GPU_LINK=$(grep ${NET_DEV}, ${CUDA_INFO_FILE}| cut  -d',' -f5)
   echo "Using CUDA device ${CUDA_DEV} via ${BEST_GPU_LINK}. Performing GDR perftest. Waiting for client to connect ..."
   CMDSTR=$(get_cmdstr)
-  echo "${CMDSTR}"
+  echo "${SERVER_POD}:${CMDSTR}"
   ${K8CL} exec ${SERVER_POD} -- bash -c "${CMDSTR}"
 fi
 rm -f ${CUDA_INFO_FILE}
