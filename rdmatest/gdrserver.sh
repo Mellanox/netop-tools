@@ -51,8 +51,9 @@ GID_IDX=$(echo $GID_INFO |cut -d' ' -f3)
 if [ "${GDR}" == false ];then
   echo "--gdr flag not provided. Performing rdma perftest. Waiting for client to connect ..."
   CMDSTR=$(get_cmdstr)
-  echo "${CMDSTR}"
+  echo "${SRVR_POD}:${NET_DEV}:${CMDSTR}"
   ${K8CL} exec ${SRVR_POD} -- bash -c "${CMDSTR}"
+  echo "${SRVR_POD}:${NET_DEV}:${CMDSTR}"
 fi
 
 if [ "${GDR}" == true ];then
@@ -62,7 +63,8 @@ if [ "${GDR}" == true ];then
   BEST_GPU_LINK=$(grep ${NET_DEV}, ${CUDA_INFO_FILE}| cut  -d',' -f5)
   echo "Using CUDA device ${CUDA_DEV} via ${BEST_GPU_LINK}. Performing GDR perftest. Waiting for client to connect ..."
   CMDSTR=$(get_cmdstr)
-  echo "${SRVR_POD}:${CMDSTR}"
+  echo "${SRVR_POD}:${NET_DEV}:${CMDSTR}"
   ${K8CL} exec ${SRVR_POD} -- bash -c "${CMDSTR}"
+  echo "${SRVR_POD}:${NET_DEV}:${CMDSTR}"
 fi
 rm -f ${CUDA_INFO_FILE}
