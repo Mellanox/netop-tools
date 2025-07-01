@@ -1,8 +1,9 @@
 #!/bin/bash
 #
 # config details here:
-# https://kubernetes.io/docs/tasks/tools/install-${K8CL}-linux/
+# https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
 #
+source ${NETOP_ROOT_DIR}/global_ops.cfg
 function restart()
 {
   systemctl enable --now kubelet
