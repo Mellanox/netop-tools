@@ -49,6 +49,9 @@ spec:
     #image: mellanox/rping-test
     image: harbor.runailabs-ps.com/nvidia/rdmadbg_cuda:latest
     imagePullPolicy: IfNotPresent
+    env:
+       - name: SYSCTL_CONFIG
+         value: "${SYSCTL_CONFIG}"
     securityContext:
       privileged: true
       capabilities:
