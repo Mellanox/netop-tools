@@ -43,6 +43,7 @@ metadata:
   name: ${NAME}
   annotations:
     k8s.v1.cni.cncf.io/networks: ${NETWORKS}
+  namespace: ${NETOP_APP_NAMESPACE}
 spec:
   containers:
   - name: appcntr1
