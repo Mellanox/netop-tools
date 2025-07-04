@@ -14,7 +14,7 @@ spec:
       "kubernetes": {
         "kubeconfig": "/etc/cni/net.d/whereabouts.d/whereabouts.kubeconfig"
       },
-      "range": "192.169.0.0/16",
+      "range": "192.170.0.0/16",
       "exclude": [],
       "log_file": "/var/log/whereabouts.log",
       "log_level": "info"
