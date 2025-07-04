@@ -1,19 +1,19 @@
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkNodePolicy
 metadata:
-  name: sriovibnet-rdma-node-policy-a-su-1
+  name: sriovibnet-rdma-node-policy-b-su-1
   namespace: nvidia-network-operator
 spec:
   deviceType: netdevice
   mtu: 9000
   nicSelector:
     vendor: "15b3"
-    pfNames: [ "ibs0f1" ]
+    pfNames: [ "ibs1f1" ]
   numVfs: 2
   linkType: IB
   priority: 90    # used to resolve multiple policy definitions, lower value, higher priority
   isRdma: true
-  resourceName: sriovib_resource_a
+  resourceName: sriovib_resource_b
   nodeSelector:
     node-role.kubernetes.io/worker: ""
     feature.node.kubernetes.io/pci-15b3.present: "true"
