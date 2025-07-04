@@ -52,7 +52,3 @@ spec:
       repository: ghcr.io/k8snetworkplumbingwg
       version: v0.7.0
       imagePullSecrets: []
-  nicFeatureDiscovery:
-    image: nic-feature-discovery
-    repository: ghcr.io/mellanox
-    version: v0.0.1

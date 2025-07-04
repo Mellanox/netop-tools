@@ -53,7 +53,3 @@ spec:
     repository: ghcr.io/mellanox
     version: v0.2.0
     enableWebhook: false
-  nicFeatureDiscovery:
-    image: nic-feature-discovery
-    repository: ghcr.io/mellanox
-    version: v0.0.1
