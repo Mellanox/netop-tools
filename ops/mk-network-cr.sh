@@ -24,11 +24,11 @@ function mkIPPoolCRDs()
           case "${NVIPAM_POOL_TYPE}" in
           IPPool)
             FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}-${NETOP_SU}.yaml"
-            ${NETOP_ROOT_DIR}/ops/mk-nvipam-pool.sh ${FILE} ${NIDX} ${NETOP_SU} ${RANGE} ${GW} ${BLOCKSIZE}
+            ${NETOP_ROOT_DIR}/ops/mk-nvipam-pool.sh "${FILE}" "${NIDX}" "${NETOP_SU}" "${RANGE}" "${GW}" "${BLOCKSIZE}"
             ;;
           CIDRPool)
             FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/cidrpool-${NIDX}-${NETOP_SU}.yaml"
-            ${NETOP_ROOT_DIR}/ops/mk-nvipam-cidr.sh ${FILE} ${NIDX} ${NETOP_SU} ${RANGE} ${GW} ${BLOCKSIZE}
+            ${NETOP_ROOT_DIR}/ops/mk-nvipam-cidr.sh "${FILE}" "${NIDX}" "${NETOP_SU}" "${RANGE}" "${GW}" "${BLOCKSIZE}"
             ;;
           esac
           echo ${FILE}
