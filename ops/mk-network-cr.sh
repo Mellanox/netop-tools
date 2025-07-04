@@ -12,34 +12,28 @@ function mkIPPoolCRDs()
   if [ "${IPAM_TYPE}" = "nv-ipam" ];then
     for NETOP_SU in ${NETOP_SULIST[@]};do
       #echo "NETOP_SU:${NETOP_SU}"
-      IPPOOLS_KEY=NETOP_IPPOOLS[${NETOP_SU}]
-      for IPPOOL_KEY in ${IPPOOLS_KEY[@]};do
-        #echo "IPPOOL_KEY:${IPPOOL_KEY}"
-        IPPOOL=${!IPPOOL_KEY}
-        #echo "IPPOOL:${IPPOOL}"
-        NUM_SUBNETS="${#NETOP_NETLIST[@]}"
-        ${NETOP_ROOT_DIR}/ops/generate_subnets.sh "${NETOP_NETWORK_RANGE}" "${NUM_SUBNETS}" ${NETOP_NETWORK_GW} > ${SUBNET_FILE}
-        LINENUM=1
-        for NIDXDEF in ${NETOP_NETLIST[@]};do
-          NIDX=$(echo ${NIDXDEF}|cut -d',' -f1)
-          LINE=$(sed -n ${LINENUMNUM}p ${SUBNET_FILE})
-          RANGE=$(echo ${LINE}|cut -d' ' -f1)
-          GW=$(echo ${LINE}|cut -d' ' -f3)
-          case "${NVIPAM_POOL_TYPE}" in
-          IPPool)
-            FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}-${NETOP_SU}.yaml"
-            ${NETOP_ROOT_DIR}/ops/mk-nvipam-pool.sh "${FILE}" "${NIDX}" "${NETOP_SU}" "${RANGE}" "${GW}" "${NETOP_PERNODE_BLOCKSIZE}"
-            ;;
-          CIDRPool)
-            FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/cidrpool-${NIDX}-${NETOP_SU}.yaml"
-            ${NETOP_ROOT_DIR}/ops/mk-nvipam-cidr.sh "${FILE}" "${NIDX}" "${NETOP_SU}" "${RANGE}" "${GW}" "${NETOP_PERNODE_BLOCKSIZE}"
-            ;;
-          esac
-          LINENUM=let LINENUM+1
-          echo ${FILE}
-        done
-        rm  ${SUBNET_FILE}
+      NUM_SUBNETS="${#NETOP_NETLIST[@]}"
+      ${NETOP_ROOT_DIR}/ops/generate_subnets.sh "${NETOP_NETWORK_RANGE}" "${NUM_SUBNETS}" ${NETOP_NETWORK_GW} > ${SUBNET_FILE}
+      LINE_NUM=1
+      for NIDXDEF in ${NETOP_NETLIST[@]};do
+        NIDX=$(echo ${NIDXDEF}|cut -d',' -f1)
+        LINE=$(sed -n ${LINE_NUM}p ${SUBNET_FILE})
+        RANGE=$(echo ${LINE}|cut -d' ' -f1)
+        GW=$(echo ${LINE}|cut -d' ' -f3)
+        case "${NVIPAM_POOL_TYPE}" in
+        IPPool)
+          FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/ippool-${NIDX}-${NETOP_SU}.yaml"
+          ${NETOP_ROOT_DIR}/ops/mk-nvipam-pool.sh "${FILE}" "${NIDX}" "${NETOP_SU}" "${RANGE}" "${GW}" "${NETOP_PERNODE_BLOCKSIZE}"
+          ;;
+        CIDRPool)
+          FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/cidrpool-${NIDX}-${NETOP_SU}.yaml"
+          ${NETOP_ROOT_DIR}/ops/mk-nvipam-cidr.sh "${FILE}" "${NIDX}" "${NETOP_SU}" "${RANGE}" "${GW}" "${NETOP_PERNODE_BLOCKSIZE}"
+          ;;
+        esac
+        let LINE_NUM=LINE_NUM+1
+        echo ${FILE}
       done
+      rm  ${SUBNET_FILE}
     done
   fi
 }

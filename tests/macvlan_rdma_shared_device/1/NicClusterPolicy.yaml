@@ -56,6 +56,17 @@ spec:
               "linkTypes": ["ether"],
               "isRdma": true
             }
+          },
+          {
+            "resourceName": "rdma_shared_device_b",
+            "rdmaHcaMax": 63,
+            "selectors": {
+              "vendors": ["15b3"],
+              "drivers": [],
+              "ifNames": ["ens3f0np0"],
+              "linkTypes": ["ether"],
+              "isRdma": true
+            }
           }
         ]
       }
