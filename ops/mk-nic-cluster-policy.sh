@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 # nic cluster plocy file has migrated outof the values.yaml file
 #
@@ -310,6 +310,6 @@ hostdev_rdma_sriov)
 esac
 secondaryNetwork >> ${FILE}
 nvIpam >> ${FILE}
-if [ NIC_CONFIG_ENABLE == true ];then
+if [ ${NIC_CONFIG_ENABLE} == "true" ];then
   nicFeatureDiscovery >> ${FILE}
 fi
