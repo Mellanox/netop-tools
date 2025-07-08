@@ -6,7 +6,7 @@ spec:
   ofedDriver:
     image: doca-driver
     repository: nvcr.io/nvidia/mellanox
-    version: 25.01-0.6.0.0-0
+    version: 25.04-0.6.1.0-2
     forcePrecompiled: false
     imagePullSecrets: []
     terminationGracePeriodSeconds: 300
@@ -51,5 +51,5 @@ spec:
     image: nvidia-k8s-ipam
     imagePullSecrets: []
     repository: ghcr.io/mellanox
-    version: v0.2.0
+    version: v0.3.7
     enableWebhook: false

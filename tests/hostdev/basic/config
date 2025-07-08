@@ -1,24 +1,4 @@
-NETOP_VERSION=25.1.0
-
-#IPAM_TYPE="whereabouts"
-
-IPAM_TYPE="nv-ipam"
-#export NVIPAM_POOL_TYPE="CIDRPool"
-NVIPAM_POOL_TYPE="IPPool"
-
-#USECASE="sriovnet_rdma"
-#NETOP_NETLIST=( a,,,0000:03:00.0 b,,,0000:03:00.1 )
-#USECASE="sriovibnet_rdma"
-#NETOP_NETLIST=( a,,,0000:81:00.0 )
-
+NIC_CONFIG_ENABLE="false"
 USECASE="hostdev_rdma_sriov"
 NETOP_NETLIST=( a,,,0000:03:00.2,0000:03:00.4 b,,,0000:03:00.3,0000:03:00.5 )
-
-#USECASE="macvlan_rdma_shared_device"
-#NETOP_NETLIST=( a,,16,ens2f0np0 b,,16,ens2f1np1 )
-
 CREATE_CONFIG_ONLY="1"
-NIC_CONFIG_ENABLE="false"
-#DEVICE_TYPES=( "Connectx-5 Ex")
-#NUM_VFS=4
-#RDMASHAREDMODE=false

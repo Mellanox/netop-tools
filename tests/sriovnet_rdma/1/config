@@ -1,4 +1,4 @@
-NETOP_VERSION=25.1.0
+NETOP_VERSION=25.4.0
 USECASE="sriovnet_rdma"
 
 #IPAM_TYPE="whereabouts"
