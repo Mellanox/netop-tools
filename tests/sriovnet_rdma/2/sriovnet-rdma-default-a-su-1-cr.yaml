@@ -9,13 +9,13 @@ spec:
   resourceName: "sriov_resource_a"
   ipam: |
     {
-      "type": "whereabouts",
+      "type": "nv-ipam",
       "datastore": "kubernetes",
       "kubernetes": {
-        "kubeconfig": "/etc/cni/net.d/whereabouts.d/whereabouts.kubeconfig"
+        "kubeconfig": "/etc/cni/net.d/nv-ipam.d/nv-ipam.kubeconfig"
       },
-      "range": "192.170.0.0/16",
-      "exclude": [],
-      "log_file": "/var/log/whereabouts.log",
-      "log_level": "info"
+      "log_file": "/var/log/SriovNetwork_nv-ipam.log",
+      "log_level": "debug",
+      "poolName": "sriovnet-pool-a-su-1",
+      "poolType": "IPPool"
     }

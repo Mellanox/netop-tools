@@ -5,8 +5,6 @@ metadata:
   namespace: nvidia-network-operator
 spec:
   vlan: 0
-  metaPlugins: |
-    { "type" : "rdma" }
   networkNamespace: "default"
   resourceName: "sriov_resource_b"
   ipam: |
