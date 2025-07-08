@@ -35,4 +35,5 @@ popd
 cd ${NETOP_CHART_DIR}/network-operator
 helm upgrade -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator --version ${NETOP_VERSION} -f ./values.yaml -f ${USECASE_DIR}/values.yaml
 uncordon
+${NETOP_ROOT_DIR}/install/applycrds.sh
 ${NETOP_ROOT_DIR}/ops/apply-network-cr.sh
