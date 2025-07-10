@@ -9,4 +9,4 @@ WORKDIR /home/perftest
  
 #ADD ./entrypoint.sh ./
 #ENTRYPOINT ["/usr/bin/bash", "-c", "sleep", "inf"]
-ENTRYPOINT [ "./entrypoint.sh" ]
+ENTRYPOINT [ "/root/entrypoint.sh" ]
