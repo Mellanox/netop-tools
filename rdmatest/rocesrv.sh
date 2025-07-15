@@ -22,5 +22,5 @@ for arg in "$@"; do
   esac
 done
 source ${NETOP_ROOT_DIR}/global_ops.cfg
-DEV=$(${K8CL} exec ${SRVR_POD} -- sh -c "rdma link" | awk --assign net="${NET}" '{ if ( $8 == net ){print $2 }}' | cut -d'/' -f1 )
+DEV=$(${K8CL} exec ${SRVR_POD} -- sh -c "rdma link" | awk --assign net="${NET_DEV}" '{ if ( $8 == net ){print $2 }}' | cut -d'/' -f1 )
 ${K8CL} exec ${SRVR_POD} -- bash -c "ib_write_bw -d ${DEV} -F --report_gbits"

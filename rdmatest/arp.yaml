@@ -1,0 +1,9 @@
+#  RP_FILTER="sysctl net.ipv4.conf.all.rp_filter=0"
+#  ARP_ANNOUNCE="sysctl net.ipv4.conf.all.arp_announce=2"
+#  ARP_IGNORE="sysctl net.ipv4.conf.all.arp_ignore=1"
+# under
+# containers:
+# - name:
+    env:
+    - name: SYSCTL_CONFIG
+      value: "net.ipv4.conf.all.rp_filter=0,net.ipv4.conf.all.arp_announce=2,net.ipv4.conf.all.arp_ignore=1"
