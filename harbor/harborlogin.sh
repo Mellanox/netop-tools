@@ -24,6 +24,6 @@ case $# in
   usage
 esac
 IMAGE_ID=$(sudo docker images | grep -v "IMAGE" | grep ${IMAGE} | tr -s [:space:] | cut -d' ' -f3)
-sudo docker tag ${IMAGE_ID} ${HARBOR_URL}
-sudo docker login ${HARBOR_REGISTRY}
-sudo docker push ${HARBOR_URL}
+sudo docker tag ${IMAGE_ID} ${REGISTRY_URL}
+sudo docker login ${REGISTRY}
+sudo docker push ${REGISTRY_URL}

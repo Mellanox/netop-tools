@@ -24,4 +24,4 @@ case $# in
 *)
   usage
 esac
-sudo docker pull ${HARBOR_URL}
+sudo docker pull ${REGISTRY_URL}

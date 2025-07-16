@@ -19,5 +19,5 @@ case $# in
   echo "usage:$0 image config"
   exit 1
 esac
-sudo docker login ${HARBOR_REGISTRY}
-sudo docker push ${HARBOR_URL}
+sudo docker login ${REGISTRY}
+sudo docker push ${REGISTRY_URL}

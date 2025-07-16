@@ -28,4 +28,4 @@ case $# in
 *)
   usage
 esac
-sudo crictl push --creds "${USR}:${PSW}" ${HARBOR_URL}
+sudo crictl push --creds "${USR}:${PSW}" ${REGISTRY_URL}
