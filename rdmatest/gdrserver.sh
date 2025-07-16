@@ -8,13 +8,13 @@ function gid_info()
 }
 function get_cmdstr() 
 {
-  RP_FILTER="sysctl net.ipv4.conf.all.rp_filter=0"
-  ARP_ANNOUNCE="sysctl net.ipv4.conf.all.arp_announce=2"
-  ARP_IGNORE="sysctl net.ipv4.conf.all.arp_ignore=1"
+#  RP_FILTER="sysctl net.ipv4.conf.all.rp_filter=0"
+#  ARP_ANNOUNCE="sysctl net.ipv4.conf.all.arp_announce=2"
+#  ARP_IGNORE="sysctl net.ipv4.conf.all.arp_ignore=1"
   if [ "${GDR}" == false ];then
-    echo "${RP_FILTER};${ARP_ANNOUNCE};${ARP_IGNORE};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a" 
+    echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a" 
   else
-    echo "${RP_FILTER};${ARP_ANNOUNCE};${ARP_IGNORE};ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a"
+    echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a"
   fi
 }
 if [ $# -lt 1 ];then
@@ -37,10 +37,11 @@ for arg in "$@"; do
     --net)
       shift # Remove --net from processing
       NET_DEV=${1}
+      shift
       ;;
-    --ns)                                                                                               │
-      shift # Remove --ns from processing                                                               │
-      NAMESPACE="-n ${1}"                                                                               │
+    --ns) 
+      shift # Remove --ns from processing
+      NAMESPACE="-n ${1}"
       shift 
     # Add more flags here as needed
   esac
