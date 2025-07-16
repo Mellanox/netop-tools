@@ -28,4 +28,4 @@ case $# in
 *)
   usage
 esac
-sudo ctr --namespace k8s.io images push --user "${USR}:${PSW}" ${HARBOR_URL}
+sudo ctr --namespace k8s.io images push --user "${USR}:${PSW}" ${REGISTRY_URL}

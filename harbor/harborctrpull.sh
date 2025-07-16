@@ -22,4 +22,4 @@ case $# in
 *)
   usage
 esac
-sudo ctr --namespace k8s.io images pull ${HARBOR_URL}
+sudo ctr --namespace k8s.io images pull ${REGISTRY_URL}

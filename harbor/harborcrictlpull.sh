@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# need to do docker login ${HARBOR_REGISTRY}
+# need to do docker login ${REGISTRY}
 #
 function usage()
 {
@@ -21,4 +21,4 @@ case $# in
 *)
   usage
 esac
-sudo crictl pull ${HARBOR_URL}
+sudo crictl pull ${REGISTRY_URL}
