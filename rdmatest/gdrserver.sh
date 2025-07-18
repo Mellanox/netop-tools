@@ -18,7 +18,7 @@ function get_cmdstr()
   fi
 }
 if [ $# -lt 1 ];then
-  echo "usage:${0} <server_pod> --net <netdev> [ --ns <namespace> ] [--gdr] "
+  echo "usage:${0} <server_pod> --net <netdev> [ --ns <namespace> ] [--gdr]|[--gpu {n}]  "
   exit 1
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
@@ -28,27 +28,34 @@ shift
 
 GDR=false
 NET_DEV="net1"
+CUDA_DEV=""
 for arg in "$@"; do
   case $arg in
-    --gdr)
-      GDR=true
-      shift # Remove --gdr from processing
-      ;;
-    --net)
-      shift # Remove --net from processing
-      NET_DEV=${1}
-      shift
-      ;;
-    --ns) 
-      shift # Remove --ns from processing
-      NAMESPACE="-n ${1}"
-      shift 
+  --gdr)
+    GDR=true
+    shift # Remove --gdr from processing
+    ;;
+  --net)
+    shift # Remove --net from processing
+    NET_DEV=${1}
+    shift
+    ;;
+  --ns)
+    shift # Remove --ns from processing
+    NAMESPACE="-n ${1}"
+    shift
+    ;;
+  --gpu)
+    shift # Remove --gpu from processing
+    CUDA_DEV="${1}"
+    GDR=true
+    BEST_GPU_LINK="manual"
+    shift
     # Add more flags here as needed
   esac
 done
 
 CUDA_INFO_FILE="/tmp/cuda_info.$$"
-
 GID_INFO=$(${K8CL} ${NAMESPACE} exec ${SRVR_POD} -- sh -c "/root/show_gids" | gid_info ${NET_DEV})
 RDMA_DEV=$(echo $GID_INFO |cut -d' ' -f1)
 GID_IDX=$(echo $GID_INFO |cut -d' ' -f3)
@@ -62,10 +69,12 @@ if [ "${GDR}" == false ];then
 fi
 
 if [ "${GDR}" == true ];then
-  echo "--gdr flag Provided. Determining optimal CUDA device. This may take a few seconds ..."
-  ${K8CL} ${NAMESPACE} exec ${SRVR_POD} -- bash -c "/root/k8s-netdev-mapping.sh" > ${CUDA_INFO_FILE}
-  CUDA_DEV=$(grep ${NET_DEV}, ${CUDA_INFO_FILE}| cut  -d',' -f6)
-  BEST_GPU_LINK=$(grep ${NET_DEV}, ${CUDA_INFO_FILE}| cut  -d',' -f5)
+  if [ "${CUDA_DEV}" == "" ];then
+    echo "--gdr flag Provided. Determining optimal CUDA device. This may take a few seconds ..."
+    ${K8CL} ${NAMESPACE} exec ${SRVR_POD} -- bash -c "/root/k8s-netdev-mapping.sh" > ${CUDA_INFO_FILE}
+    CUDA_DEV=$(grep ${NET_DEV}, ${CUDA_INFO_FILE}| cut  -d',' -f6)
+    BEST_GPU_LINK=$(grep ${NET_DEV}, ${CUDA_INFO_FILE}| cut  -d',' -f5)
+  fi
   echo "Using CUDA device ${CUDA_DEV} via ${BEST_GPU_LINK}. Performing GDR perftest. Waiting for client to connect ..."
   CMDSTR=$(get_cmdstr)
   echo "${SRVR_POD}:${NET_DEV}:${CMDSTR}"
