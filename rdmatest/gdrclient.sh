@@ -19,7 +19,7 @@ function get_cmdstr()
   fi
 }
 if [ $# -lt 2 ];then
-  echo "usage:${0} <client_pod> <server_pod> --net <netdev> [ --ns <namespace> ] [--gdr] "
+  echo "usage:${0} <client_pod> <server_pod> --net <netdev> [ --ns <namespace> ] [--gdr]|[--gpu [n] "
   exit 1
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
