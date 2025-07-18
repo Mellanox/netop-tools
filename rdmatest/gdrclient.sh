@@ -30,21 +30,29 @@ SRVR_POD=${1}
 shift
 NET_DEV=net1
 GDR=false
+CUDA_DEV=""
 for arg in "$@"; do
   case $arg in
-    --gdr)
-      GDR=true
-      shift # Remove --gdr from processing
-      ;;
-    --net)
-      shift # Remove --net from processing
-      NET_DEV=${1}
-      shift
-      ;;
-    --ns) 
-      shift # Remove --ns from processing
-      NAMESPACE="-n ${1}"
-      shift   
+  --gdr)
+    GDR=true
+    shift # Remove --gdr from processing
+    ;;
+  --net)
+    shift # Remove --net from processing
+    NET_DEV=${1}
+    shift
+    ;;
+  --ns)
+    shift # Remove --ns from processing
+    NAMESPACE="-n ${1}"
+    shift
+    ;;
+  --gpu)
+    shift # Remove --gpu from processing
+    CUDA_DEV="${1}"
+    GDR=true
+    BEST_GPU_LINK="manual"
+    shift
     # Add more flags here as needed
   esac
 done
