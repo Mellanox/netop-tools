@@ -90,7 +90,13 @@ cat << OFED_DRIVER2
       value: "mlx5_core:mlx5_ib:ib_umad:ib_uverbs:ib_ipoib:rdma_cm:rdma_ucm:ib_core:ib_cm:${OFED_BLACKLIST_ADD}"
 OFED_DRIVER2
     fi
+    if [ "${ENABLE_NFSRDMA}" = "true" ];then
 cat << OFED_DRIVER3
+    - name: ENABLE_NFSRDMA
+      value: "${ENABLE_NFSRDMA}"
+OFED_DRIVER3
+    fi
+cat << OFED_DRIVER4
     startupProbe:
       initialDelaySeconds: 10
       periodSeconds: 20
@@ -110,7 +116,7 @@ cat << OFED_DRIVER3
         podSelector: ""
         timeoutSeconds: 300
         deleteEmptyDir: true
-OFED_DRIVER3
+OFED_DRIVER4
 }
 function sriovDevicePlugin()
 {
