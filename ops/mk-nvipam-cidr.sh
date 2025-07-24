@@ -30,7 +30,7 @@ spec:
   nodeSelector:
     nodeSelectorTerms:
     - matchExpressions:
-        - key: node-role.kubernetes.io/worker
+        - key: node-role.kubernetes.io/${WORKERNODE}
           operator: Exists
 #       - key: node.su/${NETOP_SU}
 #         operator: Exists
@@ -59,7 +59,7 @@ nv_cidrpool ${*}
 #  nodeSelector: # optional
 #    nodeSelectorTerms:
 #      - matchExpressions:
-#          - key: node-role.kubernetes.io/worker
+#          - key: node-role.kubernetes.io/${WORKERNODE}
 #            operator: Exists
 #  defaultGateway: true # optional
 #  routes: # optional

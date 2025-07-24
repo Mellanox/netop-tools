@@ -10,5 +10,5 @@ if [ "$#" -lt 1 ];then
   exit 1
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
-${K8CL} label node ${1} node-role.kubernetes.io/worker=""
+${K8CL} label node ${1} node-role.kubernetes.io/${WORKERNODE}=""
 ${K8CL} taint nodes ${1} node-role.kubernetes.io/control-plane-

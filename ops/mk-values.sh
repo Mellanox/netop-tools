@@ -21,7 +21,7 @@ sriovNetworkOperator:
 sriov-network-operator:
   sriovOperatorConfig:
     configDaemonNodeSelector:
-      node-role.kubernetes.io/worker: ""
+      node-role.kubernetes.io/${WORKERNODE}: ""
     featureGates:
       parallelNicConfig: true
       mellanoxFirmwareReset: false
