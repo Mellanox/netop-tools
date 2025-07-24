@@ -11,4 +11,4 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 # to make unschedulable, add the taint node-role.kubernetes.io/control-plane:NoSchedule
 ${K8CL} taint nodes ${1} node-role.kubernetes.io/control-plane:NoSchedule
 # remove the worker label
-${K8CL} label node ${1} node-role.kubernetes.io/worker-
+${K8CL} label node ${1} node-role.kubernetes.io/${WORKERNODE}-
