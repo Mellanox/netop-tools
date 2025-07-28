@@ -56,7 +56,7 @@ case ${NETOP_VERSION} in
 esac
 function ofedDriver()
 {
-if [ ${OFED_ENABLE} = false ];then
+if [ "${OFED_ENABLE}" = "false" ];then
   return
 fi
 cat << OFED_DRIVER0
@@ -316,6 +316,6 @@ hostdev_rdma_sriov)
 esac
 secondaryNetwork >> ${FILE}
 nvIpam >> ${FILE}
-if [ ${NIC_CONFIG_ENABLE} == "true" ];then
+if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
   nicFeatureDiscovery >> ${FILE}
 fi
