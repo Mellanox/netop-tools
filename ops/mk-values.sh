@@ -23,8 +23,11 @@ sriov-network-operator:
     configDaemonNodeSelector:
       node-role.kubernetes.io/${WORKERNODE}: ""
     featureGates:
-      parallelNicConfig: true
-      mellanoxFirmwareReset: false
+      parallelNicConfig: ${FG_PARALLEL_NIC_CONFIG}
+      resourceInjectorMatchCondition: ${FG_RESOURCE_INJECTOR_MATCH}
+      metricsExporter: ${METRICS_EXPORTER}
+      manageSoftwareBridges: ${MANAGE_SW_BRIDGE}
+      mellanoxFirmwareReset: ${FG_MLNX_FW_RESET}
 SRIOV_NETWORK_OPERATOR
 }
 function pullSecrets()
