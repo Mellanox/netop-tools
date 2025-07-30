@@ -62,11 +62,16 @@ nicConfigurationOperator:
   enabled: ${NIC_CONFIG_ENABLE}
 maintenanceOperator:
   enabled: ${NIC_CONFIG_ENABLE}
-# NicClusterPolicy CR values
-deployCR: true
 nvIpam:
   deploy: ${NVIPAMVAL}
 VALUES_YAML
+}
+function deployCR()
+{
+cat <<DEPLOY_CR_YAML
+# NicClusterPolicy CR values
+deployCR: true
+DEPLOY_CR_YAML
 }
 function ofedDriver()
 {
@@ -183,6 +188,7 @@ function 24_7_0()
   version
   ipamType
   values_yaml
+  deployCR
   sriovNetworkOperator
   pullSecrets
   ofedDriver
@@ -201,6 +207,15 @@ function 24_7_0()
     ;;
   esac
   secondaryNetwork
+}
+function 25_4_0()
+{
+  version
+  ipamType
+  values_yaml
+  sriovNetworkOperator
+  pullSecrets
+# ofedDriver
 }
 function 24_10_0()
 {
@@ -222,7 +237,10 @@ function 24_10_1()
 }
 
 case ${NETOP_VERSION} in
-  24.10.0|24.10.1|25.1.0|25.4.0)
+  25.1.0|25.4.0)
+    NETOP_FUNCT=25_4_0
+    ;;
+  24.10.0|24.10.1)
     NETOP_FUNCT=24_10_1
     ;;
   24.7.0|24.1.1)
