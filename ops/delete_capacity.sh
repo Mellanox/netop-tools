@@ -1,6 +1,8 @@
 #!/bin/bash
 
-
+# must run on local node
+# first run kubectl proxy
+#
 #Delete stale (not used) resource from the node
 # Input:
 #   $1: node name
@@ -8,7 +10,6 @@
 
 # '/' symbol is a special character in JSON, so we need to escape it
 # and replace it with '~1'
-
 #Running the script
 # Before running the script, run '${K8CL} proxy' to create a local proxy to the Kubernetes API
 # Then run the script with the node name and resource name as arguments
