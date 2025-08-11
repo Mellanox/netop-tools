@@ -8,8 +8,13 @@ NIC_CONFIG_ENABLE=${NIC_CONFIG_ENABLE:-true}
 function sriovNetworkOperator()
 {
 case ${USECASE} in
-sriovnet_rdma|sriovibnet_rdma)
+sriovnet_rdma)
   SRIOVNET="true"
+  IPOIBVAL="false"
+  ;;
+sriovibnet_rdma)
+  SRIOVNET="true"
+  IPOIBVAL="true"
   ;;
 *)
   SRIOVNET="false"
@@ -177,6 +182,8 @@ secondaryNetwork:
     deploy: true
   ipamPlugin:
     deploy: ${IPAMVAL}
+  ipoib:
+    deploy: ${IPOIBVAL}
 SECONDARY_NETWORK
 }
 function version()
