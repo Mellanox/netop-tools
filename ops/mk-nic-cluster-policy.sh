@@ -226,7 +226,8 @@ cat << SECONDARY_NETWORK1
       version: ${MULTUS_VERSION}
       imagePullSecrets: []
 SECONDARY_NETWORK1
-if [ "${NETOP_NETWORK_TYPE}" = "IPoIBNetwork" ];then
+case "${NETOP_NETWORK_TYPE}" in
+IPoIBNetwork|SriovIBNetwork)
 cat << SECONDARY_NETWORK2
     ipoib:
       image: ipoib-cni
@@ -234,7 +235,8 @@ cat << SECONDARY_NETWORK2
       version: ${IPOIB_VERSION}
       imagePullSecrets: []
 SECONDARY_NETWORK2
-fi
+    ;;
+esac
 if [ "${IPAM_TYPE}" = "whereabouts" ];then
 cat << SECONDARY_NETWORK3 >> ${FILE}
     ipamPlugin:
