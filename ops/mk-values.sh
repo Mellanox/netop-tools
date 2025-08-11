@@ -73,10 +73,10 @@ VALUES_YAML
 }
 function deployCR()
 {
-cat <<DEPLOY_CR_YAML
+cat <<DEPLOY_CR_YAML1
 # NicClusterPolicy CR values
-deployCR: true
-DEPLOY_CR_YAML
+deployCR: ${1}
+DEPLOY_CR_YAML1
 }
 function ofedDriver()
 {
@@ -195,7 +195,7 @@ function 24_7_0()
   version
   ipamType
   values_yaml
-  deployCR
+  deployCR true
   sriovNetworkOperator
   pullSecrets
   ofedDriver
@@ -220,6 +220,7 @@ function 25_4_0()
   version
   ipamType
   values_yaml
+  deployCR false
   sriovNetworkOperator
   pullSecrets
 # ofedDriver
@@ -229,6 +230,7 @@ function 24_10_0()
   version
   ipamType
   values_yaml
+  deployCR true
   sriovNetworkOperator
   pullSecrets
 # ofedDriver
@@ -238,6 +240,7 @@ function 24_10_1()
   version
   ipamType
   values_yaml
+  deployCR true
   sriovNetworkOperator
   pullSecrets
 # ofedDriver
