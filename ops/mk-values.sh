@@ -223,6 +223,7 @@ function 25_4_0()
   sriovNetworkOperator
   pullSecrets
 # ofedDriver
+  secondaryNetwork
 }
 function 24_10_0()
 {
