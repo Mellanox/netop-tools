@@ -17,12 +17,28 @@ function get_cmdstr()
     echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a"
   fi
 }
+function roce_config()
+{
+  CUDA_INFO_FILE="/tmp/cuda_info.$$"
+  GID_INFO=$(${K8CL} ${NAMESPACE} exec ${SRVR_POD} -- sh -c "/root/show_gids" | gid_info ${NET_DEV})
+  RDMA_DEV=$(echo ${GID_INFO} |cut -d' ' -f1)
+  GID_IDX=$(echo ${GID_INFO} |cut -d' ' -f3)
+}
+function ib_config()
+{
+  CUDA_INFO_FILE="/tmp/cuda_info.$$"
+  GID_INFO=$(${K8CL} ${NAMESPACE} exec ${SRVR_POD} -- sh -c "/root/getrdmanet.sh ${NET_DEV}" )
+  RDMA_DEV=$(echo ${GID_INFO} |cut -d',' -f1)
+  GID_IDX=$(echo ${GID_INFO} |cut -d',' -f2)
+}
 if [ $# -lt 1 ];then
-  echo "usage:${0} <server_pod> --net <netdev> [ --ns <namespace> ] [--gdr]|[--gpu {n}]  "
+  echo "usage:${0} <roce|ib> <server_pod> --net <netdev> [ --ns <namespace> ] [--gdr]|[--gpu {n}]  "
   exit 1
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
+MODE=${1}
+shift
 SRVR_POD=${1}
 shift
 
@@ -55,11 +71,14 @@ for arg in "$@"; do
   esac
 done
 
-CUDA_INFO_FILE="/tmp/cuda_info.$$"
-GID_INFO=$(${K8CL} ${NAMESPACE} exec ${SRVR_POD} -- sh -c "/root/show_gids" | gid_info ${NET_DEV})
-RDMA_DEV=$(echo $GID_INFO |cut -d' ' -f1)
-GID_IDX=$(echo $GID_INFO |cut -d' ' -f3)
-
+case ${MODE} in
+roce)
+  roce_config
+  ;;
+ib)
+  ib_config
+  ;;
+esac
 if [ "${GDR}" == false ];then
   echo "--gdr flag not provided. Performing rdma perftest. Waiting for client to connect ..."
   CMDSTR=$(get_cmdstr)
