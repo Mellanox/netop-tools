@@ -56,7 +56,7 @@ case ${NETOP_VERSION} in
 esac
 function ofedDriver()
 {
-if [ ${OFED_ENABLE} = false ];then
+if [ "${OFED_ENABLE}" = "false" ];then
   return
 fi
 cat << OFED_DRIVER0
@@ -90,7 +90,13 @@ cat << OFED_DRIVER2
       value: "mlx5_core:mlx5_ib:ib_umad:ib_uverbs:ib_ipoib:rdma_cm:rdma_ucm:ib_core:ib_cm:${OFED_BLACKLIST_ADD}"
 OFED_DRIVER2
     fi
+    if [ "${ENABLE_NFSRDMA}" = "true" ];then
 cat << OFED_DRIVER3
+    - name: ENABLE_NFSRDMA
+      value: "${ENABLE_NFSRDMA}"
+OFED_DRIVER3
+    fi
+cat << OFED_DRIVER4
     startupProbe:
       initialDelaySeconds: 10
       periodSeconds: 20
@@ -110,7 +116,7 @@ cat << OFED_DRIVER3
         podSelector: ""
         timeoutSeconds: 300
         deleteEmptyDir: true
-OFED_DRIVER3
+OFED_DRIVER4
 }
 function sriovDevicePlugin()
 {
@@ -207,6 +213,7 @@ RDMA_SDP3
 }
 function secondaryNetwork()
 {
+set -x
 cat << SECONDARY_NETWORK1
   secondaryNetwork:
     cniPlugins:
@@ -220,7 +227,8 @@ cat << SECONDARY_NETWORK1
       version: ${MULTUS_VERSION}
       imagePullSecrets: []
 SECONDARY_NETWORK1
-if [ "${NETOP_NETWORK_TYPE}" = "IPoIBNetwork" ];then
+case "${NETOP_NETWORK_TYPE}" in
+IPoIBNetwork)
 cat << SECONDARY_NETWORK2
     ipoib:
       image: ipoib-cni
@@ -228,7 +236,8 @@ cat << SECONDARY_NETWORK2
       version: ${IPOIB_VERSION}
       imagePullSecrets: []
 SECONDARY_NETWORK2
-fi
+    ;;
+esac
 if [ "${IPAM_TYPE}" = "whereabouts" ];then
 cat << SECONDARY_NETWORK3 >> ${FILE}
     ipamPlugin:
@@ -310,6 +319,6 @@ hostdev_rdma_sriov)
 esac
 secondaryNetwork >> ${FILE}
 nvIpam >> ${FILE}
-if [ ${NIC_CONFIG_ENABLE} == "true" ];then
+if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
   nicFeatureDiscovery >> ${FILE}
 fi

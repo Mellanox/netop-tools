@@ -14,12 +14,7 @@ fi
 ${NETOP_ROOT_DIR}/install/mksecret.sh
 
 cd ${USECASE_DIR}
-${NETOP_ROOT_DIR}/ops/mk-values.sh
-${NETOP_ROOT_DIR}/ops/mk-nic-cluster-policy.sh
-${NETOP_ROOT_DIR}/ops/mk-network-cr.sh
-if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
-  ${NETOP_ROOT_DIR}/ops/mk-nic-config.sh
-fi
+${NETOP_ROOT_DIR}/ops/mk-config.sh
 
 RELEASE_VALUES=${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart/network-operator/values.yaml
 # if the release values file exists, use it, otherwise use an empty string

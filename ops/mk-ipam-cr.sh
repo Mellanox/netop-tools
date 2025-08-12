@@ -16,7 +16,7 @@ cat <<HEREDOC1
         "kubeconfig": "/etc/cni/net.d/${IPAM_TYPE}.d/${IPAM_TYPE}.kubeconfig"
       },
       "range": "${NETOP_NETWORK_RANGE}",
-      "exclude": [],
+      "exclude": [ ${NETOP_NETWORK_EXCLUDE} ],
       "log_file": "/var/log/${IPAM_TYPE}.log",
       "log_level": "info"
     }

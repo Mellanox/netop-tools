@@ -26,7 +26,6 @@ metadata:
   namespace: ${NETOP_NAMESPACE}
 spec:
   deviceType: netdevice
-  mtu: ${NETOP_MTU}
   nicSelector:
     vendor: "15b3"
     ${DEVICES}
@@ -36,7 +35,7 @@ spec:
   isRdma: true
   resourceName: ${NETOP_RESOURCE}_${NDIX}
   nodeSelector:
-    node-role.kubernetes.io/worker: ""
+    node-role.kubernetes.io/${WORKERNODE}: ""
     feature.node.kubernetes.io/pci-15b3.present: "true"
 HEREDOC
 echo ${FILE}

@@ -19,7 +19,7 @@ function get_cmdstr()
   fi
 }
 if [ $# -lt 2 ];then
-  echo "usage:${0} <client_pod> <server_pod> --net <netdev> [ --ns <namespace> ] [--gdr] "
+  echo "usage:${0} <client_pod> <server_pod> --net <netdev> [ --ns <namespace> ] [--gdr]|[--gpu [n] "
   exit 1
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
@@ -30,21 +30,29 @@ SRVR_POD=${1}
 shift
 NET_DEV=net1
 GDR=false
+CUDA_DEV=""
 for arg in "$@"; do
   case $arg in
-    --gdr)
-      GDR=true
-      shift # Remove --gdr from processing
-      ;;
-    --net)
-      shift # Remove --net from processing
-      NET_DEV=${1}
-      shift
-      ;;
-    --ns) 
-      shift # Remove --ns from processing
-      NAMESPACE="-n ${1}"
-      shift   
+  --gdr)
+    GDR=true
+    shift # Remove --gdr from processing
+    ;;
+  --net)
+    shift # Remove --net from processing
+    NET_DEV=${1}
+    shift
+    ;;
+  --ns)
+    shift # Remove --ns from processing
+    NAMESPACE="-n ${1}"
+    shift
+    ;;
+  --gpu)
+    shift # Remove --gpu from processing
+    CUDA_DEV="${1}"
+    GDR=true
+    BEST_GPU_LINK="manual"
+    shift
     # Add more flags here as needed
   esac
 done

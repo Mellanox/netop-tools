@@ -8,8 +8,13 @@ NIC_CONFIG_ENABLE=${NIC_CONFIG_ENABLE:-true}
 function sriovNetworkOperator()
 {
 case ${USECASE} in
-sriovnet_rdma|sriovibnet_rdma)
+sriovnet_rdma)
   SRIOVNET="true"
+  IPOIBVAL="false"
+  ;;
+sriovibnet_rdma)
+  SRIOVNET="true"
+  IPOIBVAL="true"
   ;;
 *)
   SRIOVNET="false"
@@ -21,10 +26,13 @@ sriovNetworkOperator:
 sriov-network-operator:
   sriovOperatorConfig:
     configDaemonNodeSelector:
-      node-role.kubernetes.io/worker: ""
+      node-role.kubernetes.io/${WORKERNODE}: ""
     featureGates:
-      parallelNicConfig: true
-      mellanoxFirmwareReset: false
+      parallelNicConfig: ${FG_PARALLEL_NIC_CONFIG}
+      resourceInjectorMatchCondition: ${FG_RESOURCE_INJECTOR_MATCH}
+      metricsExporter: ${METRICS_EXPORTER}
+      manageSoftwareBridges: ${MANAGE_SW_BRIDGE}
+      mellanoxFirmwareReset: ${FG_MLNX_FW_RESET}
 SRIOV_NETWORK_OPERATOR
 }
 function pullSecrets()
@@ -59,11 +67,16 @@ nicConfigurationOperator:
   enabled: ${NIC_CONFIG_ENABLE}
 maintenanceOperator:
   enabled: ${NIC_CONFIG_ENABLE}
-# NicClusterPolicy CR values
-deployCR: true
 nvIpam:
   deploy: ${NVIPAMVAL}
 VALUES_YAML
+}
+function deployCR()
+{
+cat <<DEPLOY_CR_YAML1
+# NicClusterPolicy CR values
+deployCR: ${1}
+DEPLOY_CR_YAML1
 }
 function ofedDriver()
 {
@@ -169,6 +182,8 @@ secondaryNetwork:
     deploy: true
   ipamPlugin:
     deploy: ${IPAMVAL}
+  ipoib:
+    deploy: ${IPOIBVAL}
 SECONDARY_NETWORK
 }
 function version()
@@ -180,6 +195,7 @@ function 24_7_0()
   version
   ipamType
   values_yaml
+  deployCR true
   sriovNetworkOperator
   pullSecrets
   ofedDriver
@@ -199,11 +215,23 @@ function 24_7_0()
   esac
   secondaryNetwork
 }
+function 25_4_0()
+{
+  version
+  ipamType
+  values_yaml
+  deployCR false
+  sriovNetworkOperator
+  pullSecrets
+# ofedDriver
+  secondaryNetwork
+}
 function 24_10_0()
 {
   version
   ipamType
   values_yaml
+  deployCR true
   sriovNetworkOperator
   pullSecrets
 # ofedDriver
@@ -213,13 +241,17 @@ function 24_10_1()
   version
   ipamType
   values_yaml
+  deployCR true
   sriovNetworkOperator
   pullSecrets
 # ofedDriver
 }
 
 case ${NETOP_VERSION} in
-  24.10.0|24.10.1|25.1.0|25.4.0)
+  25.1.0|25.4.0)
+    NETOP_FUNCT=25_4_0
+    ;;
+  24.10.0|24.10.1)
     NETOP_FUNCT=24_10_1
     ;;
   24.7.0|24.1.1)
