@@ -47,11 +47,6 @@ spec:
       repository: ghcr.io/k8snetworkplumbingwg
       version: v4.1.0
       imagePullSecrets: []
-    ipoib:
-      image: ipoib-cni
-      repository: ghcr.io/mellanox
-      version: v1.2.2
-      imagePullSecrets: []
   nvIpam:
     image: nvidia-k8s-ipam
     imagePullSecrets: []
