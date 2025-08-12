@@ -48,7 +48,7 @@ spec:
   containers:
   - name: appcntr1
     #image: mellanox/rping-test
-    image: harbor.runailabs-ps.com/nvidia/rdmadbg_cuda:latest
+    image: harbor.runailabs-ps.com/netop/rdmadbg_cuda_x86_64:latest
     imagePullPolicy: IfNotPresent
     env:
        - name: SYSCTL_CONFIG
