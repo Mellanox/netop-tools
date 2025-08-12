@@ -213,6 +213,7 @@ RDMA_SDP3
 }
 function secondaryNetwork()
 {
+set -x
 cat << SECONDARY_NETWORK1
   secondaryNetwork:
     cniPlugins:
@@ -227,7 +228,7 @@ cat << SECONDARY_NETWORK1
       imagePullSecrets: []
 SECONDARY_NETWORK1
 case "${NETOP_NETWORK_TYPE}" in
-IPoIBNetwork|SriovIBNetwork)
+IPoIBNetwork)
 cat << SECONDARY_NETWORK2
     ipoib:
       image: ipoib-cni
