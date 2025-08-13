@@ -13,9 +13,9 @@ function get_cmdstr()
 #  ARP_ANNOUNCE="sysctl net.ipv4.conf.all.arp_announce=2"
 #  ARP_IGNORE="sysctl net.ipv4.conf.all.arp_ignore=1"
   if [ "${GDR}" == false ];then
-    echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a ${IP}"
+    echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a ${IP} ${SIZE}"
   else
-    echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a ${IP}"
+    echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a ${IP} ${SIZE}"
   fi
 }
 function roce_config()
@@ -52,6 +52,7 @@ shift
 NET_DEV=net1
 GDR=false
 CUDA_DEV=""
+SIZE=""
 for arg in "$@"; do
   case $arg in
   --gdr)
@@ -73,6 +74,11 @@ for arg in "$@"; do
     CUDA_DEV="${1}"
     GDR=true
     BEST_GPU_LINK="manual"
+    shift
+    ;;
+  --size)
+    shift # remove --size
+    SIZE=" -s ${1}"
     shift
     # Add more flags here as needed
   esac
