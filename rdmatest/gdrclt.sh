@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 # ${1}=client pod
 # ${2}=target server pod
@@ -35,7 +35,7 @@ function ib_config()
   RDMA_DEV=$(echo ${GID_INFO} |cut -d',' -f1)
   GID_IDX=$(echo ${GID_INFO} |cut -d',' -f2)
   GID_INFO=$(${K8CL} ${NAMESPACE} exec ${SRVR_POD} -- sh -c "/root/getrdmanet.sh ${NET_DEV}" )
-  IP=$(echo ${GID_INFO} |cut -d' ' -f3)
+  IP=$(echo ${GID_INFO} |cut -d',' -f3)
 }
 if [ $# -lt 2 ];then
   echo "usage:${0} <rdma|roce> <client_pod> <server_pod> --net <netdev> [ --ns <namespace> ] [--gdr]|[--gpu [n] "
@@ -43,6 +43,8 @@ if [ $# -lt 2 ];then
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
+MODE=${1}
+shift
 CLNT_POD=${1}
 shift
 SRVR_POD=${1}
@@ -79,6 +81,14 @@ GID_INFO_FILE_SRVR="/tmp/gid_info_srvr.$$"
 GID_INFO_FILE_CLNT="/tmp/gid_info_clnt.$$"
 CUDA_INFO_FILE="/tmp/cuda_info.$$"
 
+case ${MODE} in
+roce)
+  roce_config
+  ;;
+ib)
+  ib_config
+  ;;
+esac
 
 if [ "${GDR}" == false ];then
   echo "--gdr flag not provided. Performing rdma perftest."
