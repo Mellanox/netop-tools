@@ -37,7 +37,7 @@ spec:
   isRdma: true
   resourceName: ${NETOP_RESOURCE}_${NDIX}
   nodeSelector:
-    node-role.kubernetes.io/${WORKERNODE}: ""
+    ${NETOP_NODESELECTOR}: "${NETOP_NODESELECTOR_VAL}"
     feature.node.kubernetes.io/pci-15b3.present: "true"
 HEREDOC
 echo ${FILE}
