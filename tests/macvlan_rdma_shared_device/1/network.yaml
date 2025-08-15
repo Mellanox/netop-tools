@@ -1,4 +1,4 @@
-# VERSION: 25.4.0
+# VERSION:25.4.0
 ---
 apiVersion: mellanox.com/v1alpha1
 kind: MacvlanNetwork
@@ -20,5 +20,28 @@ spec:
       "log_file": "/var/log/MacvlanNetwork_nv-ipam.log",
       "log_level": "debug",
       "poolName": "macvlan-pool-a-su-1",
+      "poolType": "IPPool"
+    }
+---
+apiVersion: mellanox.com/v1alpha1
+kind: MacvlanNetwork
+metadata:
+  name: macvlan-rdma-shared-device-default-b-su-1
+  namespace: nvidia-network-operator
+spec:
+  networkNamespace: "default"
+  master: "ens3f0np0"
+  mode: "bridge"
+  mtu: 1500
+  ipam: |
+    {
+      "type": "nv-ipam",
+      "datastore": "kubernetes",
+      "kubernetes": {
+        "kubeconfig": "/etc/cni/net.d/nv-ipam.d/nv-ipam.kubeconfig"
+      },
+      "log_file": "/var/log/MacvlanNetwork_nv-ipam.log",
+      "log_level": "debug",
+      "poolName": "macvlan-pool-b-su-1",
       "poolType": "IPPool"
     }

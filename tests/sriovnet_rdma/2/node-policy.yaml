@@ -1,4 +1,4 @@
-# VERSION: 25.4.0
+# VERSION:25.4.0
 ---
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkNodePolicy
