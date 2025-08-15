@@ -23,7 +23,7 @@ RELEASE_VALUES=${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart/network-op
 
 ${docmd} helm install -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator --version ${NETOP_VERSION} \
   ${RELEASE_VALUES} \
-  -f ${USECASE_DIR}/values.yaml
+  -f ${USECASE_DIR}/${NETOP_VALUES_FILE}
 
 ${NETOP_ROOT_DIR}/install/applycrds.sh
 ${docmd} ${K8CL} apply -f ${USECASE_DIR}/NicClusterPolicy.yaml

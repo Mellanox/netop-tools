@@ -189,6 +189,7 @@ SECONDARY_NETWORK
 function version()
 {
   echo "# VERSION:${NETOP_VERSION}"
+  echo "---"
 }
 function 24_7_0()
 {
@@ -263,5 +264,4 @@ case ${NETOP_VERSION} in
     ;;
 esac
 
-#NETOP_FUNCT=$(echo ${NETOP_VERSION} | sed 's/\./_/g')
-${NETOP_FUNCT} > ./values.yaml
+${NETOP_FUNCT} > ${NETOP_VALUES_FILE}
