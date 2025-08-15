@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # nic cluster policy file has migrated out of the values.yaml file
 #
