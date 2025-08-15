@@ -1,0 +1,45 @@
+# VERSION:25.4.0
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovIBNetwork
+metadata:
+  name: "sriovibnet-rdma-default-a-su-1"
+  namespace: nvidia-network-operator
+spec:
+  linkState: enable
+  networkNamespace: "default"
+  resourceName: "sriovib_resource_a"
+  ipam: |
+    {
+      "type": "nv-ipam",
+      "datastore": "kubernetes",
+      "kubernetes": {
+        "kubeconfig": "/etc/cni/net.d/nv-ipam.d/nv-ipam.kubeconfig"
+      },
+      "log_file": "/var/log/SriovIBNetwork_nv-ipam.log",
+      "log_level": "debug",
+      "poolName": "sriovibnet-pool-a-su-1",
+      "poolType": "IPPool"
+    }
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovIBNetwork
+metadata:
+  name: "sriovibnet-rdma-default-b-su-1"
+  namespace: nvidia-network-operator
+spec:
+  linkState: enable
+  networkNamespace: "default"
+  resourceName: "sriovib_resource_b"
+  ipam: |
+    {
+      "type": "nv-ipam",
+      "datastore": "kubernetes",
+      "kubernetes": {
+        "kubeconfig": "/etc/cni/net.d/nv-ipam.d/nv-ipam.kubeconfig"
+      },
+      "log_file": "/var/log/SriovIBNetwork_nv-ipam.log",
+      "log_level": "debug",
+      "poolName": "sriovibnet-pool-b-su-1",
+      "poolType": "IPPool"
+    }
