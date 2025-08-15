@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # build container for different CPUs (x86_64,arm64)
 #

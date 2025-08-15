@@ -5,8 +5,6 @@
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 function nv_ippool()
 {
-FILE=${1}
-shift
 NIDX=${1}
 shift
 NETOP_SU=${1}
@@ -17,7 +15,8 @@ NETWORK_GW=${1}
 shift
 PERNODE_BLOCKSIZE=${1}
 shift
-cat <<POOLHEREDOC > ${FILE}
+cat <<POOLHEREDOC
+---
 apiVersion: nv-ipam.nvidia.com/v1alpha1
 kind: IPPool
 metadata:

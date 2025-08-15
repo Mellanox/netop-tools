@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # pull an image from private registry
 #

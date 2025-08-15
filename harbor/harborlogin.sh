@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # from deliotte bastion node, was able to login.
 #

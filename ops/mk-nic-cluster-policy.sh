@@ -1,6 +1,6 @@
-#!/bin/bash -x
+#!/bin/bash
 #
-# nic cluster plocy file has migrated outof the values.yaml file
+# nic cluster policy file has migrated out of the values.yaml file
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 case ${NETOP_VERSION} in
@@ -294,8 +294,10 @@ cat << MAINTENANCE_OPERATOR
 MAINTENANCE_OPERATOR
   fi
 }
-FILE="NicClusterPolicy.yaml"
+FILE="${NETOP_NICCLUSTER_FILE}"
 cat << HEREDOC1 > ${FILE}
+# VERSION: ${NETOP_VERSION}
+---
 apiVersion: mellanox.com/v1alpha1
 kind: NicClusterPolicy
 metadata:

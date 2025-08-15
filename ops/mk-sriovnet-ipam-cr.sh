@@ -10,27 +10,29 @@ if [ "$#" -ne 3 ];then
   exit 1
 fi
 NIDX=${1}
-NETOP_SU=${2}
-NETOP_APP_NAMESPACE=${3}
+shift
+NETOP_SU=${1}
+shift
+NETOP_APP_NAMESPACE=${1}
+shift
 
-FILE="${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}-cr.yaml"
-cat <<HEREDOC1> ${FILE}
+cat <<HEREDOC1
+---
 apiVersion: sriovnetwork.openshift.io/v1
 kind: ${NETOP_NETWORK_TYPE}
 metadata:
-  name: "${FILE%%-cr.yaml}"
+  name: "${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}"
   namespace: ${NETOP_NAMESPACE}
 spec:
 HEREDOC1
 if [ "${NETOP_NETWORK_TYPE}" = "SriovNetwork" ];then
-  echo "  vlan: ${NETOP_NETWORK_VLAN}" >> ${FILE}
+  echo "  vlan: ${NETOP_NETWORK_VLAN}"
 else
-  echo "  linkState: enable" >> ${FILE}
+  echo "  linkState: enable"
 fi
-meta_plugins >> ${FILE}
-cat <<HEREDOC4>> ${FILE}
+meta_plugins 
+cat <<HEREDOC4
   networkNamespace: "${NETOP_APP_NAMESPACE}"
   resourceName: "${NETOP_RESOURCE}_${NIDX}"
 HEREDOC4
-mk_ipam_cr ${NIDX} ${NETOP_SU} >> ${FILE}
-echo ${FILE}
+mk_ipam_cr ${NIDX} ${NETOP_SU}
