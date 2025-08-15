@@ -1,12 +1,15 @@
-apiVersion: sriovnetwork.openshift.io/v1
-kind: SriovIBNetwork
+# VERSION: 25.4.0
+---
+apiVersion: mellanox.com/v1alpha1
+kind: MacvlanNetwork
 metadata:
-  name: "sriovibnet-rdma-default-a-su-1"
+  name: macvlan-rdma-shared-device-default-a-su-1
   namespace: nvidia-network-operator
 spec:
-  linkState: enable
   networkNamespace: "default"
-  resourceName: "sriovib_resource_a"
+  master: "ens2f0np0"
+  mode: "bridge"
+  mtu: 1500
   ipam: |
     {
       "type": "nv-ipam",
@@ -14,8 +17,8 @@ spec:
       "kubernetes": {
         "kubeconfig": "/etc/cni/net.d/nv-ipam.d/nv-ipam.kubeconfig"
       },
-      "log_file": "/var/log/SriovIBNetwork_nv-ipam.log",
+      "log_file": "/var/log/MacvlanNetwork_nv-ipam.log",
       "log_level": "debug",
-      "poolName": "sriovibnet-pool-a-su-1",
+      "poolName": "macvlan-pool-a-su-1",
       "poolType": "IPPool"
     }
