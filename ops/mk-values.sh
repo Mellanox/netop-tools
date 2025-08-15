@@ -26,7 +26,7 @@ sriovNetworkOperator:
 sriov-network-operator:
   sriovOperatorConfig:
     configDaemonNodeSelector:
-      node-role.kubernetes.io/${WORKERNODE}: ""
+      ${NETOP_NODESELECTOR}: "${NETOP_NODESELECTOR_VAL}"
     featureGates:
       parallelNicConfig: ${FG_PARALLEL_NIC_CONFIG}
       resourceInjectorMatchCondition: ${FG_RESOURCE_INJECTOR_MATCH}
