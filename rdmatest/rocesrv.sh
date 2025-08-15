@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # set up the server side rdma test
 #

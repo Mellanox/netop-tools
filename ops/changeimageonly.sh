@@ -61,7 +61,7 @@ crictl pull --creds '$oauthtoken':${NGC_API_KEY} nvcr.io/nvstaging/mellanox/netw
 # netchartlinks.sh  # set the symbolic links which you did manual above
 # applycrds.sh        # apply the cluster resource definitions
 
-#!/bin/bash -x
+#!/bin/bash
 #
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
@@ -73,13 +73,3 @@ ${K8CL} scale deployment --replicas=0 -n ${NETOP_NAMESPACE} network-operator
 ../applycrds.sh
 helm upgrade -n ${NETOP_NAMESPACE}  network-operator network-operator  -f ../network-operator-values-${NETOP_VERSION}.yaml
 uncordon
-
-
-#
-#
-#
-
-Call me to talk though this.
-
-Tom
-

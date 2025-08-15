@@ -9,21 +9,24 @@ if [ "$#" -lt 3 ];then
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 NDIX="${1}"
-DEVICE_LST="${2}"
-NETOP_SU="${3}"
+shift
+DEVICE_LST="${1}"
+shift
+NETOP_SU="${1}"
+shift
 
-FILE="${NETOP_NETWORK_NAME}-node-policy-${NDIX}-${NETOP_SU}.yaml"
 logger "DEVICE_LST[${DEVICE_LST}]"
 if [[ "${DEVICE_LST}" == *:* ]];then
    DEVICES='rootDevices: [ "'${DEVICE_LST}'" ]'
 else
    DEVICES='pfNames: [ "'${DEVICE_LST}'" ]'
 fi
-cat << HEREDOC > ${FILE}
+cat << HEREDOC
+---
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkNodePolicy
 metadata:
-  name: ${FILE%%.yaml}
+  name: ${NETOP_NETWORK_NAME}-node-policy-${NDIX}-${NETOP_SU}
   namespace: ${NETOP_NAMESPACE}
 spec:
   deviceType: netdevice
@@ -37,7 +40,6 @@ spec:
   isRdma: true
   resourceName: ${NETOP_RESOURCE}_${NDIX}
   nodeSelector:
-    node-role.kubernetes.io/${WORKERNODE}: ""
+    ${NETOP_NODESELECTOR}: "${NETOP_NODESELECTOR_VAL}"
     feature.node.kubernetes.io/pci-15b3.present: "true"
 HEREDOC
-echo ${FILE}

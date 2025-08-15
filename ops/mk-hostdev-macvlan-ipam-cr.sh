@@ -30,8 +30,8 @@ NETOP_SU=${1}
 shift
 NETOP_APP_NAMESPACE=${1}
 shift
-FILE="${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}-cr.yaml"
-cat <<HEREDOC> "${FILE}"
+cat <<HEREDOC
+---
 apiVersion: mellanox.com/v1alpha1
 kind: ${NETOP_NETWORK_TYPE}
 metadata:
@@ -43,6 +43,4 @@ spec:
   mode: "bridge"
   mtu: ${NETOP_MTU}
 HEREDOC
-mk_ipam_cr ${NIDX} ${NETOP_SU} >> "${FILE}"
-echo ${FILE}
-# "gateway": "${NETOP_NETWORK_GW}" # for ipam config above may need to set depending on fabric design
+mk_ipam_cr ${NIDX} ${NETOP_SU}

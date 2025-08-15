@@ -26,7 +26,7 @@ sriovNetworkOperator:
 sriov-network-operator:
   sriovOperatorConfig:
     configDaemonNodeSelector:
-      node-role.kubernetes.io/${WORKERNODE}: ""
+      ${NETOP_NODESELECTOR}: "${NETOP_NODESELECTOR_VAL}"
     featureGates:
       parallelNicConfig: ${FG_PARALLEL_NIC_CONFIG}
       resourceInjectorMatchCondition: ${FG_RESOURCE_INJECTOR_MATCH}
@@ -189,6 +189,7 @@ SECONDARY_NETWORK
 function version()
 {
   echo "# VERSION:${NETOP_VERSION}"
+  echo "---"
 }
 function 24_7_0()
 {
@@ -263,5 +264,4 @@ case ${NETOP_VERSION} in
     ;;
 esac
 
-#NETOP_FUNCT=$(echo ${NETOP_VERSION} | sed 's/\./_/g')
-${NETOP_FUNCT} > ./values.yaml
+${NETOP_FUNCT} > ${NETOP_VALUES_FILE}
