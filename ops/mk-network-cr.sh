@@ -51,7 +51,7 @@ function mkNetworkAttachmentDefinition()
 #
 for NETOP_SU in ${NETOP_SULIST[@]};do
   echo "# VERSION:${NETOP_VERSION}" > ${NETOP_NODEPOLICY_FILE} 
-  echo "# VERSION:${NETOP_VERSION}" > ${NETOP_NETWORK_FILE}
+  echo "# VERSION:${NETOP_VERSION}" > ${NETOP_NETWORK_FILE} 
   for NIDXDEF in ${NETOP_NETLIST[@]};do
     NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
     NDEV=`echo ${NIDXDEF}|cut -d',' -f4`
@@ -80,5 +80,13 @@ for NETOP_SU in ${NETOP_SULIST[@]};do
       esac
     done
   done
+  #
+  # combine to single file for BCM format
+  #
+  if [ "${NETOP_BCM_CONFIG}" == true ];then
+    cat ${NETOP_NODEPOLICY_FILE} ${NETOP_NETWORK_FILE} > /tmp/${NETOP_NETWORK_FILE}
+    mv -f /tmp/${NETOP_NETWORK_FILE} ${NETOP_NETWORK_FILE}
+    rm -f ${NETOP_NODEPOLICY_FILE}
+  fi
 done
 mkIPPoolCRDs
