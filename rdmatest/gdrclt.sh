@@ -38,7 +38,7 @@ function ib_config()
   IP=$(echo ${GID_INFO} |cut -d',' -f3)
 }
 if [ $# -lt 2 ];then
-  echo "usage:${0} <rdma|roce> <client_pod> <server_pod> --net <netdev> [ --ns <namespace> ] [--gdr]|[--gpu [n] "
+  echo "usage:${0} <rdma|roce> <client_pod> <server_pod> --net <netdev> [ --ns <namespace> ] --size [block size in bytes] [--gdr]|[--gpu [n] "
   exit 1
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
@@ -80,7 +80,12 @@ for arg in "$@"; do
     shift # remove --size
     SIZE=" -s ${1}"
     shift
+    ;;
     # Add more flags here as needed
+  *)
+    echo "invalid arg:$arg"
+    usage
+    exit 1
   esac
 done
 GID_INFO_FILE_SRVR="/tmp/gid_info_srvr.$$"
