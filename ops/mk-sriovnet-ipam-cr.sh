@@ -4,14 +4,16 @@
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 source ${NETOP_ROOT_DIR}/ops/mk-ipam-cr.sh
-if [ "$#" -ne 3 ];then
-  echo "usage:$0 {NETWORK INDEX} {NETOP_SU} {NETOP_APP_NAMESPACE}"
-  echo "example:$0 a su-1 default"
+if [ "$#" -ne 4 ];then
+  echo "usage:$0 {NETWORK_NAME} {IPPOOL_NAME} {NETWORK INDEX} {NETOP_APP_NAMESPACE}"
+  echo "example:$0 a default"
   exit 1
 fi
-NIDX=${1}
+NETWORK_NAME=${1}
 shift
-NETOP_SU=${1}
+IPPOOL_NAME=${1}
+shift
+NIDX=${1}
 shift
 NETOP_APP_NAMESPACE=${1}
 shift
@@ -21,7 +23,7 @@ cat <<HEREDOC1
 apiVersion: sriovnetwork.openshift.io/v1
 kind: ${NETOP_NETWORK_TYPE}
 metadata:
-  name: "${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}"
+  name: "${NETWORK_NAME}"
   namespace: ${NETOP_NAMESPACE}
 spec:
 HEREDOC1
@@ -35,4 +37,4 @@ cat <<HEREDOC4
   networkNamespace: "${NETOP_APP_NAMESPACE}"
   resourceName: "${NETOP_RESOURCE}_${NIDX}"
 HEREDOC4
-mk_ipam_cr ${NIDX} ${NETOP_SU}
+mk_ipam_cr ${IPPOOL_NAME}

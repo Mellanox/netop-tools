@@ -1,0 +1,95 @@
+# VERSION: 25.4.0
+---
+apiVersion: mellanox.com/v1alpha1
+kind: NicClusterPolicy
+metadata:
+  name: nic-cluster-policy
+spec:
+  ofedDriver:
+    image: doca-driver
+    repository: nvcr.io/nvidia/mellanox
+    version: 25.04-0.6.1.0-2
+    forcePrecompiled: false
+    imagePullSecrets: []
+    terminationGracePeriodSeconds: 300
+    env:
+    - name: RESTORE_DRIVER_ON_POD_TERMINATION
+      value: "true"
+    - name: UNLOAD_STORAGE_MODULES
+      value: "true"
+    - name: CREATE_IFNAMES_UDEV
+      value: "true"
+    startupProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 20
+    livenessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 30
+    readinessProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 30
+    upgradePolicy:
+      autoUpgrade: true
+      maxParallelUpgrades: 1
+      safeLoad: false
+      drain:
+        enable: true
+        force: true
+        podSelector: ""
+        timeoutSeconds: 300
+        deleteEmptyDir: true
+  sriovDevicePlugin:
+    image: sriov-network-device-plugin
+    repository: ghcr.io/k8snetworkplumbingwg
+    version: v3.9.0
+    imagePullSecrets: []
+    config: |
+      {
+        "resourceList": [
+          {
+            "resourcePrefix": "nvidia.com",
+            "resourceName": "rdma_device_a",
+            "selectors": {
+              "vendors": ["15b3"],
+              "devices": [],
+              "drivers": [],
+              "pfNames": [],
+              "pciAddresses": ["0000:03:00.2","0000:03:00.4"],
+              "rootDevices": [],
+              "linkTypes": [],
+              "isRdma": true
+            }
+          },
+          {
+            "resourcePrefix": "nvidia.com",
+            "resourceName": "rdma_device_b",
+            "selectors": {
+              "vendors": ["15b3"],
+              "devices": [],
+              "drivers": [],
+              "pfNames": [],
+              "pciAddresses": ["0000:03:00.3","0000:03:00.5"],
+              "rootDevices": [],
+              "linkTypes": [],
+              "isRdma": true
+            }
+          }
+        ]
+      }
+  secondaryNetwork:
+    cniPlugins:
+      image: plugins
+      repository: ghcr.io/k8snetworkplumbingwg
+      version: v1.5.0
+      imagePullSecrets: []
+    multus:
+      image: multus-cni
+      repository: ghcr.io/k8snetworkplumbingwg
+      version: v4.1.0
+      imagePullSecrets: []
+  nvIpam:
+    image: nvidia-k8s-ipam
+    imagePullSecrets: []
+    repository: ghcr.io/mellanox
+    version: v0.3.7
+    enableWebhook: false

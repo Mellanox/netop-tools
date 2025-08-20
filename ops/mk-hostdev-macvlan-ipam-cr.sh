@@ -18,15 +18,15 @@
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 source ${NETOP_ROOT_DIR}/ops/mk-ipam-cr.sh
 if [ "$#" -ne 4 ];then
-  echo "usage:$0 {NETWORK_MASTER DEV} {NETWORK IDX} {SCALABLE_UNIT} {NETOP_APP_NAMESPACE}"
-  echo "example:$0 ens1f0np0 a default"
+  echo "usage:$0 {NETWORK_NAME} {IPPOOL_NAME} {NETWORK_MASTER DEV} {NETOP_APP_NAMESPACE}"
+  echo "example:$0 networkname ippooolname ens1f0np0 default"
   exit 1
 fi
-NDEV=${1}
+NETWORK_NAME="${1}"
 shift
-NIDX=${1}
+IPPOOL_NAME="${1}"
 shift
-NETOP_SU=${1}
+NDEV="${1}"
 shift
 NETOP_APP_NAMESPACE=${1}
 shift
@@ -35,7 +35,7 @@ cat <<HEREDOC
 apiVersion: mellanox.com/v1alpha1
 kind: ${NETOP_NETWORK_TYPE}
 metadata:
-  name: ${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}
+  name: ${NETWORK_NAME}
   namespace: ${NETOP_NAMESPACE}
 spec:
   networkNamespace: "${NETOP_APP_NAMESPACE}"
@@ -43,4 +43,4 @@ spec:
   mode: "bridge"
   mtu: ${NETOP_MTU}
 HEREDOC
-mk_ipam_cr ${NIDX} ${NETOP_SU}
+mk_ipam_cr ${IPPOOL_NAME}

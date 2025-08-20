@@ -4,9 +4,6 @@
 #
 function whereabouts()
 {
-NIDX=${1}
-NETOP_SU=${2}
-
 cat <<HEREDOC1
   ipam: |
     {
@@ -24,11 +21,8 @@ HEREDOC1
 }
 function nv_ipam_config()
 {
-NIDX=${1}
+IPPOOL_NAME=${1}
 shift
-NETOP_SU=${1}
-shift
-
 cat <<HEREDOC2
   ipam: |
     {
@@ -39,18 +33,13 @@ cat <<HEREDOC2
       },
       "log_file": "/var/log/${NETOP_NETWORK_TYPE}_${IPAM_TYPE}.log",
       "log_level": "debug",
-      "poolName": "${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}",
+      "poolName": "${IPPOOL_NAME}",
       "poolType": "${NVIPAM_POOL_TYPE}"
     }
 HEREDOC2
 }
 function dhcp_config()
 {
-NIDX=${1}
-shift
-NETOP_SU=${1}
-shift
-
 cat <<HEREDOC3
   ipam: |
     {
@@ -98,13 +87,13 @@ function mk_ipam_cr()
 {
   case ${IPAM_TYPE} in
   whereabouts)
-    whereabouts ${1} ${2}
+    whereabouts ${*}
     ;;
   nv-ipam)
-    nv_ipam_config ${1} ${2}
+    nv_ipam_config ${*}
     ;;
   dhcp)
-    dhcp_config ${1} ${2}
+    dhcp_config ${*}
     ;;
   esac
 }
