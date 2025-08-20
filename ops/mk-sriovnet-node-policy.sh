@@ -3,19 +3,18 @@
 # https://github.com/k8snetworkplumbingwg/sriov-network-operator/tree/master
 #
 if [ "$#" -lt 3 ];then
-  echo "usage:$0 {NETWORK_NDIX} {DEVICE_LST} {SCALABLE_UNIT}"
-  echo "example:$0 a 0000:24:00.0 su-1"
+  echo "usage:$0 {NETWORK_NAME} {NETWORK_NIDX} {DEVICE_LST}"
+  echo "example:$0 sriovnet-rdma-default-a-su-1-cr a 0000:24:00.0"
   exit 1
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
-NDIX="${1}"
+NETWORK_NAME="${1}"
+shift
+NIDX="${1}"
 shift
 DEVICE_LST="${1}"
 shift
-NETOP_SU="${1}"
-shift
 
-logger "DEVICE_LST[${DEVICE_LST}]"
 if [[ "${DEVICE_LST}" == *:* ]];then
    DEVICES='rootDevices: [ "'${DEVICE_LST}'" ]'
 else
@@ -26,7 +25,7 @@ cat << HEREDOC
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkNodePolicy
 metadata:
-  name: ${NETOP_NETWORK_NAME}-node-policy-${NDIX}-${NETOP_SU}
+  name: ${NETWORK_NAME}
   namespace: ${NETOP_NAMESPACE}
 spec:
   deviceType: netdevice
@@ -38,7 +37,7 @@ spec:
   linkType: ETH
   priority: 90    # used to resolve multiple policy definitions, lower value, higher priority
   isRdma: true
-  resourceName: ${NETOP_RESOURCE}_${NDIX}
+  resourceName: ${NETOP_RESOURCE}_${NIDX}
   nodeSelector:
     ${NETOP_NODESELECTOR}: "${NETOP_NODESELECTOR_VAL}"
     feature.node.kubernetes.io/pci-15b3.present: "true"
