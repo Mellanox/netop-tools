@@ -3,6 +3,14 @@
 # nic cluster policy file has migrated out of the values.yaml file
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
+function init_file()
+{
+  if [ "${NETOP_TAG_VERSION}" == true ];then
+    echo "# VERSION:${NETOP_VERSION}" > "${1}"
+  else
+    rm -f "${1}"
+  fi
+}
 case ${NETOP_VERSION} in
 24.7.0)
   DOCA_VERSION="24.07-0.6.1.0-0"
@@ -296,8 +304,8 @@ MAINTENANCE_OPERATOR
   fi
 }
 FILE="${NETOP_NICCLUSTER_FILE}"
-cat << HEREDOC1 > ${FILE}
-# VERSION: ${NETOP_VERSION}
+init_file "${FILE}"
+cat << HEREDOC1 >> ${FILE}
 ---
 apiVersion: mellanox.com/v1alpha1
 kind: NicClusterPolicy

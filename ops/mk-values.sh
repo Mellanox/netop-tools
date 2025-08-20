@@ -188,7 +188,9 @@ SECONDARY_NETWORK
 }
 function version()
 {
-  echo "# VERSION:${NETOP_VERSION}"
+  if [ "${NETOP_TAG_VERSION}" == true ];then
+    echo "# VERSION:${NETOP_VERSION}"
+  fi
   echo "---"
 }
 function 24_7_0()

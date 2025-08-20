@@ -6,11 +6,19 @@
 # echo 0 > /sys/devices/pci0000:20/0000:20:01.5/0000:23:00.0/sriov_numvfs
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
+function init_file()
+{
+  if [ "${NETOP_TAG_VERSION}" == true ];then
+    echo "# VERSION:${NETOP_VERSION}" > "${1}"
+  else
+    rm -f "${1}"
+  fi
+}
 function combinedIPPoolCRD()
 {
   SUBNET_FILE="/tmp/subnets.$$"
   if [ "${IPAM_TYPE}" = "nv-ipam" ];then
-    echo "# VERSION:${NETOP_VERSION}" > ${NETOP_IPPOOL_FILE}
+    init_file ${NETOP_IPPOOL_FILE}
     for NETOP_SU in ${NETOP_SULIST[@]};do
       NUM_SUBNETS="${#NETOP_NETLIST[@]}"
       ${NETOP_ROOT_DIR}/ops/generate_subnets.sh "${NETOP_NETWORK_RANGE}" "${NUM_SUBNETS}" ${NETOP_NETWORK_GW} > ${SUBNET_FILE}
@@ -51,8 +59,7 @@ function IPPoolCRD()
         GW=$(echo ${LINE}|cut -d' ' -f3)
         IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}
         FILE="ippool-${NIDX}-${NETOP_SU}.yaml"
-        #echo "# VERSION:${NETOP_VERSION}" > ${FILE}
-        rm -f ${FILE}
+        init_file ${FILE}
         case "${NVIPAM_POOL_TYPE}" in
         IPPool)
           ${NETOP_ROOT_DIR}/ops/mk-nvipam-pool.sh "${IPPOOL_NAME}" "${RANGE}" "${GW}" "${NETOP_PERNODE_BLOCKSIZE}" >> ${FILE}
@@ -83,8 +90,8 @@ function mkNetworkAttachmentDefinition()
 function combinedNetworkCRD()
 {
   for NETOP_SU in ${NETOP_SULIST[@]};do
-    echo "# VERSION:${NETOP_VERSION}" > ${NETOP_NODEPOLICY_FILE} 
-    echo "# VERSION:${NETOP_VERSION}" > ${NETOP_NETWORK_FILE} 
+    init_file ${NETOP_NODEPOLICY_FILE} 
+    init_file ${NETOP_NETWORK_FILE} 
     for NIDXDEF in ${NETOP_NETLIST[@]};do
       NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
       NDEV=`echo ${NIDXDEF}|cut -d',' -f4`
@@ -138,8 +145,7 @@ function NetworkCRD()
       NDEV=`echo ${NIDXDEF}|cut -d',' -f4`
       POLICY_NAME="${NETOP_NETWORK_NAME}-node-policy-${NIDX}-${NETOP_SU}"
       FILE="${POLICY_NAME}.yaml"
-      #echo "# VERSION:${NETOP_VERSION}" > ${FILE} 
-      rm -f ${FILE} 
+      init_file ${FILE} 
       case ${NETOP_NETWORK_TYPE} in
       SriovIBNetwork)
         ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-node-policy.sh ${POLICY_NAME} ${NIDX} ${NDEV} > ${FILE}
@@ -151,8 +157,7 @@ function NetworkCRD()
       for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
         NETWORK_NAME="${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}"
         FILE="${NETWORK_NAME}-cr.yaml"
-        #echo "# VERSION:${NETOP_VERSION}" > ${FILE} 
-        rm -f ${FILE} 
+        init_file ${FILE} 
         IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}
         case ${NETOP_NETWORK_TYPE} in
         HostDeviceNetwork)
