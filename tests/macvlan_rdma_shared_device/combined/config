@@ -15,3 +15,4 @@ USECASE="macvlan_rdma_shared_device"
 #NIC_CONFIG_ENABLE="false"
 #DEVICE_TYPES=( "Connectx-5 Ex")
 NETOP_COMBINED="true"
+NETOP_TAG_VERSION="true"
