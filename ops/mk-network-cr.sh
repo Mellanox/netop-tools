@@ -99,7 +99,6 @@ function combinedNetworkCRD()
       case ${NETOP_NETWORK_TYPE} in
       SriovIBNetwork)
         ${NETOP_ROOT_DIR}/ops/mk-sriovibnet-node-policy.sh ${FILE%%.yaml} ${NIDX} ${NDEV} >> ${NETOP_NODEPOLICY_FILE}
-  name: ${FILE%%.yaml}
         ;;
       SriovNetwork)
         ${NETOP_ROOT_DIR}/ops/mk-sriovnet-node-policy.sh ${FILE%%.yaml} ${NIDX} ${NDEV} >> ${NETOP_NODEPOLICY_FILE}
