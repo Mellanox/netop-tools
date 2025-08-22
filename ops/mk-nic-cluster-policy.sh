@@ -222,7 +222,6 @@ RDMA_SDP3
 }
 function secondaryNetwork()
 {
-set -x
 cat << SECONDARY_NETWORK1
   secondaryNetwork:
     cniPlugins:
