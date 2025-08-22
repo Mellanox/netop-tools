@@ -10,3 +10,4 @@ install/insdocker.sh
 install/insk8base.sh
 global_ops_user.cfg
 ngc/ngc-cli
+./ngc/ngcconfig.dat
