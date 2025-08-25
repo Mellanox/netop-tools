@@ -16,8 +16,9 @@ variable.
 The **global\_ops.cfg** file defines the shared global configuration
 values for Network-Operator.
 
-Edit the **global\_ops.cfg** setting K8s networking parameters and
-selecting the USECASE.
+Copy a usecase config override file from
+**./config/{dgx|dell|examples}/global_ops_user.cfg{selector}** -> **global\_ops\_user.cfg** 
+Override the **global\_ops.cfg** default settings to values needed for cluster.
 
 **./setuc.sh** \# set the uc symlink for the selected USECASE
 

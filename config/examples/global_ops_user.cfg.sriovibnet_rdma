@@ -1,0 +1,10 @@
+NIC_CONFIG_ENABLE=false
+NFD_ENABLE=false
+OFED_ENABLE=true
+CREATE_CONFIG_ONLY=1
+USECASE="sriovibnet_rdma"
+DEVICE_TYPES=( "connectx-7" )
+# for maximum E/W RDMA performance each NIC port gets defined as a network
+# example device PCI id for connectx-7 = 1021 # interpreted by config as HEX
+# devices index,{device PCI id},,root device (PCI BFDs | netdevice)
+NETOP_NETLIST=( a,,,ibs0f1 b,,,ibs1f1 )
