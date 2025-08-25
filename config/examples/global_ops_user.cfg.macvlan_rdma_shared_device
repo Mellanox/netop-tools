@@ -1,0 +1,11 @@
+NIC_CONFIG_ENABLE=false
+NFD_ENABLE=false
+OFED_ENABLE=true
+CREATE_CONFIG_ONLY=1
+USECASE="macvlan_rdma_shared_device"
+MTU_DEFAULT="9000"
+DEVICE_TYPES=( "connectx-7" )
+# for maximum E/W RDMA performance each NIC port gets defined as a network
+# example device PCI id for connectx-7 = 1021 # interpreted by config as HEX
+# devices index, device PCI id, HCAMAX (RDMA shared only), list of network device | PCI BFDs
+NETOP_NETLIST=( a,,${NETOP_HCAMAX},ens2f0np0 b,,${NETOP_HCAMAX},ens3f0np0 )

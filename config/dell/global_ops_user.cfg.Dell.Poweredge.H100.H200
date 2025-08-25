@@ -1,0 +1,18 @@
+# Vendor: Dell Inc. 
+# Product Name: PowerEdge XE9680
+# Product Name: 0KK0RG     
+# H100, H200 same
+NFD_ENABLE=true
+OFED_ENABLE=false
+CREATE_CONFIG_ONLY=0
+USECASE="sriovnet_rdma"
+MTU_DEFAULT="9000"
+DEVICE_TYPES=( "connectx-7" )
+NUM_VFS=4
+NUM_GPUS=8
+NIC_CONFIG_ENABLE=false
+NETOP_NETWORK_RANGE="192.168.121.0/24"
+NETOP_PERNODE_BLOCKSIZE="15"
+NETOP_COMBINED="true"
+SBRMODE="true"
+NETOP_NETLIST=( a,,,0000:9c:00.0 b,,,0000:bc:00.0 c,,,0000:cc:00.0 d,,,0000:dc:00.0 e,,,0000:5e:00.0 f,,,0000:4d:00.0 g,,,0000:1a:00.0 h,,,0000:3c:00.0 )
