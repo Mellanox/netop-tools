@@ -4,16 +4,26 @@
 # typically in a GPU/NIC system you'll deploy multiple parallel 2ndary networks.
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
+function runCmds()
+{
+  DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
+  FILE_LIST="${DIR}/${1}"
+  if [ -f ${FILE_LIST} ];then
+    for FILE in $(cat ${FILE_LIST});do
+      WORK="${DIR}/${FILE}"
+      if [ -f ${WORK} ];then
+        ${docmd} ${K8CL} ${1} -f "${WORK}"
+      else
+        echo "ERROR:${WORK} not found"
+      fi
+    done
+  else
+    echo "ERROR:${FILE_LIST} not found"
+  fi
+}
 function cmdNetworkCRDs()
 {
-  for NETOP_SU in ${NETOP_SULIST[@]};do
-    FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/${NETOP_NETWORK_FILE}"
-    if [ -f ${FILE} ];then
-      ${docmd} ${K8CL} ${1} -f "${FILE}"
-    else
-      echo "ERROR:${FILE} not found"
-    fi
-  done
+  runCmds netop_network_files
 }
 #
 # make sure the ip pool is created
@@ -21,27 +31,13 @@ function cmdNetworkCRDs()
 function cmdIPAM_CRDs()
 {
   if [ "${IPAM_TYPE}" = "nv-ipam" ];then
-    for NETOP_SU in ${NETOP_SULIST[@]};do
-      FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/${NETOP_IPPOOL_FILE}"
-      if [ -f ${FILE} ];then
-        ${docmd} ${K8CL} ${1} -f "${FILE}"
-      else
-        echo "ERROR:${FILE} not found"
-      fi
-    done
+    runCmds netop_ippool_files
   fi
 }
 function cmdSriovNodePolicy()
 {
   if [ "${NETOP_BCM_CONFIG}" == false ];then
-    for NETOP_SU in ${NETOP_SULIST[@]};do
-      FILE="${NETOP_ROOT_DIR}/usecase/${USECASE}/${NETOP_NODEPOLICY_FILE}"
-      if [ -f ${FILE} ];then
-        ${docmd} ${K8CL} ${1} -f "${FILE}"
-      else
-        echo "ERROR:${FILE} not found"
-      fi
-    done
+    runCmds netop_nodepolicy_files
   fi
 ###  # according to Ivan,
 ###  # Network-Attachment-Definition generated automatically, except for ib-sriov-cni and pkey
