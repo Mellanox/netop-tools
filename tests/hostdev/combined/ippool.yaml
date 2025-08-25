@@ -1,4 +1,3 @@
-# VERSION:25.4.0
 ---
 apiVersion: nv-ipam.nvidia.com/v1alpha1
 kind: IPPool

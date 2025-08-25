@@ -14,13 +14,13 @@ sriovnet_rdma)
   ;;
 sriovibnet_rdma)
   SRIOVNET="true"
-  IPOIBVAL="true"
+  IPOIBVAL="false"
   ;;
 *)
   SRIOVNET="false"
   return
 esac
-cat << SRIOV_NETWORK_OPERATOR
+cat << SRIOV_NETWORK_OPERATOR0
 sriovNetworkOperator:
   enabled: ${SRIOVNET}
 sriov-network-operator:
@@ -29,11 +29,15 @@ sriov-network-operator:
       ${NETOP_NODESELECTOR}: "${NETOP_NODESELECTOR_VAL}"
     featureGates:
       parallelNicConfig: ${FG_PARALLEL_NIC_CONFIG}
+      mellanoxFirmwareReset: ${FG_MLNX_FW_RESET}
+SRIOV_NETWORK_OPERATOR0
+if [ "${NETOP_BCM_CONFIG}" == false ];then
+cat << SRIOV_NETWORK_OPERATOR1
       resourceInjectorMatchCondition: ${FG_RESOURCE_INJECTOR_MATCH}
       metricsExporter: ${METRICS_EXPORTER}
       manageSoftwareBridges: ${MANAGE_SW_BRIDGE}
-      mellanoxFirmwareReset: ${FG_MLNX_FW_RESET}
-SRIOV_NETWORK_OPERATOR
+SRIOV_NETWORK_OPERATOR1
+fi
 }
 function pullSecrets()
 {
@@ -182,9 +186,9 @@ secondaryNetwork:
     deploy: true
   ipamPlugin:
     deploy: ${IPAMVAL}
-  ipoib:
-    deploy: ${IPOIBVAL}
 SECONDARY_NETWORK
+#  ipoib:
+#    deploy: ${IPOIBVAL}
 }
 function version()
 {
@@ -251,7 +255,7 @@ function 24_10_1()
 }
 
 case ${NETOP_VERSION} in
-  25.1.0|25.4.0)
+  25.1.0|25.4.0|25.7.0)
     NETOP_FUNCT=25_4_0
     ;;
   24.10.0|24.10.1)
