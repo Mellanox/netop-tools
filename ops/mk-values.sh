@@ -63,17 +63,28 @@ fi
 
 function values_yaml()
 {
-cat <<VALUES_YAML
+#NodeFeatureRule: ${NFD_ENABLE}
+cat <<VALUES_YAML0
 nfd:
   enabled: ${NFD_ENABLE}
-  NodeFeatureRule: ${NFD_ENABLE}
+VALUES_YAML0
+case "${NETOP_VERSION}" in
+25.4.0|25.7.0)
+cat << VALUES_YAML1
+  nfd.deployNodeFeatureRules: ${NFD_ENABLE}
+VALUES_YAML1
+  ;;
+*)
+  ;;
+esac
+cat << VALUES_YAML2
 nicConfigurationOperator:
   enabled: ${NIC_CONFIG_ENABLE}
 maintenanceOperator:
   enabled: ${NIC_CONFIG_ENABLE}
 nvIpam:
   deploy: ${NVIPAMVAL}
-VALUES_YAML
+VALUES_YAML2
 }
 function deployCR()
 {
@@ -222,17 +233,6 @@ function 24_7_0()
   esac
   secondaryNetwork
 }
-function 25_4_0()
-{
-  version
-  ipamType
-  values_yaml
-  deployCR false
-  sriovNetworkOperator
-  pullSecrets
-# ofedDriver
-  secondaryNetwork
-}
 function 24_10_0()
 {
   version
@@ -253,10 +253,34 @@ function 24_10_1()
   pullSecrets
 # ofedDriver
 }
+function 25_1_0()
+{
+  version
+  ipamType
+  values_yaml
+  deployCR false
+  sriovNetworkOperator
+  pullSecrets
+# ofedDriver
+  secondaryNetwork
+}
+function 25_4_0()
+{
+  version
+  ipamType
+  values_yaml
+  sriovNetworkOperator
+  pullSecrets
+# ofedDriver
+# secondaryNetwork
+}
 
 case ${NETOP_VERSION} in
-  25.1.0|25.4.0|25.7.0)
+  25.4.0|25.7.0)
     NETOP_FUNCT=25_4_0
+    ;;
+  25.1.0)
+    NETOP_FUNCT=25_1_0
     ;;
   24.10.0|24.10.1)
     NETOP_FUNCT=24_10_1
