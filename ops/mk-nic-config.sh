@@ -43,7 +43,7 @@ spec:
       feature.node.kubernetes.io/network-sriov.capable: "true"
    nicSelector:
       # nicType selector is mandatory the rest are optional. Only a single type can be specified.
-      nicType: ${NIC_TYPE}
+      nicType: "${NIC_TYPE}"
 #      pciAddresses:
 #         - "0000:07:00.0"
 #         - “0000:08:00.0”
