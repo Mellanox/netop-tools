@@ -7,7 +7,7 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 function runCmds()
 {
   DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
-  FILE_LIST="${DIR}/${1}"
+  FILE_LIST="${DIR}/${2}"
   if [ -f ${FILE_LIST} ];then
     for FILE in $(cat ${FILE_LIST});do
       WORK="${DIR}/${FILE}"
@@ -23,7 +23,7 @@ function runCmds()
 }
 function cmdNetworkCRDs()
 {
-  runCmds netop_network_files
+  runCmds ${1} netop_network_files
 }
 #
 # make sure the ip pool is created
@@ -31,13 +31,13 @@ function cmdNetworkCRDs()
 function cmdIPAM_CRDs()
 {
   if [ "${IPAM_TYPE}" = "nv-ipam" ];then
-    runCmds netop_ippool_files
+    runCmds ${1} netop_ippool_files
   fi
 }
 function cmdSriovNodePolicy()
 {
   if [ "${NETOP_BCM_CONFIG}" == false ];then
-    runCmds netop_nodepolicy_files
+    runCmds ${1} netop_nodepolicy_files
   fi
 ###  # according to Ivan,
 ###  # Network-Attachment-Definition generated automatically, except for ib-sriov-cni and pkey

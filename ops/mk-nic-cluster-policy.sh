@@ -48,7 +48,7 @@ case ${NETOP_VERSION} in
   SRIOV_DP_VERSION="v3.9.0"
   MULTUS_VERSION="v4.1.0"
   NIC_FEATURE_VERSION="v0.0.2"
-  NIC_CONFIGURATIOMN_OPERATOR_VERSION="v1.0.3"
+  NIC_CONFIGURATION_OPERATOR_VERSION="v1.0.3"
   OVS_CNI_VERSION="v0.38.2"
   MAINTENANCE_OPERATOR_VERSION="v0.2.0"
   CNI_PLUGINS_VERSION="v1.6.2-update.1"
@@ -72,7 +72,7 @@ cat << OFED_DRIVER0
   ofedDriver:
     image: doca-driver
 OFED_DRIVER0
-if [ "${NETOP_BCM_CONFIG}" == "true" ];then
+if [ "${NETOP_JINGA_CONFIG}" == "true" ];then
 cat << OFED_DRIVER1
     repository: {{registry or "nvcr.io"}}/nvidia/mellanox
 OFED_DRIVER1
@@ -301,6 +301,26 @@ cat << NODE_FEATURE_DISCOVERY
 NODE_FEATURE_DISCOVERY
   fi
 }
+function nicConfig()
+{
+cat << NIC_CONFIGURATION
+  nicConfigurationOperator:
+    operator:
+      image: nic-configuration-operator
+      repository: ghcr.io/mellanox
+      version: ${NIC_CONFIGURATION_OPERATOR_VERSION}
+    configurationDaemon:
+      image: nic-configuration-operator-daemon
+      repository: ghcr.io/mellanox
+      version: ${NIC_CONFIGURATION_OPERATOR_VERSION}
+    nicFirmwareStorage:
+      create: false
+      pvcName: nic-fw-storage-pvc
+      # Name of the storage class is provided by the user
+      storageClassName: nfs-csi
+      availableStorageSize: 1Gi
+NIC_CONFIGURATION
+}
 function maintenanceOperator()
 {
   if [ "${MAINTENANCE_OPERATOR_VERSION}" != "" ];then
@@ -312,7 +332,8 @@ cat << MAINTENANCE_OPERATOR
 MAINTENANCE_OPERATOR
   fi
 }
-FILE="${NETOP_NICCLUSTER_FILE}"
+function mk_file()
+{
 init_file "${FILE}"
 cat << HEREDOC1 >> ${FILE}
 ---
@@ -341,4 +362,14 @@ secondaryNetwork >> ${FILE}
 nvIpam >> ${FILE}
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
   nicFeatureDiscovery >> ${FILE}
+  #nicConfig >> ${FILE}
+fi
+}
+NETOP_JINGA_CONFIG=false
+FILE="${NETOP_NICCLUSTER_FILE}"
+mk_file
+if [ "${NETOP_BCM_CONFIG}" == true ];then
+   NETOP_JINGA_CONFIG=true
+   FILE="${NETOP_NICCLUSTER_FILE}.j2"
+   mk_file
 fi

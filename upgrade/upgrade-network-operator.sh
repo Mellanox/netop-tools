@@ -20,7 +20,7 @@ cd ${USECASE_DIR}
 ${NETOP_ROOT_DIR}/ops/mk-values.sh
 ${NETOP_ROOT_DIR}/ops/mk-nic-cluster-policy.sh
 ${NETOP_ROOT_DIR}/ops/mk-network-cr.sh
-${K8CL} apply -f NicClusterPolicy.yaml
+${K8CL} apply -f ${NETOP_NICCLUSTER_FILE}
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
   ${NETOP_ROOT_DIR}/ops/mk-nic-config.sh
   for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
@@ -33,7 +33,7 @@ popd
 # the yaml file needs to be the custom network operator configuration to overider the defaults
 #
 cd ${NETOP_CHART_DIR}/network-operator
-helm upgrade -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator --version ${NETOP_VERSION} -f ./values.yaml -f ${USECASE_DIR}/values.yaml
+helm upgrade -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator --version ${NETOP_VERSION} -f ./values.yaml -f ${USECASE_DIR}/${NETOP_VALUES_FILE}
 uncordon
 ${NETOP_ROOT_DIR}/install/applycrds.sh
 ${NETOP_ROOT_DIR}/ops/apply-network-cr.sh
