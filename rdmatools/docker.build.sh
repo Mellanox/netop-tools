@@ -4,7 +4,7 @@
 #
 if [ $# -ne 2 ];then
   echo "usage:$0 {REGISTRY_IMAGE} {CONFIG}"
-  echo "expects ./Dockerfile.{IMAGE}"
+  echo "expects {IMAGE} {CONFIG}"
   exit 1
 fi
 IMAGE=${1}

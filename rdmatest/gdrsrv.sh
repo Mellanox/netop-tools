@@ -31,8 +31,12 @@ function ib_config()
   RDMA_DEV=$(echo ${GID_INFO} |cut -d',' -f1)
   GID_IDX=$(echo ${GID_INFO} |cut -d',' -f2)
 }
-if [ $# -lt 1 ];then
+function usage()
+{
   echo "usage:${0} <roce|ib> <server_pod> --net <netdev> [ --ns <namespace> ] --size [block size in bytes] [--gdr]|[--gpu {n}]  "
+}
+if [ $# -lt 1 ];then
+  usage
   exit 1
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
@@ -46,7 +50,8 @@ GDR=false
 NET_DEV="net1"
 CUDA_DEV=""
 SIZE=""
-for arg in "$@"; do
+while [ $# -gt 0 ]; do
+  arg=${1}
   case $arg in
   --gdr)
     GDR=true
