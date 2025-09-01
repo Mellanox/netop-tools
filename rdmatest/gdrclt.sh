@@ -37,8 +37,12 @@ function ib_config()
   GID_INFO=$(${K8CL} ${NAMESPACE} exec ${SRVR_POD} -- sh -c "/root/getrdmanet.sh ${NET_DEV}" )
   IP=$(echo ${GID_INFO} |cut -d',' -f3)
 }
+function usage()
+{
+  echo "usage:${0} <ib|roce> <client_pod> <server_pod> --net <netdev> [ --ns <namespace> ] --size [block size in bytes] [--gdr]|[--gpu [n] "
+}
 if [ $# -lt 2 ];then
-  echo "usage:${0} <rdma|roce> <client_pod> <server_pod> --net <netdev> [ --ns <namespace> ] --size [block size in bytes] [--gdr]|[--gpu [n] "
+  usage
   exit 1
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
