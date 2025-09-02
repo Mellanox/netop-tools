@@ -245,7 +245,7 @@ cat << SECONDARY_NETWORK1
       version: ${MULTUS_VERSION}
       imagePullSecrets: []
 SECONDARY_NETWORK1
-if [ "${NETOP_BCM}" == true ];then
+if [ "${NETOP_BCM_CONFIG}" == true ];then
 cat << SECONDARY_NETWORK2
       containerResources:
         - name: "kube-multus"
@@ -373,11 +373,11 @@ if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
   #nicConfig >> ${FILE}
 fi
 }
-NETOP_JINGA_CONFIG="false"
+NETOP_JINGA_CONFIG=false
 FILE="${NETOP_NICCLUSTER_FILE}"
 mk_file
 if [ "${NETOP_BCM_CONFIG}" == true ];then
-   NETOP_JINGA_CONFIG="true"
+   NETOP_JINGA_CONFIG=true
    FILE="${NETOP_NICCLUSTER_FILE}.j2"
    mk_file
 fi
