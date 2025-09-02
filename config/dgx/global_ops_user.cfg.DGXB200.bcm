@@ -17,4 +17,4 @@ NETOP_COMBINED=true
 NETOP_NETLIST=( a,,,ibp24s0 b,,,ibp64s0 c,,,ibp79s0 d,,,ibp94s0 e,,,ibp154s0 f,,,ibp192s0 g,,,ibp206s0 h,,,ibp220s0 )
 NETOP_NETWORK_RANGE="192.168.1.0/24"
 NETOP_BCM_CONFIG="true"
-NETOP_NICCLUSTER_FILE="nic-cluster-policy_b200.yaml.j2"
+NETOP_NICCLUSTER_FILE="nic-cluster-policy_b200.yaml"
