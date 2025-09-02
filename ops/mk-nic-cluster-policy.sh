@@ -245,25 +245,33 @@ cat << SECONDARY_NETWORK1
       version: ${MULTUS_VERSION}
       imagePullSecrets: []
 SECONDARY_NETWORK1
+if [ "${NETOP_BCM}" == true ];then
+cat << SECONDARY_NETWORK2
+      containerResources:
+        - name: "kube-multus"
+          limits: {memory: "100Mi"}
+          requests: {memory: "100Mi"}
+SECONDARY_NETWORK2
+fi
 case "${NETOP_NETWORK_TYPE}" in
 IPoIBNetwork)
-cat << SECONDARY_NETWORK2
+cat << SECONDARY_NETWORK3
     ipoib:
       image: ipoib-cni
       repository: ghcr.io/mellanox
       version: ${IPOIB_VERSION}
       imagePullSecrets: []
-SECONDARY_NETWORK2
+SECONDARY_NETWORK3
     ;;
 esac
 if [ "${IPAM_TYPE}" = "whereabouts" ];then
-cat << SECONDARY_NETWORK3 >> ${FILE}
+cat << SECONDARY_NETWORK4 >> ${FILE}
     ipamPlugin:
       image: whereabouts
       repository: ghcr.io/k8snetworkplumbingwg
       version: ${WHEREABOUTS_VERSION}
       imagePullSecrets: []
-SECONDARY_NETWORK3
+SECONDARY_NETWORK4
 fi
 }
 function nvIpam()
@@ -365,11 +373,11 @@ if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
   #nicConfig >> ${FILE}
 fi
 }
-NETOP_JINGA_CONFIG=false
+NETOP_JINGA_CONFIG="false"
 FILE="${NETOP_NICCLUSTER_FILE}"
 mk_file
 if [ "${NETOP_BCM_CONFIG}" == true ];then
-   NETOP_JINGA_CONFIG=true
+   NETOP_JINGA_CONFIG="true"
    FILE="${NETOP_NICCLUSTER_FILE}.j2"
    mk_file
 fi
