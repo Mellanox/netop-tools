@@ -251,7 +251,6 @@ function 24_10_1()
   deployCR true
   sriovNetworkOperator
   pullSecrets
-# ofedDriver
 }
 function 25_1_0()
 {
@@ -261,7 +260,6 @@ function 25_1_0()
   deployCR false
   sriovNetworkOperator
   pullSecrets
-# ofedDriver
   secondaryNetwork
 }
 function 25_4_0()
@@ -271,12 +269,21 @@ function 25_4_0()
   values_yaml
   sriovNetworkOperator
   pullSecrets
-# ofedDriver
-# secondaryNetwork
+}
+function 25_7_0()
+{
+  version
+  ipamType
+  values_yaml
+  sriovNetworkOperator
+  pullSecrets
 }
 
 case ${NETOP_VERSION} in
-  25.4.0|25.7.0)
+  25.7.0)
+    NETOP_FUNCT=25_7_0
+    ;;
+  25.4.0)
     NETOP_FUNCT=25_4_0
     ;;
   25.1.0)
