@@ -14,7 +14,7 @@ apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkPoolConfig
 metadata:
   name: node-pool-unavailable-config
-  namespace: ${NETOP_NAME_SPACE}
+  namespace: ${NETOP_NAMESPACE}
 spec:
   maxUnavailable: ${QUOTE}${NETOP_SRIOV_NODE_POOL}${QUOTE}
   nodeSelector:
