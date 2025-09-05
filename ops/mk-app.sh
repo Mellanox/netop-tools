@@ -17,6 +17,26 @@ cat << HEREDOC0
 HEREDOC0
 fi
 }
+function get_networks()
+{
+for NETOP_SU in ${NETOP_SULIST[@]};do
+  for DEVDEF in ${NETOP_NETLIST[@]};do
+    NIDX=`echo ${DEVDEF}|cut -d',' -f1`
+    NETWORKS=${NETWORKS},${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}
+  done
+done
+# trim leading ,
+NETWORKS=`echo "${NETWORKS}" | sed 's/,//'`
+}
+function set_network_resource()
+{
+for DEVDEF in ${NETOP_NETLIST[@]};do
+  NIDX=`echo ${DEVDEF}|cut -d',' -f1`
+cat << HEREDOC2 
+        ${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}: '1'
+HEREDOC2
+done
+}
 NAME=${1}
 shift
 NETOP_APP_NAMESPACE=${1:-'default'}
@@ -28,14 +48,7 @@ if [ "${NAME}" = "" ];then
 fi
 mkdir -p apps
 cd apps
-for NETOP_SU in ${NETOP_SULIST[@]};do
-  for DEVDEF in ${NETOP_NETLIST[@]};do
-    NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-    NETWORKS=${NETWORKS},${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}
-  done
-done
-# trim leading ,
-NETWORKS=`echo "${NETWORKS}" | sed 's/,//'`
+get_networks
 cat << HEREDOC1 > ./${NAME}.yaml
 apiVersion: v1
 kind: Pod
@@ -61,22 +74,12 @@ spec:
       requests:
 HEREDOC1
 set_gpus >> ./${NAME}.yaml
-for DEVDEF in ${NETOP_NETLIST[@]};do
-  NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-cat << HEREDOC2 >> ./${NAME}.yaml
-        ${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}: '1'
-HEREDOC2
-done
+set_network_resource >> ./${NAME}.yaml
 cat <<HEREDOC3 >> ./${NAME}.yaml
       limits:
 HEREDOC3
 set_gpus >> ./${NAME}.yaml
-for DEVDEF in ${NETOP_NETLIST[@]};do
-  NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-cat << HEREDOC4 >> ./${NAME}.yaml
-        ${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}: '1'
-HEREDOC4
-done
+set_network_resource >> ./${NAME}.yaml
 cat << HEREDOC5 >> ./${NAME}.yaml
     command:
     - sh
