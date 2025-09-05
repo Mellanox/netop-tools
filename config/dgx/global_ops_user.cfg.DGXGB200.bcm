@@ -13,6 +13,6 @@ NUM_GPUS=4
 NETOP_NAMESPACE="network-operator"
 NETOP_BCM_CONFIG=true
 NETOP_COMBINED=true
-NETOP_NICCLUSTER_FILE="nic-cluster-policy_gb200.yaml"
+NETOP_NICCLUSTER_FILE="nic-cluster-policy.yaml"
 NETOP_NETLIST=( a,,,ibp3s0 b,,,ibP2p3s0 c,,,ibP16p3s0 d,,,ibP18p3s0 )
 NETOP_NETWORK_RANGE="192.168.1.0/24"
