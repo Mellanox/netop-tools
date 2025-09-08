@@ -1,0 +1,84 @@
+---
+apiVersion: kubeflow.org/v2beta1
+kind: MPIJob
+metadata:
+  name: nccl-test
+spec:
+  slotsPerWorker: 8
+  launcherCreationPolicy: WaitForWorkersReady
+  runPolicy:
+    cleanPodPolicy: Running
+
+  # Mount MPI Operator's SSH key where the user actually is
+  # We'll run as root, so point to /root/.ssh
+  sshAuthMountPath: /root/.ssh
+
+  mpiReplicaSpecs:
+    Launcher:
+      replicas: 1
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: mpi-launcher
+              image: docker.io/deepops/nccl-tests:2312
+              # Run as root to avoid the "uid 1000" user lookup error
+              securityContext:
+                runAsUser: 0
+              env:
+                - name: OMPI_ALLOW_RUN_AS_ROOT
+                  value: "1"
+                - name: OMPI_ALLOW_RUN_AS_ROOT_CONFIRM
+                  value: "1"
+              command: ["/bin/bash","-lc"]
+              args:
+                - >
+                  mpirun --allow-run-as-root
+                  -np 16
+                  -bind-to none -map-by slot
+                  -mca pml ob1
+                  -mca btl ^openib
+                  -mca btl_tcp_if_include 192.168.0.0/16
+                  -mca oob_tcp_if_include 172.29.0.0/16
+                  -mca routed direct
+                  -mca plm_rsh_args "-p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /root/.ssh/id_rsa"
+                  all_reduce_perf_mpi -b 16 -e 16G -f 2 -g 1
+                  && sleep infinity
+
+    Worker:
+      replicas: 2
+      template:
+        metadata:
+          labels:
+            mpi-memcpy-dra-test-replica: mpi-worker
+          annotations:
+            # Your SR-IOV RDMA networks
+            k8s.v1.cni.cncf.io/networks: "sriovibnet-rdma-default-a-su-1,sriovibnet-rdma-default-b-su-1,sriovibnet-rdma-default-c-su-1,sriovibnet-rdma-default-d-su-1,sriovibnet-rdma-default-e-su-1,sriovibnet-rdma-default-f-su-1,sriovibnet-rdma-default-g-su-1,sriovibnet-rdma-default-h-su-1"
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: mpi-worker
+              image: docker.io/deepops/nccl-tests:2312
+              # Root to generate host keys & read /etc/ssh/*
+              securityContext:
+                runAsUser: 0
+                capabilities:
+                  add: ["IPC_LOCK"]
+              command: ["/bin/bash","-lc"]
+              args:
+                - >
+                  ssh-keygen -A &&
+                  exec /usr/sbin/sshd -De -p 2222
+              resources:
+                limits:
+                  nvidia.com/gpu: 8
+                  nvidia.com/sriovib_resource_a: "1"
+                  nvidia.com/sriovib_resource_b: "1"
+                  nvidia.com/sriovib_resource_c: "1"
+                  nvidia.com/sriovib_resource_d: "1"
+                  nvidia.com/sriovib_resource_e: "1"
+                  nvidia.com/sriovib_resource_f: "1"
+                  nvidia.com/sriovib_resource_g: "1"
+                  nvidia.com/sriovib_resource_h: "1"
+
+

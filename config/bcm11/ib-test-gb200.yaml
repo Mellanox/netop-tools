@@ -1,0 +1,77 @@
+---
+apiVersion: kubeflow.org/v2beta1
+kind: MPIJob
+metadata:
+  name: nvbandwidth-test
+spec:
+  slotsPerWorker: 4
+  launcherCreationPolicy: WaitForWorkersReady
+  runPolicy:
+    cleanPodPolicy: Running
+  sshAuthMountPath: /home/mpiuser/.ssh
+  mpiReplicaSpecs:
+    Launcher:
+      replicas: 1
+      template:
+        metadata:
+          labels:
+            mpi-memcpy-dra-test-replica: mpi-launcher
+        spec:
+          containers:
+          - image: ghcr.io/nvidia/k8s-samples:nvbandwidth-v0.7-8d103163
+            name: mpi-launcher
+            securityContext:
+              runAsUser: 1000
+            command:
+            - mpirun
+            args:
+            - --bind-to
+            - core
+            - --map-by
+            - ppr:4:node
+            - -np
+            - "8"
+            - --report-bindings
+            - -q
+            - nvbandwidth
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+        tolerations:
+          - key: "key"
+            operator: "Equal"
+            value: "value"
+            effect: "NoSchedule"
+    Worker:
+      replicas: 2
+      template:
+        metadata:
+          labels:
+            mpi-memcpy-dra-test-replica: mpi-worker
+          annotations:
+	      k8s.v1.cni.cncf.io/networks:     sriovibnet-rdma-default-a-su-1,sriovibnet-rdma-default-b-su-1,sriovibnet-rdma-default-c-su-1,sriovibnet-rdma-default-d-su-1
+        spec:
+          containers:
+          - image: ghcr.io/nvidia/k8s-samples:nvbandwidth-v0.7-8d103163
+            name: mpi-worker
+            securityContext:
+              runAsUser: 1000
+            env:
+            command:
+            - /usr/sbin/sshd
+            args:
+            - -De
+            - -f
+            - /home/mpiuser/.sshd_config
+            resources:
+              limits:
+                nvidia.com/gpu: 4
+                nvidia.com/sriovib_resource_a: '1'
+                nvidia.com/sriovib_resource_b: '1'
+                nvidia.com/sriovib_resource_c: '1'
+                nvidia.com/sriovib_resource_d: '1'
+
