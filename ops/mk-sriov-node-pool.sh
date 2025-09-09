@@ -19,7 +19,7 @@ spec:
   maxUnavailable: ${QUOTE}${NETOP_SRIOV_NODE_POOL}${QUOTE}
   nodeSelector:
     matchExpressions:
-      - key: node-role.kubernetes.io/worker
+      - key: ${NETOP_NODESELECTOR}
         operator: Exists
 HEREDOC
 }
