@@ -57,7 +57,8 @@ NET_DEV=net1
 GDR=false
 CUDA_DEV=""
 SIZE=""
-for arg in "$@"; do
+while [ $# -gt 0 ]; do
+  arg=${1}
   case $arg in
   --gdr)
     GDR=true
