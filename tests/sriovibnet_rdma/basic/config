@@ -1,4 +1,5 @@
 NETOP_VERSION=25.4.0
+NFD_ENABLE="false"
 
 #IPAM_TYPE="whereabouts"
 
