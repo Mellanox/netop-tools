@@ -1,0 +1,12 @@
+Node Feature Discovery,,,v0.15.6,Optionally deployed. May already be present in the cluster with proper configuration.
+NVIDIA DOCA Driver container,,,24.07-0.6.1.0-0,
+k8s-rdma-shared-device-plugin,,,v1.5.1,
+sriov-network-device-plugin,,,v3.7.0,
+containernetworking CNI plugins,,,v1.5.0,
+whereabouts CNI,,,v0.7.0,
+multus CNI,,,v3.9.3,
+IPoIB CNI,,,v1.2.0,
+IB Kubernetes,,,v1.0.2,
+NV IPAM Plugin,,,v0.2.0,
+NIC Feature Discovery,,,v0.0.1,Only one instance of NFD should be deployed.
+DOCA Telemetry,,,1.16.5-doca2.6.0-host

@@ -1,4 +1,5 @@
 NETOP_VERSION=25.4.0
+NFD_ENABLE="false"
 USECASE="sriovnet_rdma"
 
 #IPAM_TYPE="whereabouts"
@@ -13,4 +14,5 @@ USECASE="macvlan_rdma_shared_device"
 #NETOP_NETLIST=( a,,16,ens2f0np0 b,,16,ens2f1np1 )
 
 #NIC_CONFIG_ENABLE="false"
+NIC_FD_ENABLE="true"
 #DEVICE_TYPES=( "Connectx-5 Ex")
