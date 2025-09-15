@@ -1,5 +1,7 @@
 # Vendor: NVIDIA
 # Product Name: DGXB200
+# needed in worker node grub default config: iommu=pt intel_iommu=on
+#
 NETOP_VERSION="25.4.0"
 NIC_CONFIG_ENABLE=false
 K8SVER="1.32"
