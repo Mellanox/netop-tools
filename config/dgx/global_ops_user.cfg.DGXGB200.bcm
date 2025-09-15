@@ -1,5 +1,6 @@
 # Vendor: NVIDIA
 # Product Name: DGXGB200
+# needed in worker node grub default config: iommu.passthrough=1
 NETOP_VERSION="25.4.0"
 NIC_CONFIG_ENABLE=false
 K8SVER="1.32"
