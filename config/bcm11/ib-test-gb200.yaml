@@ -41,11 +41,11 @@ spec:
                 - matchExpressions:
                   - key: node-role.kubernetes.io/control-plane
                     operator: Exists
-        tolerations:
-          - key: "key"
-            operator: "Equal"
-            value: "value"
-            effect: "NoSchedule"
+          tolerations:
+            - key: "key"
+              operator: "Equal"
+              value: "value"
+              effect: "NoSchedule"
     Worker:
       replicas: 2
       template:
@@ -53,7 +53,7 @@ spec:
           labels:
             mpi-memcpy-dra-test-replica: mpi-worker
           annotations:
-	      k8s.v1.cni.cncf.io/networks:     sriovibnet-rdma-default-a-su-1,sriovibnet-rdma-default-b-su-1,sriovibnet-rdma-default-c-su-1,sriovibnet-rdma-default-d-su-1
+	    k8s.v1.cni.cncf.io/networks: sriovibnet-rdma-default-a-su-1,sriovibnet-rdma-default-b-su-1,sriovibnet-rdma-default-c-su-1,sriovibnet-rdma-default-d-su-1
         spec:
           containers:
           - image: ghcr.io/nvidia/k8s-samples:nvbandwidth-v0.7-8d103163
