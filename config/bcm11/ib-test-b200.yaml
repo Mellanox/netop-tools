@@ -53,7 +53,7 @@ spec:
             mpi-memcpy-dra-test-replica: mpi-worker
           annotations:
             # Your SR-IOV RDMA networks
-            k8s.v1.cni.cncf.io/networks: "sriovibnet-rdma-default-a-su-1,sriovibnet-rdma-default-b-su-1,sriovibnet-rdma-default-c-su-1,sriovibnet-rdma-default-d-su-1,sriovibnet-rdma-default-e-su-1,sriovibnet-rdma-default-f-su-1,sriovibnet-rdma-default-g-su-1,sriovibnet-rdma-default-h-su-1"
+            k8s.v1.cni.cncf.io/networks: sriovibnet-rdma-default-a-su-1,sriovibnet-rdma-default-b-su-1,sriovibnet-rdma-default-c-su-1,sriovibnet-rdma-default-d-su-1,sriovibnet-rdma-default-e-su-1,sriovibnet-rdma-default-f-su-1,sriovibnet-rdma-default-g-su-1,sriovibnet-rdma-default-h-su-1
         spec:
           restartPolicy: OnFailure
           containers:
