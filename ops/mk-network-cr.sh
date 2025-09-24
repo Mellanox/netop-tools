@@ -24,6 +24,12 @@ function IPPoolCRD()
       NUM_SUBNETS="${#NETOP_NETLIST[@]}"
       ${NETOP_ROOT_DIR}/ops/generate_subnets.sh "${NETOP_NETWORK_RANGE}" "${NUM_SUBNETS}" ${NETOP_NETWORK_GW} > ${SUBNET_FILE}
       LINE_NUM=1
+      if [ $(grep -c -i err ${SUBNET_FILE}) -ne 0 ];then
+         echo "subnet configuration error"
+         cat  ${SUBNET_FILE}
+         rm -f ${SUBNET_FILE}
+         exit 1
+      fi
       for NIDXDEF in ${NETOP_NETLIST[@]};do
         NIDX=$(echo ${NIDXDEF}|cut -d',' -f1)
         LINE=$(sed -n ${LINE_NUM}p ${SUBNET_FILE})

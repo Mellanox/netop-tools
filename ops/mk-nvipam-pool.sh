@@ -5,6 +5,11 @@
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 function nv_ippool()
 {
+if [ $# -ne 4 ];then
+  echo "usage:$0 {IPPOOL_NAME} {NETWORK_RANGE} {NETWORK_GW} {PERNODE_BLOCKSIZE}" >nv_ippool.err
+  echo "input:$0 $*" >>nv_ippool.err
+  exit 1
+fi
 IPPOOL_NAME="${1}"
 shift
 NETWORK_RANGE="${1}"
