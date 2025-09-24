@@ -1,0 +1,22 @@
+# Vendor: NVIDIA
+# Product Name: DGXH100
+# needed in worker node grub default config: iommu=pt intel_iommu=on
+#
+NETOP_VERSION="25.4.0"
+NIC_CONFIG_ENABLE=false
+K8SVER="1.32"
+NFD_ENABLE=true
+OFED_ENABLE=false
+CREATE_CONFIG_ONLY=0
+USECASE="sriovibnet_rdma"
+DEVICE_TYPES=( "connectx-7" )
+NUM_VFS=8
+NUM_GPUS=8
+NETOP_NAMESPACE="network-operator"
+NETOP_BCM_CONFIG=true
+NETOP_COMBINED=true
+NETOP_SRIOV_NODE_POOL="100%"
+NETOP_NICCLUSTER_FILE="nic-cluster-policy-h100.yaml"
+#NETOP_NETLIST=( a,,,0000:18:00.0 b,,,0000:40:00.0 c,,,0000:4f:00.0 d,,,0000:5e:00.0 e,,,0000:9a:00.0 f,,,0000:c0:00.0 g,,,0000:ce:00.0 h,,,0000:dc:00.0 )
+NETOP_NETLIST=( a,,,ibp24s0 b,,,ibp64s0 c,,,ibp79s0 d,,,ibp94s0 e,,,ibp154s0 f,,,ibp192s0 g,,,ibp206s0 h,,,ibp220s0 )
+NETOP_NETWORK_RANGE="192.168.0.0/16"
