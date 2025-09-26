@@ -18,9 +18,9 @@
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 source ${NETOP_ROOT_DIR}/ops/mk-ipam-cr.sh
-if [ "$#" -ne 4 ];then
-  echo "usage:$0 {NETWORK_NAME} {IPPOOL_NAME} {NETWORK_MASTER DEV} {NETOP_APP_NAMESPACE}"
-  echo "example:$0 networkname ippoolname ib1 default"
+if [ "$#" -ne 5 ];then
+  echo "usage:$0 {NETWORK_NAME} {IPPOOL_NAME} {NETWORK_MASTER DEV} {NIDX} {NETOP_APP_NAMESPACE}"
+  echo "example:$0 networkname ippoolname ib1 a default"
   exit 1
 fi
 NETWORK_NAME="${1}"
@@ -28,6 +28,8 @@ shift
 IPPOOL_NAME="${1}"
 shift
 NDEV="${1}"
+shift
+NIDX=${1}
 shift
 NETOP_APP_NAMESPACE="${1}"
 shift

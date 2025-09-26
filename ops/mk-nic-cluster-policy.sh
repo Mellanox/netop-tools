@@ -332,6 +332,38 @@ cat << MAINTENANCE_OPERATOR
     version: $(get_release_tag maintenance-operator)
 MAINTENANCE_OPERATOR
 }
+function docaTelemetryService()
+{
+if [ "${DOCA_TELEMETRY_SERVICE}" != "true" ];then
+  return
+fi
+REPOSITORY=$(get_repository doca_telemetry)
+if [ "${REPOSITORY}" = "" ];then
+  return
+fi
+cat << DOCA_TELEMETRY
+  docaTelemetryService:
+    image: doca_telemetry
+    imagePullSecrets: []
+    repository: ${REPOSITORY}
+    version: $(get_release_tag doca_telemetry)
+DOCA_TELEMETRY
+}
+function node_affinity()
+{
+if [ "${NCP_NODE_AFFINITY}" == "true" ];then
+cat << NODE_AFFINITY
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: feature.node.kubernetes.io/pci-15b3.present
+          operator: In
+          values:
+          - "true"
+NODE_AFFINITY
+fi
+}
 function mk_file()
 {
 init_file "${FILE}"
@@ -343,6 +375,8 @@ metadata:
   name: nic-cluster-policy
 spec:
 HEREDOC1
+docaTelemetryService >> ${FILE}
+node_affinity >> ${FILE}
 ofedDriver >> ${FILE}
 case ${USECASE} in
 ipoib_rdma_shared_device)
