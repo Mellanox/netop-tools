@@ -1,9 +1,17 @@
 #!/bin/bash
 #
 #
+function getProtocol()
+{
+if [ $(grep -c v2 gid_info.$$) != 0 ];then
+  echo "v2"
+else
+  echo "v1"
+fi
+}
 function getPartGUID()
 {
-  LINE=$(ip -br a | grep ${NET} | tr -s [:space:])
+  LINE=$(ip -br a | grep ${1} | tr -s [:space:])
   DEV=$(echo ${LINE}| cut -d' ' -f1)
   IP=$(echo ${LINE}| cut -d' ' -f3 | cut -d'/' -f1)
   GUID=$(echo ${LINE}| cut -d' ' -f4| cut -d':' -f4-6| cut -d'/' -f1)
@@ -11,22 +19,30 @@ function getPartGUID()
 }
 function getAzure()
 {
-  LINE=$(getPartGUID)
+  LINE=$(getPartGUID ${1})
   IP=$(echo ${LINE}|cut -d',' -f3)
   GUID=$(echo ${LINE}|cut -d, -f2)
-  GLINE=$(/root/show_gids |grep ${GUID}|tr -s [:space])
+  /root/show_gids > gid_info.$$
+  PROTOCOL=$(getProtocol)
+  GLINE=$(/root/show_gids |grep ${GUID}|grep ${PROTOCOL}|tr -s [:space])
   DEV=$(echo ${GLINE}|cut -d' ' -f1)
   GID=$(echo ${GLINE}|cut -d' ' -f3)
-  echo ${DEV},${GID},${IP}
+  echo ${DEV},${GID},${IP},${1}
+  # rm -f gid_info.$$
 }
 function getDGX()
 {
-  LINE=$(ip -br a | grep ${NET} | tr -s [:space:])
+  LINE=$(ip -br a | grep ${1} | tr -s [:space:])
   DEV=$(echo ${LINE}| cut -d' ' -f1)
   IP=$(echo ${LINE}| cut -d' ' -f2)
   GID=$(echo ${LINE}| cut -d' ' -f3)
-  echo ${DEV},${GID},${IP}
+  echo ${DEV},${GID},${IP},${1}
 }
-NET=${1}
-shift
-getAzure
+if [ "$#" -eq 1 ];then
+  getAzure ${1}
+else
+  ip -br a | grep net | tr -s [:space:] | while read LINE;do
+    NET=$(echo ${LINE} | cut -d' ' -f1)
+    getAzure ${NET}
+  done
+fi
