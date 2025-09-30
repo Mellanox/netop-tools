@@ -1,9 +1,9 @@
-#!/usr/bin/bash 
+#!/usr/bin/bash
 # Maps pcie/pf/vf/pod netdev & associated gpu
 
 function gid_info()
 {
-  awk --assign net="${1}" '{ if ( $7 == net ) {print $1, $2, $3, $4, $5, $6, $7 }}' ${2} | grep v2 | grep -v fe80
+  awk --assign net="${1}" '{ if ( $7 == net ) {print $1, $2, $3, $4, $5, $6, $7 }}' ${2} | grep ${PROTOCOL} | grep -v fe80
 }
 function get_gpu_priority()
 {
@@ -23,29 +23,45 @@ function get_gpu_priority()
   echo ""
   return  # we didn't find any GPU
 }
-
-# Header
-echo -e "NET_DEV\tRDMA_DEV\tVF_PCIe\tGPU_NIC_#\tBEST_CONNECTION\tCLOSEST_CUDA_DEV_#"
-echo -e "-------\t--------\t-------\t---------\t---------------\t------------------"
-
-
-
-# Loop over available netdevs 'net1', 'net2', etc
-/root/show_gids > gid_info.$$
-cat gid_info.$$ | grep v2 | grep -v fe80 | cut -f 7 | while read NET_DEV;do
+function oldParse()
+{
+cat gid_info.$$ | grep ${PROTOCOL} | grep -v fe80 | cut -d' ' -f7 | while read NET_DEV;do
   # print net dev
   #echo "For net dev:  ${NET_DEV}"
 
   # Get rdma netdev
   #RDMA_DEV=$(rdma link | grep netdev | grep ${NET_DEV} | cut -d ' ' -f2 | cut -d '/' -f1)
-  #RDMA_DEV=$(/root/show_gids | grep -i ${NET_DEV} | grep v2 | grep -v fe80 | cut -f1)
+  #RDMA_DEV=$(/root/show_gids | grep -i ${NET_DEV} | grep ${PROTOCOL} | grep -v fe80 | cut -f1)
   #echo ${NET_DEV} = ${RDMA_DEV}a
   GID_INFO=$(gid_info ${NET_DEV} gid_info.$$)
   RDMA_DEV=$(echo $GID_INFO |cut -d' ' -f1)
   GID_IDX=$(echo $GID_INFO |cut -d' ' -f3)
-  
+done
+}
+
+# Header
+function header()
+{
+echo -e "NET_DEV\tRDMA_DEV\tVF_PCIe\tGPU_NIC_#\tBEST_CONNECTION\tCLOSEST_CUDA_DEV_#"
+echo -e "-------\t--------\t-------\t---------\t---------------\t------------------"
+}
+
+
+# Loop over available netdevs 'net1', 'net2', etc
+/root/show_gids > gid_info.$$
+if [ $(grep -c v2 gid_info.$$) != 0 ];then
+  PROTOCOL="v2"
+else
+  PROTOCOL="v1"
+fi
+LINK_MSG='Link up'
+LINK_MSG="renamed"
+/root/getrdmanet.sh | while read GID_INFO;do
+  RDMA_DEV=$(echo $GID_INFO |cut -d',' -f1)
+  GID_IDX=$(echo $GID_INFO |cut -d',' -f2)
+  NET_DEV=$(echo $GID_INFO |cut -d',' -f4)
   # Check dmesg for the vf
-  VF_PCI=$(dmesg | grep ${NET_DEV} | grep 'Link up' | tail -n 1 | cut -d']' -f2 | cut -d' ' -f3)
+  VF_PCI=$(dmesg | grep ${NET_DEV} | grep "${LINK_MSG}" | tail -n 1 | cut -d']' -f2 | cut -d' ' -f3)
   #echo ${NET_DEV} = ${VF_PCI}
   if [ "${VF_PCI}" == "" ]; then
     VF_PCI="na"
