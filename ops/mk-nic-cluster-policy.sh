@@ -68,6 +68,16 @@ cat << OFED_DRIVER3
     - name: CREATE_IFNAMES_UDEV
       value: "true"
 OFED_DRIVER3
+    if [ "${ENTRYPOINT_DEBUG}" = "true" ];then
+cat << OFED_DRIVER8
+    - name: ENTRYPOINT_DEBUG
+      value: "true"
+    - name: DEBUG_LOG_FILE
+      value: "${DEBUG_LOG_FILE}"
+    - name: DEBUG_SLEEP_SEC_ON_EXIT
+      value: ${DEBUG_SLEEP_SEC_ON_EXIT}
+OFED_DRIVER8
+    fi
     #
     # should be fixed in 25.4.0
     #
