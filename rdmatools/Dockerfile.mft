@@ -1,0 +1,13 @@
+#ARG D_CUDA_IMAGE=nvidia/cuda:12.6.2-devel-ubuntu24.04
+FROM ubuntu:24.04
+#FROM ${D_CUDA_IMAGE} AS build
+
+COPY ./payloads ./getpkgs.sh ./mft_entrypoint.sh /root/
+
+RUN DEBIAN_FRONTEND=noninteractive /root/getpkgs.sh
+#RUN for F in /usr/bin/ib_*;do setcap cap_ipc_lock=+ep $F;done
+WORKDIR /root
+ 
+#ADD ./entrypoint.sh ./
+#ENTRYPOINT ["/usr/bin/bash", "-c", "sleep", "inf"]
+ENTRYPOINT [ "/root/mft_entrypoint.sh" ]

@@ -1,0 +1,24 @@
+# B200 
+# SuperMicro
+# Product Name: SYS-A22GA-NBRT
+# Product Name: Version: 1.0
+NETOP_VERSION="25.7.0"
+NIC_CONFIG_ENABLE=false
+K8SVER="1.32"
+NFD_ENABLE=false
+OFED_ENABLE=true
+CREATE_CONFIG_ONLY=0
+USECASE="sriovnet_rdma"
+DEVICE_TYPES=( "connectx-7" )
+NUM_VFS=4
+NUM_GPUS=4
+NETOP_NAMESPACE="nvidia-network-operator"
+NETOP_BCM_CONFIG=false
+NETOP_COMBINED=true
+NETOP_NICCLUSTER_FILE="nic-cluster-policy-b200.yaml"
+NETOP_SRIOV_NODE_POOL="100%"
+NETOP_NETLIST=( a,,,0000:18:00.0 b,,,0000:3e:00.0 c,,,0000:60:00.0 d,,,0000:71:00.0 e,,,0000:98:00.0 f,,,0000:bb:00.0 g,,,0000:dd:00.0 h,,,0000:ee:00.0 )
+NETOP_NETWORK_RANGE="192.168.0.0/16"
+NETOP_APP_NAMESPACES=( "default" "runai-eval-1" )
+#NETOP_NODESELECTOR=${NETOP_NODESELECTOR:-"node-role.kubernetes.io/worker"}
+#NETOP_NODESELECTOR_VAL=${NETOP_NODESELECTOR_VAL:-""}
