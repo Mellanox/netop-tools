@@ -77,10 +77,14 @@ VALUES_YAML1
 *)
   ;;
 esac
+
+case "${NETOP_VERSION}" in
+  25.1.0) param=nicConfigurationOperator;;
+  *)      param=maintenanceOperator;;
+esac
+
 cat << VALUES_YAML2
-nicConfigurationOperator:
-  enabled: ${NIC_CONFIG_ENABLE}
-maintenanceOperator:
+${param}:
   enabled: ${NIC_CONFIG_ENABLE}
 nvIpam:
   deploy: ${NVIPAMVAL}
