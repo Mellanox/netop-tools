@@ -318,6 +318,12 @@ cat << NIC_CONFIGURATION
       image: nic-configuration-operator-daemon
       repository: $(get_repository nic-configuration-operator-daemon required)
       version: $(get_release_tag nic-configuration-operator-daemon)
+NIC_CONFIGURATION
+
+if [ "${FW_UPGRADE_ENABLE}" = "true" ];then
+  case "${NETOP_VERSION}" in
+    25.4.0|25.7.0)
+cat << NIC_CONFIGURATION
     nicFirmwareStorage:
       create: false
       pvcName: nic-fw-storage-pvc
@@ -325,6 +331,11 @@ cat << NIC_CONFIGURATION
       storageClassName: nfs-csi
       availableStorageSize: 1Gi
 NIC_CONFIGURATION
+;;
+*)
+;;
+esac
+fi
 }
 function maintenanceOperator()
 {
