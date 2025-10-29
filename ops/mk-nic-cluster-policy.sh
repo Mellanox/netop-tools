@@ -273,6 +273,9 @@ fi
 }
 function nodeFeatureDiscovery()
 {
+#TODO
+#Leaving it here for future use. Probably can be consolidated with generation of values.yaml
+  return
   if [ "${NFD_ENABLE}" != true ];then
      return
   fi
