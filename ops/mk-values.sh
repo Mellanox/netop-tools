@@ -71,7 +71,7 @@ VALUES_YAML0
 case "${NETOP_VERSION}" in
 25.4.0|25.7.0)
 cat << VALUES_YAML1
-  nfd.deployNodeFeatureRules: ${NFD_ENABLE}
+  deployNodeFeatureRules: ${NFD_ENABLE}
 VALUES_YAML1
   ;;
 *)
