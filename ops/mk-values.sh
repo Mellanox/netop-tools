@@ -69,7 +69,7 @@ nfd:
   enabled: ${NFD_ENABLE}
 VALUES_YAML0
 case "${NETOP_VERSION}" in
-25.4.0|25.7.0)
+25.4.0|25.7.0|25.10.*)
 cat << VALUES_YAML1
   deployNodeFeatureRules: ${NFD_ENABLE}
 VALUES_YAML1
@@ -282,8 +282,19 @@ function 25_7_0()
   sriovNetworkOperator
   pullSecrets
 }
+function 25_10_0()
+{
+  version
+  ipamType
+  values_yaml
+  sriovNetworkOperator
+  pullSecrets
+}
 
 case ${NETOP_VERSION} in
+  25.10.*)
+    NETOP_FUNCT=25_10_0
+    ;;
   25.7.0)
     NETOP_FUNCT=25_7_0
     ;;

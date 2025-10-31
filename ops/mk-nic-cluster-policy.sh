@@ -325,7 +325,7 @@ NIC_CONFIGURATION
 
 if [ "${FW_UPGRADE_ENABLE}" = "true" ];then
   case "${NETOP_VERSION}" in
-    25.4.0|25.7.0)
+    25.4.0|25.7.0|25.10.*)
 cat << NIC_CONFIGURATION
     nicFirmwareStorage:
       create: false
