@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 # Build cuda-perftest in rdma debug container
 apt-get update
-apt-get -y install libibumad-dev
+apt-get -y install libibumad-dev libibumad3
 apt-get -y install pciutils
 apt-get -y install libpci-dev
 
