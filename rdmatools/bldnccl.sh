@@ -2,7 +2,10 @@
 TAG="v2.28.7-1"
 function pkgs()
 {
-  apt install -y build-essential devscripts debhelper fakeroot
+  apt-get update
+  apt install -y build-essential devscripts debhelper fakeroot lintian
+  apt install -y openmpi-bin libopenmpi-dev openssh-server
+  #mkdir -p /run/sshd && chmod 755 /run/sshd && ssh-keygen -A
 }
 function getsrc()
 {
@@ -17,11 +20,26 @@ function makesrc()
 # Build NCCL deb package
 function mkpkg()
 {
-  make pkg.debian.build 
-  ls build/pkg/deb/
+  make pkg.debian.build
+  cd /root/nccl/build/pkg/deb
+  FILES=""
+  for FILE in $(ls *.deb);do
+    FILES="${FILES} ./${FILE}"
+  done
+  apt install -y --allow-change-held-packages ${FILES}
 }
+function mktests()
+{
+ git clone https://github.com/NVIDIA/nccl-tests.git
+ cd nccl-tests
+ make -j src.build
+}
+cd /root
 pkgs
 getsrc
+pushd .
 cd ./nccl
 makesrc
 mkpkg
+popd
+mktests

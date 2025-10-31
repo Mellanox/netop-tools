@@ -3,13 +3,16 @@ ARG D_CUDA_IMAGE=nvidia/cuda:13.0.1-devel-ubuntu24.04
 #FROM ubuntu:24.04
 FROM ${D_CUDA_IMAGE} AS build
 
-COPY ./getrdmanet.sh ./ib_top ./getpkgs.sh ./rdmadebug.sh ./mlnx_tools.sh ./rdma-core.sh ./perftestcuda.sh ./perftestenv.sh ./tcpdumprdma.sh ./install_perftest_cuda.sh ./k8s-netdev-mapping.sh ./show_gids ./entrypoint.sh ./sysctl_config.sh ./bldnccl.sh /root/
+COPY ./getrdmanet.sh ./ib_top ./getpkgs.sh ./rdmadebug.sh ./mlnx_tools.sh ./rdma-core.sh ./perftestcuda.sh ./perftestenv.sh ./tcpdumprdma.sh ./install_perftest_cuda.sh ./k8s-netdev-mapping.sh ./show_gids ./nccl_entrypoint.sh ./sysctl_config.sh ./bldnccl.sh /root/
 
-RUN DEBIAN_FRONTEND=noninteractive /root/getpkgs.sh && /root/rdmadebug.sh && /root/perftestcuda.sh /root/bldnccl.sh && /root/bldnccl.sh
+RUN DEBIAN_FRONTEND=noninteractive /root/getpkgs.sh && /root/rdmadebug.sh && /root/perftestcuda.sh && /root/bldnccl.sh
+RUN mkdir -p /run/sshd && \
+    chmod 755 /run/sshd && \
+    ssh-keygen -A
 #RUN for F in /usr/bin/ib_*;do setcap cap_ipc_lock=+ep $F;done
 #WORKDIR /home/perftest
 WORKDIR /root
  
 #ADD ./entrypoint.sh ./
 #ENTRYPOINT ["/usr/bin/bash", "-c", "sleep", "inf"]
-ENTRYPOINT [ "/root/entrypoint.sh" ]
+ENTRYPOINT [ "/root/nccl_entrypoint.sh" ]
