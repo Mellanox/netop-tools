@@ -1,0 +1,30 @@
+# Manufacturer: NVIDIA
+# Product Name: DGXB300
+# Version: A.1
+# Serial Number: 1943625000018
+# UUID: 71154a7a-bfde-1000-02d6-4cbb4700008c
+# Wake-up Type: Power Switch
+# SKU Number: 675-24387-0100-TS2
+# Family: DGX
+# needed in worker node grub default config: iommu=pt intel_iommu=on
+#
+NETOP_VERSION="25.10.0-beta.4"
+PROD_VER=0
+NGC_API_KEY=$(cat /home/thuff/keys/ngc/ngc_staging_personal_key)
+NIC_CONFIG_ENABLE=false
+K8SVER="1.33"
+NFD_ENABLE=false
+OFED_ENABLE=false
+CREATE_CONFIG_ONLY=1
+USECASE="sriovnet_rdma"
+MTU_DEFAULT="9000"
+DEVICE_TYPES=( "connectx-8" )
+NUM_VFS=4
+NUM_GPUS=8
+NETOP_NAMESPACE="network-operator"
+NETOP_BCM_CONFIG=true
+NETOP_COMBINED=true
+NETOP_SRIOV_NODE_POOL="100%"
+NETOP_NICCLUSTER_FILE="nic-cluster-policy-b300.yaml"
+NETOP_NETLIST=( a,,,0000:17:00.0 b,,,0000:17:00.1 c,,,0000:39:00.0 d,,,0000:39:00.1 e,,,0000:5f:00.0 f,,,0000:5f:00.1 g,,,0000:70:00.0 h,,,0000:70:00.1 i,,,0000:97:00.0 j,,,0000:97:00.1 k,,,0000:b9:00.0 l,,,0000:b9:00.1 m,,,0000:dc:00.0 n,,,0000:dc:00.1 o,,,0000:ed:00.0 p,,,0000:ed:00.1 )
+NETOP_NETWORK_RANGE="192.168.0.0/16"
