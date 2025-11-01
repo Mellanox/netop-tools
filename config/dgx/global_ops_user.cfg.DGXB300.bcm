@@ -31,5 +31,6 @@ NETOP_BCM_CONFIG=true
 NETOP_COMBINED=true
 NETOP_SRIOV_NODE_POOL="100%"
 NETOP_NICCLUSTER_FILE="nic-cluster-policy-b300.yaml"
-NETOP_NETLIST=( a,,,0000:17:00.0 b,,,0000:17:00.1 c,,,0000:39:00.0 d,,,0000:39:00.1 e,,,0000:5f:00.0 f,,,0000:5f:00.1 g,,,0000:70:00.0 h,,,0000:70:00.1 i,,,0000:97:00.0 j,,,0000:97:00.1 k,,,0000:b9:00.0 l,,,0000:b9:00.1 m,,,0000:dc:00.0 n,,,0000:dc:00.1 o,,,0000:ed:00.0 p,,,0000:ed:00.1 )
+#NETOP_NETLIST=( a,,,0000:17:00.0 b,,,0000:17:00.1 c,,,0000:39:00.0 d,,,0000:39:00.1 e,,,0000:5f:00.0 f,,,0000:5f:00.1 g,,,0000:70:00.0 h,,,0000:70:00.1 i,,,0000:97:00.0 j,,,0000:97:00.1 k,,,0000:b9:00.0 l,,,0000:b9:00.1 m,,,0000:dc:00.0 n,,,0000:dc:00.1 o,,,0000:ed:00.0 p,,,0000:ed:00.1 )
+NETOP_NETLIST=( a,,,eth_p0_r0 b,,,eth_p1_r0 c,,,eth_p0_r1 d,,,eth_p1_r1 e,,,eth_p0_r2 f,,,eth_p1_r2 g,,,eth_p0_r3 h,,,eth_p1_r3 i,,,eth_p0_r4 j,,,eth_p1_r4 k,,,eth_p0_r5 l,,,eth_p1_r5 m,,,eth_p0_r6 n,,,eth_p1_r6 o,,,eth_p0_r7 p,,,eth_p1_r7 )
 NETOP_NETWORK_RANGE="192.168.0.0/16"
