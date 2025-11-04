@@ -18,6 +18,8 @@ NIC_TYPE_MAP=(
 )
 
 source ${NETOP_ROOT_DIR}/global_ops.cfg
+function mk_nic_cfgs()
+{
 for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
   NIC_TYPE=${NIC_TYPE_MAP[${DEVICE_TYPE}]:-"unknown"}
   case ${USECASE} in
@@ -74,3 +76,12 @@ cat << NIC_CONFIG2 >> ${FILE}
          env: Baremetal
 NIC_CONFIG2
 done
+}
+function fw_update_pv()
+{
+if [ "${NETOP_BCM_CONFIG}" == true ];then
+  ${NETOP_ROOT_DIR}/ops/mk-fw-storsage-pv.sh
+fi
+}
+mk_nic_cfgs
+fw_update_pv
