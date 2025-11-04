@@ -80,7 +80,7 @@ done
 function fw_update_pv()
 {
 if [ "${NETOP_BCM_CONFIG}" == true ];then
-  ${NETOP_ROOT_DIR}/ops/mk-fw-storsage-pv.sh
+  ${NETOP_ROOT_DIR}/ops/mk-nic-fw-pv.sh
 fi
 }
 mk_nic_cfgs
