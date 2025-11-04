@@ -7,7 +7,7 @@ fi
 
 if [[ $# -eq 0 ]];then
   echo "Running all tests"
-  CONFIGS=$(ls ${NETOP_ROOT_DIR}/tests/*/*/config)
+  CONFIGS=$(find ${NETOP_ROOT_DIR}/tests -type f -name 'config' | sort)
 else
   #TODO: how to identify single test?"
   #IDEA: contantenate base usecase with a test number
