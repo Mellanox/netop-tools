@@ -58,7 +58,7 @@ fi
 cat << OFED_DRIVER3
     version: $(get_release_tag doca-driver)
     forcePrecompiled: false
-    imagePullSecrets: []
+    imagePullSecrets: [${NGC_SECRET}]
     terminationGracePeriodSeconds: 300
     env:
     - name: RESTORE_DRIVER_ON_POD_TERMINATION
@@ -128,7 +128,7 @@ cat << SRIOV_DEV_PLUGIN1
     image: sriov-network-device-plugin
     repository: $(get_repository sriov-network-device-plugin required)
     version: $(get_release_tag sriov-network-device-plugin)
-    imagePullSecrets: []
+    imagePullSecrets: [${NGC_SECRET}]
     config: |
       {
         "resourceList": [
@@ -178,7 +178,7 @@ cat << RDMA_SDP1
     image: k8s-rdma-shared-dev-plugin
     repository: $(get_repository k8s-rdma-shared-dev-plugin required)
     version: $(get_release_tag k8s-rdma-shared-dev-plugin)
-    imagePullSecrets: []
+    imagePullSecrets: [${NGC_SECRET}]
     # The config below directly propagates to k8s-rdma-shared-device-plugin configuration.
     # Replace 'devices' with your (RDMA capable) netdevice name.
     config: |
@@ -222,12 +222,12 @@ cat << SECONDARY_NETWORK1
       image: plugins
       repository: $(get_repository plugins required)
       version: $(get_release_tag plugins)
-      imagePullSecrets: []
+      imagePullSecrets: [${NGC_SECRET}]
     multus:
       image: multus-cni
       repository: $(get_repository multus-cni required)
       version: $(get_release_tag multus-cni)
-      imagePullSecrets: []
+      imagePullSecrets: [${NGC_SECRET}]
 SECONDARY_NETWORK1
 if [ "${NETOP_BCM_CONFIG}" == true ];then
 cat << SECONDARY_NETWORK2
@@ -244,7 +244,7 @@ cat << SECONDARY_NETWORK3
       image: ipoib-cni
       repository: $(get_repository ipoib-cni required)
       version: $(get_release_tag ipoib-cni)
-      imagePullSecrets: []
+      imagePullSecrets: [${NGC_SECRET}]
 SECONDARY_NETWORK3
     ;;
 esac
@@ -254,7 +254,7 @@ cat << SECONDARY_NETWORK4 >> ${FILE}
       image: whereabouts
       repository: $(get_repository whereabouts required)
       version: $(get_release_tag whereabouts)
-      imagePullSecrets: []
+      imagePullSecrets: [${NGC_SECRET}]
 SECONDARY_NETWORK4
 fi
 }
@@ -266,7 +266,7 @@ cat << NVIPAM
     image: nvidia-k8s-ipam
     repository: $(get_repository nvidia-k8s-ipam required)
     version: $(get_release_tag nvidia-k8s-ipam)
-    imagePullSecrets: []
+    imagePullSecrets: [${NGC_SECRET}]
     enableWebhook: false
 NVIPAM
 fi
@@ -368,7 +368,7 @@ fi
 cat << DOCA_TELEMETRY
   docaTelemetryService:
     image: doca_telemetry
-    imagePullSecrets: []
+    imagePullSecrets: [${NGC_SECRET}]
     repository: ${REPOSITORY}
     version: $(get_release_tag doca_telemetry)
 DOCA_TELEMETRY
