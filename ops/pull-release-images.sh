@@ -7,19 +7,25 @@ function getTool()
 {
   TOOL=$(which docker)
   if [ "${TOOL}" != "" ];then
-    FILE="/root/.docker/config.json"
+    TTYPE="docker"
   else
     TOOL=$(which podman)
     if [ "${TOOL}" = "" ];then
-      echo "no docker/podman registry login tool"
-      exit 1
+      TOOL=$(which ctr)
+      if [ "${TOOL}" = "" ];then
+        echo "no docker/podman/ctr registry login tool"
+        exit 1
+      else
+        TTYPE="ctr"
+      fi
+    else
+      TTYPE="podman"
     fi
-    FILE="${XDG_RUNTIME_DIR}/containers/auth.json"
   fi
 }
 function docaImage()
 {
-  if [ "${1}" = "doca-driver" ];then
+  if [ "${1}" != "doca-driver" ];then
     echo ${1}
   else
     ARCH=$(uname -i)
@@ -42,16 +48,28 @@ function pullContainers()
         echo "NGC_API_KEY:missing:${NGC_API_KEY}"
         exit 1
       fi
-      echo "${NGC_API_KEY}" | ${TOOL} login --username  '$oauthtoken' --password-stdin ${REPOSITORY}
+      case ${TTYPE} in
+      docker|podman)
+        echo "${NGC_API_KEY}" | ${TOOL} login --username  '$oauthtoken' --password-stdin ${REPOSITORY}
+        ;;
+      esac
     fi
     CONTAINER_PATH="${REPOSITORY}/${CONTAINER}:${RELEASE_TAG}"
-    ${TOOL} pull ${CONTAINER_PATH}
+    case ${TTYPE} in
+    docker|podman)
+      ${TOOL} pull ${CONTAINER_PATH}
+      ;;
+    ctr)
+      ${TOOL} images pull --user '$oauthtoken':"${NGC_API_KEY}" ${CONTAINER_PATH}
+    esac
     if [ "$?" != "0" ];then
       echo "CONTAINER PULL FAILED: ${TOOL} pull ${CONTAINER_PATH}"
       exit 1
     fi
-    TARBALL=$(echo ${CONTAINER_PATH} | sed 's,/,_,g').tgz
-    ${TOOL} save ${CONTAINER_PATH}>${TARBALL}
+    TARBALL=$(echo ${CONTAINER_PATH} | sed 's,/,_,g' | sed 's/:/+/').tgz
+    if [ ! -f ${TARBALL} ];then
+      ${TOOL} save ${CONTAINER_PATH}>${TARBALL}
+    fi
   done <"${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}"
 }
 pullContainers
