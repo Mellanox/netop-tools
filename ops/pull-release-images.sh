@@ -5,21 +5,27 @@
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 function getTool()
 {
-  TOOL=$(which docker)
+  TOOL=$(which crictl)
   if [ "${TOOL}" != "" ];then
-    TTYPE="docker"
+    TTYPE="crictl"
   else
-    TOOL=$(which podman)
-    if [ "${TOOL}" = "" ];then
-      TOOL=$(which ctr)
-      if [ "${TOOL}" = "" ];then
-        echo "no docker/podman/ctr registry login tool"
-        exit 1
-      else
-        TTYPE="ctr"
-      fi
+    TOOL=$(which docker)
+    if [ "${TOOL}" != "" ];then
+      TTYPE="docker"
     else
-      TTYPE="podman"
+      TOOL=$(which podman)
+      if [ "${TOOL}" != "" ];then
+        TTYPE="podman"
+      else
+        TOOL=$(which ctr)
+        if [ "${TOOL}" != "" ];then
+          TTYPE="ctr"
+        else
+          echo "no crictl/docker/podman/ctr registry tool"
+          exit 1
+        fi
+      else
+      fi
     fi
   fi
 }
@@ -48,28 +54,39 @@ function pullContainers()
         echo "NGC_API_KEY:missing:${NGC_API_KEY}"
         exit 1
       fi
-      case ${TTYPE} in
-      docker|podman)
-        echo "${NGC_API_KEY}" | ${TOOL} login --username  '$oauthtoken' --password-stdin ${REPOSITORY}
-        ;;
-      esac
     fi
     CONTAINER_PATH="${REPOSITORY}/${CONTAINER}:${RELEASE_TAG}"
+    TARBALL=$(echo ${CONTAINER_PATH} | sed 's,/,_,g' | sed 's/:/+/').tgz
     case ${TTYPE} in
+    crictl)
+      ${TOOL} pull --creds '$oauthtoken':"${NGC_API_KEY}" ${CONTAINER_PATH}
+      if [ "$?" != "0" ];then
+        echo "CONTAINER PULL FAILED: ${TOOL} pull --creds '$oauthtoken':${NGC_API_KEY} ${CONTAINER_PATH}"
+        exit 1
+      fi
+      ;;
     docker|podman)
+      echo "${NGC_API_KEY}" | ${TOOL} login --username  '$oauthtoken' --password-stdin ${REPOSITORY}
       ${TOOL} pull ${CONTAINER_PATH}
+      if [ "$?" != "0" ];then
+        echo "CONTAINER PULL FAILED: ${TOOL} pull ${CONTAINER_PATH}"
+        exit 1
+      fi
+      if [ ! -f ${TARBALL} ];then
+        ${TOOL} save ${CONTAINER_PATH}>${TARBALL}
+      fi
       ;;
     ctr)
       ${TOOL} images pull --user '$oauthtoken':"${NGC_API_KEY}" ${CONTAINER_PATH}
+      if [ "$?" != "0" ];then
+        echo "CONTAINER PULL FAILED: ${TOOL} images pull --user '$oauthtoken':${NGC_API_KEY} ${CONTAINER_PATH}"
+        exit 1
+      fi
+      if [ ! -f ${TARBALL} ];then
+        ${TOOL} -n k8s.io images export ${TARBALL} ${CONTAINER_PATH}
+      fi
+      ;;
     esac
-    if [ "$?" != "0" ];then
-      echo "CONTAINER PULL FAILED: ${TOOL} pull ${CONTAINER_PATH}"
-      exit 1
-    fi
-    TARBALL=$(echo ${CONTAINER_PATH} | sed 's,/,_,g' | sed 's/:/+/').tgz
-    if [ ! -f ${TARBALL} ];then
-      ${TOOL} save ${CONTAINER_PATH}>${TARBALL}
-    fi
   done <"${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}"
 }
 pullContainers
