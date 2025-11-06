@@ -24,7 +24,6 @@ function getTool()
           echo "no crictl/docker/podman/ctr registry tool"
           exit 1
         fi
-      else
       fi
     fi
   fi
