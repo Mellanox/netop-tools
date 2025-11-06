@@ -21,8 +21,7 @@ if [ "${PROD_VER}" != "0" ];then
   return
 fi
 ${NETOP_ROOT_DIR}/uninstall/delsecret.sh
-echo "${NGC_API_KEY}" | ${TOOL} login --username  '$oauthtoken' --password-stdin nvcr.io
-echo "END"
+#echo "${NGC_API_KEY}" | ${TOOL} login --username  '$oauthtoken' --password-stdin nvcr.io
 X=$(${K8CL} get secret -n ${NETOP_NAMESPACE} | grep -c "${NGC_SECRET}")
 if [ "${X}" = "0" ];then
   #${K8CL} -n ${NETOP_NAMESPACE} create secret generic ${NGC_SECRET} --from-file=.dockerconfigjson=${FILE} --type=kubernetes.io/dockerconfigjson
