@@ -1,6 +1,6 @@
 #!/bin/bash -x
 #
-# pull and export a release of containers
+# pull and export a release of containers/{VERSION}
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 function getTool()
