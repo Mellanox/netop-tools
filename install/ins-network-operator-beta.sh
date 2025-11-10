@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 # install the network operator.
 #
@@ -25,10 +25,17 @@ RELEASE_VALUES=${RELEASE_DIR}/network-operator/values.yaml
 #${docmd} helm install -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator --version ${NETOP_VERSION} \
 #  ${RELEASE_VALUES} \
 #  -f ${USECASE_DIR}/${NETOP_VALUES_FILE}
-pushd
+pushd .
 cd ${RELEASE_DIR}
-helm install -n network-operator network-operator ./network-operator -f values.yaml
+#helm repo update
+#helm install -n  ${NETOP_NAMESPACE} network-operator ./network-operator -f values.yaml
+#helm install -n  ${NETOP_NAMESPACE} network-operator nvidia/network-operator -f values.yaml
+helm delete  -n ${NETOP_NAMESPACE} network-operator
+#helm install -n ${NETOP_NAMESPACE} network-operator ./network-operator -f ./network-operator/values.yaml
+#helm install -n ${NETOP_NAMESPACE} network-operator ./network-operator ${RELEASE_VALUES} --wait
+helm install --debug -n ${NETOP_NAMESPACE} network-operator ./network-operator ${RELEASE_VALUES} --wait
 popd
+exit 0
 ${NETOP_ROOT_DIR}/install/applycrds.sh
 ${docmd} ${K8CL} apply -f ${USECASE_DIR}/${NETOP_NICCLUSTER_FILE}
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
