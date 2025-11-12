@@ -46,7 +46,7 @@ function pullContainers()
   while read LINE;do
     REPOSITORY=$(echo "${LINE}" | cut -d, -f3)
     CONTAINER=$(echo ${LINE}|cut -d, -f4)
-    CONTAINER=$(docaImage ${CONTAINER})
+    #CONTAINER=$(docaImage ${CONTAINER})
     RELEASE_TAG=$(echo "${LINE}" | cut -d, -f5)
     if [ $(echo ${REPOSITORY} | grep -c "nvcr.io/nvstaging" ) != "0" ];then
       if [ "${NGC_API_KEY}" = "" ];then
