@@ -342,6 +342,7 @@ fi
 }
 function maintenanceOperator()
 {
+  return # defined in helm chart, not nic-cluster-policy.
 if [ "${MAINTENANCE_OPERATOR_ENABLE}" != true ];then
   return
 fi
