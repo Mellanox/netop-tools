@@ -1,12 +1,11 @@
 #!/bin/bash -x
 #
-# install the network operator.
+# install the network operator from  the local release dir.
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 ${NETOP_ROOT_DIR}/setuc.sh
 USECASE_DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
 ${docmd} systemctl restart kubelet
-#helm install -n ${NETOP_NAMESPACE} --create-namespace network-operator ./network-operator
 X=`${docmd} ${K8CL} get ns | grep -c "^${NETOP_NAMESPACE} "`
 if [ "${X}" = "0" ];then 
   ${docmd} ${K8CL} create ns ${NETOP_NAMESPACE}
@@ -22,20 +21,12 @@ RELEASE_VALUES=${RELEASE_DIR}/network-operator/values.yaml
 # and install network-operator according to documentation
 [[ -r ${RELEASE_VALUES} ]] && RELEASE_VALUES="-f ${RELEASE_VALUES}" || RELEASE_VALUES=""
 
-#${docmd} helm install -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator --version ${NETOP_VERSION} \
-#  ${RELEASE_VALUES} \
-#  -f ${USECASE_DIR}/${NETOP_VALUES_FILE}
 pushd .
 cd ${RELEASE_DIR}
-#helm repo update
-#helm install -n  ${NETOP_NAMESPACE} network-operator ./network-operator -f values.yaml
-#helm install -n  ${NETOP_NAMESPACE} network-operator nvidia/network-operator -f values.yaml
-helm delete  -n ${NETOP_NAMESPACE} network-operator
-#helm install -n ${NETOP_NAMESPACE} network-operator ./network-operator -f ./network-operator/values.yaml
-#helm install -n ${NETOP_NAMESPACE} network-operator ./network-operator ${RELEASE_VALUES} --wait
-helm install --debug -n ${NETOP_NAMESPACE} network-operator ./network-operator ${RELEASE_VALUES} --wait
+helm uninstall -n ${NETOP_NAMESPACE} network-operator 
+helm install --debug -n ${NETOP_NAMESPACE} network-operator ./network-operator ${RELEASE_VALUES} \
+ -f ${USECASE_DIR}/${NETOP_VALUES_FILE} --wait
 popd
-exit 0
 ${NETOP_ROOT_DIR}/install/applycrds.sh
 ${docmd} ${K8CL} apply -f ${USECASE_DIR}/${NETOP_NICCLUSTER_FILE}
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
