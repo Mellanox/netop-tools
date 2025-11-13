@@ -48,13 +48,14 @@ function pullContainers()
     CONTAINER=$(echo ${LINE}|cut -d, -f4)
     #CONTAINER=$(docaImage ${CONTAINER})
     RELEASE_TAG=$(echo "${LINE}" | cut -d, -f5)
+    MOD_TAG=$(echo "${LINE}" | cut -d, -f6)
     if [ $(echo ${REPOSITORY} | grep -c "nvcr.io/nvstaging" ) != "0" ];then
       if [ "${NGC_API_KEY}" = "" ];then
         echo "NGC_API_KEY:missing:${NGC_API_KEY}"
         exit 1
       fi
     fi
-    CONTAINER_PATH="${REPOSITORY}/${CONTAINER}:${RELEASE_TAG}"
+    CONTAINER_PATH="${REPOSITORY}/${CONTAINER}:${RELEASE_TAG}${MOD_TAG}"
     TARBALL=$(echo ${CONTAINER_PATH} | sed 's,/,_,g' | sed 's/:/+/').tgz
     case ${TTYPE} in
     crictl)

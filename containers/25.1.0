@@ -1,12 +1,12 @@
-Node Feature Discovery,,registry.k8s.io/nfd,node-feature-discovery,v0.15.6,Optionally deployed. May already be present in the cluster with proper configuration.
-NVIDIA DOCA Driver container,,nvcr.io/nvidia/mellanox,doca-driver,25.01-0.6.0.0-0,LTS version: 24.10-0.7.0.0-0
-k8s-rdma-shared-device-plugin,,ghcr.io/mellanox,k8s-rdma-shared-dev-plugin,v1.5.2,
-sriov-network-device-plugin,,ghcr.io/k8snetworkplumbingwg,sriov-network-device-plugin,v3.9.0,
-containernetworking CNI plugins,,ghcr.io/k8snetworkplumbingwg,plugins,v1.5.0,
-whereabouts CNI,,ghcr.io/k8snetworkplumbingwg,whereabouts,v0.7.0,
-multus CNI,,ghcr.io/k8snetworkplumbingwg,multus-cni,v4.1.0,
-IPoIB CNI,,ghcr.io/mellanox,ipoib-cni,v1.2.1,
-IB Kubernetes,,ghcr.io/mellanox,ib-kubernetes,v1.1.0,
-NV IPAM Plugin,,ghcr.io/mellanox,nvidia-k8s-ipam,v0.2.0,
-NIC Feature Discovery,,ghcr.io/mellanox,nic-feature-discovery,v0.0.1,
-DOCA Telemetry,,nvcr.io/nvidia/doca,doca_telemetry,1.16.5-doca2.6.0-host,
+Node Feature Discovery,,registry.k8s.io/nfd,node-feature-discovery,v0.15.6,,Optionally deployed. May already be present in the cluster with proper configuration.
+NVIDIA DOCA Driver container,,nvcr.io/nvidia/mellanox,doca-driver,25.01-0.6.0.0-0,,LTS version: 24.10-0.7.0.0-0
+k8s-rdma-shared-device-plugin,,ghcr.io/mellanox,k8s-rdma-shared-dev-plugin,v1.5.2,,
+sriov-network-device-plugin,,ghcr.io/k8snetworkplumbingwg,sriov-network-device-plugin,v3.9.0,,
+containernetworking CNI plugins,,ghcr.io/k8snetworkplumbingwg,plugins,v1.5.0,,
+whereabouts CNI,,ghcr.io/k8snetworkplumbingwg,whereabouts,v0.7.0,,
+multus CNI,,ghcr.io/k8snetworkplumbingwg,multus-cni,v4.1.0,,
+IPoIB CNI,,ghcr.io/mellanox,ipoib-cni,v1.2.1,,
+IB Kubernetes,,ghcr.io/mellanox,ib-kubernetes,v1.1.0,,
+NV IPAM Plugin,,ghcr.io/mellanox,nvidia-k8s-ipam,v0.2.0,,
+NIC Feature Discovery,,ghcr.io/mellanox,nic-feature-discovery,v0.0.1,,
+DOCA Telemetry,,nvcr.io/nvidia/doca,doca_telemetry,1.16.5-doca2.6.0-host,,
