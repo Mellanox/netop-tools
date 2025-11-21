@@ -2,7 +2,7 @@
 # SuperMicro
 # Product Name: SYS-A22GA-NBRT
 # Product Name: Version: 1.0
-NETOP_VERSION="25.7.0"
+NETOP_VERSION="25.10.0"
 NIC_CONFIG_ENABLE=false
 K8SVER="1.32"
 NFD_ENABLE=false

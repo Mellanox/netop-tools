@@ -3,9 +3,9 @@
 # Product Name: SYS-421GU-TNXR
 # Version: 2.2_X13DGU_SI
 # needed in worker node grub default config: iommu=pt intel_iommu=on
-NETOP_VERSION="25.4.0"
+NETOP_VERSION="25.7.0"
 NIC_CONFIG_ENABLE=false
-K8SVER="1.31"
+K8SVER="1.32"
 NFD_ENABLE=false
 OFED_ENABLE=true
 CREATE_CONFIG_ONLY=0
@@ -17,11 +17,10 @@ NETOP_NAMESPACE="nvidia-network-operator"
 NETOP_BCM_CONFIG=true
 NETOP_COMBINED=true
 NETOP_SRIOV_NODE_POOL="100%"
-NETOP_NICCLUSTER_FILE="nic-cluster-policy-b200.yaml"
+NETOP_NICCLUSTER_FILE="nic-cluster-policy-h200.yaml"
 NETOP_NETLIST=( a,,,0000:bf:00.0 b,,,0000:ae:00.0 c,,,0000:2c:00.0 d,,,0000:1c:00.0 )
 NETOP_NETWORK_RANGE="172.168.0.0/16"
 MTU_DEFAULT="9000"
 NETOP_APP_NAMESPACES=( "default" "runai-eval-1" )
 OFED_BLACKLIST_ENABLE=true
 OFED_BLACKLIST_ADD=irdma
-
