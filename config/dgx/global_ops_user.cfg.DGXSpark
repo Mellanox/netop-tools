@@ -1,0 +1,35 @@
+# Manufacturer: NVIDIA
+# Product Name: NVIDIA_DGX_Spark
+# Version: A.7
+# Serial Number: 1984325004122
+# UUID: 55a7404c-1dd2-11b2-8000-4cbb477ef0f6
+# Wake-up Type: Power Switch
+# SKU Number: 0000
+# Family: DGX Spark
+# needed in worker node grub default config: iommu=pt intel_iommu=on
+#
+NETOP_VERSION="25.7.0"
+K8SVER="1.33"
+NETOP_APP_NAMESPACES=( "default" "runai" )
+#NGC_API_KEY=$(cat /home/thuff/keys/ngc/ngc_staging_personal_key)
+#NIC_FD_ENABLE=false
+NIC_CONFIG_ENABLE=false
+FW_UPGRADE_ENABLE=false
+MAINTENANCE_OPERATOR_ENABLE=false
+NFD_ENABLE=false
+OFED_ENABLE=true
+CREATE_CONFIG_ONLY=0
+USECASE="sriovnet_rdma"
+MTU_DEFAULT="9000"
+DEVICE_TYPES=( "connectx-7" )
+NUM_VFS=8
+NUM_GPUS=1
+NETOP_NAMESPACE="network-operator"
+NETOP_BCM_CONFIG=false
+NETOP_COMBINED=true
+NETOP_SRIOV_NODE_POOL="100%"
+NETOP_NICCLUSTER_FILE="nic-cluster-policy-dgxspark.yaml"
+NETOP_NETLIST=( a,,,0000:01:00.0 b,,,0000:01:00.1 )
+#NETOP_NETLIST=( a,,,eth_p0_r0 b,,,eth_p1_r0 )
+NETOP_NETWORK_RANGE="192.168.100.0/24"
+ENTRYPOINT_DEBUG="true"

@@ -328,7 +328,7 @@ if [ "${FW_UPGRADE_ENABLE}" = "true" ];then
     25.4.0|25.7.0|25.10.*)
 cat << NIC_CONFIGURATION
     nicFirmwareStorage:
-      create: false
+      create: ${NETOP_BCM_CONFIG}
       pvcName: nic-fw-storage-pvc
       # Name of the storage class is provided by the user
       storageClassName: nfs-csi
