@@ -9,7 +9,7 @@ RELEASE_VALUES=${RELEASE_DIR}/network-operator/values.yaml
 function config()
 {
   ${NETOP_ROOT_DIR}/setuc.sh
-  ${docmd} systemctl restart kubelet
+  #${docmd} systemctl restart kubelet
   X=`${docmd} ${K8CL} get ns | grep -c "^${NETOP_NAMESPACE} "`
   if [ "${X}" = "0" ];then 
     ${docmd} ${K8CL} create ns ${NETOP_NAMESPACE}
