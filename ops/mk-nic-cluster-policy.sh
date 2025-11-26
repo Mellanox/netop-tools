@@ -188,17 +188,18 @@ RDMA_SDP1
 NETWORKS=${#NETOP_NETLIST[@]}
 COMMA=","
 for DEVDEF in ${NETOP_NETLIST[@]};do
-  IFS=',' read NIDX DEVICEID NETOP_HCAMAX DEVNAMES <<< ${DEVDEF}
+  IFS=',' read NIDX DEVICEID HCAMAX DEVNAMES <<< ${DEVDEF}
   DEVNAMES=`echo ${DEVNAMES} | sed 's/,/","/g'`
   let NETWORKS=NETWORKS-1
   if [ ${NETWORKS} -le 0 ];then
     COMMA=""
   fi
+  HCAMAX=${HCAMAX:=${NETOP_HCAMAX}}
 #           "resourcePrefix": "nvidia.com",
 cat << RDMA_SDP2
           {
             "resourceName": "${NETOP_RESOURCE}_${NIDX}",
-            "rdmaHcaMax": ${NETOP_HCAMAX},
+            "rdmaHcaMax": ${HCAMAX},
             "selectors": {
               "vendors": ["${NETOP_VENDOR}"],
               "drivers": [],

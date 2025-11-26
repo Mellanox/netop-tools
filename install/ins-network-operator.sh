@@ -8,7 +8,7 @@ RELEASE_VALUES=${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart/network-op
 function config()
 {
   ${NETOP_ROOT_DIR}/setuc.sh
-  ${docmd} systemctl restart kubelet
+  #${docmd} systemctl restart kubelet
   #helm install -n ${NETOP_NAMESPACE} --create-namespace network-operator ./network-operator
   X=`${docmd} ${K8CL} get ns | grep -c "^${NETOP_NAMESPACE} "`
   if [ "${X}" = "0" ];then 
