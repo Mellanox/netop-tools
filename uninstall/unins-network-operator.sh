@@ -21,6 +21,16 @@ function del_sriovnet()
   ${K8CL} patch crd/sriovnetworks.sriovnetwork.openshift.io -p '{"metadata":{"finalizers":[]}}' --type=merge
 }
 
+function del_deployments()
+{
+  ${K8CL} delete deployment network-operator-sriov-network-operator
+  ${K8CL} delete deployment network-operator
+}
+function del_jobs()
+{
+  ${K8CL} delete job.batch network-operator-sriov-network-operator-pre-delete-hook
+}
+
 ${K8CL} delete crd `${NETOP_ROOT_DIR}/ops/getcrds.sh | egrep 'sriov|mellanox.com|nodefeature' | cut -d' ' -f1`
 
 del_single_crd network-attachment-definitions.k8s.cni.cncf.io
@@ -29,6 +39,8 @@ if [ "${CREATE_CONFIG_ONLY}" = "1" ];then
   exit 0
 fi
 
+del_deployments
+del_jobs
 del_single_crd nicdevices.configuration.net.nvidia.com
 del_single_crd nicconfigurationtemplates.configuration.net.nvidia.com
 del_single_crd nodemaintenances.maintenance.nvidia.com
@@ -38,3 +50,5 @@ ${K8CL} delete --force NicClusterPolicy nic-cluster-policy
 ${K8CL} delete --force ns "${NETOP_NAMESPACE}"
 ${NETOP_ROOT_DIR}/uninstall/delstucknamespace.sh "${NETOP_NAMESPACE}"
 helm uninstall network-operator -n ${NETOP_NAMESPACE} --no-hooks
+helm uninstall -n ${NETOP_NAMESPACE} network-operator
+helm repo list -n ${NETOP_NAMESPACE}
