@@ -1,0 +1,23 @@
+# Vendor: NVIDIA
+# Product Name: DGXGB300
+# needed in worker node grub default config: iommu.passthrough=1
+NETOP_VERSION="25.10.0"
+K8SVER="1.34"
+NIC_CONFIG_ENABLE=true
+FW_UPGRADE_ENABLE=false
+MAINTENANCE_OPERATOR_ENABLE=true
+NETOP_APP_NAMESPACES=( "default" "runai"  )
+NFD_ENABLE=true
+OFED_ENABLE=false
+CREATE_CONFIG_ONLY=0
+USECASE="sriovibnet_rdma"
+DEVICE_TYPES=( "connectx-8" )
+NUM_VFS=16
+NUM_GPUS=4
+NETOP_NAMESPACE="network-operator"
+NETOP_BCM_CONFIG=true
+NETOP_COMBINED=true
+NETOP_NICCLUSTER_FILE="nic-cluster-policy-gb300.yaml"
+NETOP_SRIOV_NODE_POOL="100%"
+NETOP_NETLIST=( a,,,ibp3s0 b,,,ibP2p3s0 c,,,ibP16p3s0 d,,,ibP18p3s0 )
+NETOP_NETWORK_RANGE="192.168.0.0/16"
