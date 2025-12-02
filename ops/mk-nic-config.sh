@@ -79,7 +79,7 @@ done
 }
 function fw_update_pv()
 {
-if [ "${NETOP_BCM_CONFIG}" == true ];then
+if [ "${NIC_CONFIG_ENABLE}" == true ] && [ "${FW_UPGRADE_ENABLE}" == true ];then
   ${NETOP_ROOT_DIR}/ops/mk-nic-fw-pv.sh
 fi
 }
