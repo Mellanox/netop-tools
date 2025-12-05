@@ -11,6 +11,8 @@
 NETOP_VERSION="25.10.0"
 K8SVER="1.34"
 NETOP_APP_NAMESPACES=( "default" "runai"  )
+NGC_API_KEY=$(cat ~/keys/ngc/ngc_staging_personal_key)
+PROD_VER=0
 NIC_CONFIG_ENABLE=true
 FW_UPGRADE_ENABLE=false
 MAINTENANCE_OPERATOR_ENABLE=true
