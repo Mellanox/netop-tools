@@ -5,17 +5,17 @@
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 function getTool()
 {
-  TOOL=$(which crictl)
+  TOOL=$(which docker)
   if [ "${TOOL}" != "" ];then
-    TTYPE="crictl"
+    TTYPE="docker"
   else
-    TOOL=$(which docker)
+    TOOL=$(which podman)
     if [ "${TOOL}" != "" ];then
-      TTYPE="docker"
+      TTYPE="podman"
     else
-      TOOL=$(which podman)
+      TOOL=$(which crictl)
       if [ "${TOOL}" != "" ];then
-        TTYPE="podman"
+        TTYPE="crictl"
       else
         TOOL=$(which ctr)
         if [ "${TOOL}" != "" ];then
