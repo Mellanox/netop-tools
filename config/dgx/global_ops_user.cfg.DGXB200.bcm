@@ -2,9 +2,9 @@
 # Product Name: DGXB200
 # needed in worker node grub default config: iommu=pt intel_iommu=on
 #
-NETOP_VERSION="25.4.0"
+NETOP_VERSION="25.10.0"
 NIC_CONFIG_ENABLE=false
-K8SVER="1.32"
+K8SVER="1.34"
 NFD_ENABLE=true
 OFED_ENABLE=false
 CREATE_CONFIG_ONLY=0
