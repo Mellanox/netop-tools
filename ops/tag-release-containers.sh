@@ -47,6 +47,8 @@ function loadContainers()
 {
   while read LINE;do
     REPOSITORY=$(echo "${LINE}" | cut -d, -f3)
+    REGISTRY=$(echo REPOSITORY|cut -d'/' -f1)
+    REPOPATH=$(echo REPOSITORY|cut -d'/' -f2-)
     CONTAINER=$(echo ${LINE}|cut -d, -f4)
     #CONTAINER=$(docaImage ${CONTAINER})
     RELEASE_TAG=$(echo "${LINE}" | cut -d, -f5)
@@ -58,7 +60,9 @@ function loadContainers()
     else
       echo "found tag:${CONTAINER_PATH}"
     fi
-    NEWREPO=$(get_repository ${CONTAINER})
+    NEWREPOSITORY=$(get_repository ${CONTAINER})
+    NEWREGISTRY=$(echo NEWREPOSITORY|cut -d'/' -f1)
+    NEWREPOPATH=$(echo NEWREPOSITORY|cut -d'/' -f2-)
     #sudo ctr -n k8s.io images tag ${CONTAINER_PATH} "${NEWREPO}/${CONTAINER}:${RELEASE_TAG}${MOD_TAG}"
     sudo docker tag "${CONTAINER_PATH}" "${NEWREPO}/${CONTAINER}:${RELEASE_TAG}${MOD_TAG}"
   done < "${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}.nvstaging"
