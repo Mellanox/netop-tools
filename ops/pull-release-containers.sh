@@ -13,13 +13,13 @@ function getTool()
     if [ "${TOOL}" != "" ];then
       TTYPE="podman"
     else
-      TOOL=$(which crictl)
+      TOOL=$(which ctr)
       if [ "${TOOL}" != "" ];then
-        TTYPE="crictl"
+        TTYPE="ctr"
       else
-        TOOL=$(which ctr)
+        TOOL=$(which crictl)
         if [ "${TOOL}" != "" ];then
-          TTYPE="ctr"
+          TTYPE="crictl"
         else
           echo "no crictl/docker/podman/ctr registry tool"
           exit 1
@@ -72,18 +72,12 @@ function pullContainers()
         echo "CONTAINER PULL FAILED: ${TOOL} pull ${CONTAINER_PATH}"
         exit 1
       fi
-      if [ ! -f ${TARBALL} ];then
-        ${TOOL} save ${CONTAINER_PATH}>${TARBALL}
-      fi
       ;;
     ctr)
       ${TOOL} images pull --user '$oauthtoken':"${NGC_API_KEY}" ${CONTAINER_PATH}
       if [ "$?" != "0" ];then
         echo "CONTAINER PULL FAILED: ${TOOL} images pull --user '$oauthtoken':${NGC_API_KEY} ${CONTAINER_PATH}"
         exit 1
-      fi
-      if [ ! -f ${TARBALL} ];then
-        ${TOOL} -n k8s.io images export ${TARBALL} ${CONTAINER_PATH}
       fi
       ;;
     esac
