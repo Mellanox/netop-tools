@@ -18,3 +18,4 @@ else
 fi
 helm repo update
 }
+get_repo
