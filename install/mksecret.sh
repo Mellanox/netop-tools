@@ -1,4 +1,4 @@
-#!/bin/bash +x
+#!/bin/bash
 #
 # create a secrets file for nvstaging
 #
@@ -18,7 +18,7 @@ function getTool()
   fi
 }
 if [ "${PROD_VER}" != "0" ];then
-  return
+  exit
 fi
 ${NETOP_ROOT_DIR}/uninstall/delsecret.sh
 #echo "${NGC_API_KEY}" | ${TOOL} login --username  '$oauthtoken' --password-stdin nvcr.io
