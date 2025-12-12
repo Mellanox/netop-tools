@@ -45,6 +45,8 @@ del_single_crd nicdevices.configuration.net.nvidia.com
 del_single_crd nicconfigurationtemplates.configuration.net.nvidia.com
 del_single_crd nodemaintenances.maintenance.nvidia.com
 del_single_crd maintenanceoperatorconfigs.maintenance.nvidia.com
+del_single_crd nicfirmwaresources.configuration.net.nvidia.com
+del_single_crd nicfirmwaretemplates.configuration.net.nvidia.com
 
 ${K8CL} delete --force NicClusterPolicy nic-cluster-policy
 ${K8CL} delete --force ns "${NETOP_NAMESPACE}"
