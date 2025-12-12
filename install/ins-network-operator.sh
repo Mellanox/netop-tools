@@ -41,6 +41,5 @@ function crds()
   ${NETOP_ROOT_DIR}/ops/apply-network-cr.sh
 }
 config
-crds
 release
-
+crds
