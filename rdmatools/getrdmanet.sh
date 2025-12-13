@@ -14,7 +14,9 @@ function getPartGUID()
   LINE=$(ip -br a | grep ${1} | tr -s [:space:])
   DEV=$(echo ${LINE}| cut -d' ' -f1)
   IP=$(echo ${LINE}| cut -d' ' -f3 | cut -d'/' -f1)
-  GUID=$(echo ${LINE}| cut -d' ' -f4| cut -d':' -f4-6| cut -d'/' -f1)
+  GUID_RAW=$(echo ${LINE}| cut -d' ' -f4| cut -d':' -f4-6| cut -d'/' -f1)
+  IFS=':' read -ra PARTS <<< "${GUID_RAW}"
+  GUID=$(printf "%04x:%04x:%04x" $((16#${PARTS[0]})) $((16#${PARTS[1]})) $((16#${PARTS[2]})))
   echo ${DEV},${GUID},${IP}
 }
 function getAzure()
