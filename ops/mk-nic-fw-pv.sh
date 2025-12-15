@@ -14,5 +14,5 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: nfs-csi
   hostPath:
-    path: /cm/shared/nic-fw-storage-pv
+    path: /cm/shared/apps/kubernetes/k8s-user/var/volumes
 HEREDOC
