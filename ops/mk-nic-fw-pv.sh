@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #
-cat << HEREDOC >> nic-fw-pv.yaml
+cat << HEREDOC > nic-fw-pv.yaml
 apiVersion: v1
 kind: PersistentVolume
 metadata:
