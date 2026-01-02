@@ -23,8 +23,12 @@ master)
   ${NETOP_ROOT_DIR}/install/${HOST_OS}/ins-docker.sh
   ;;
 init)
-  kubeadm init --pod-network-cidr=${K8CIDR} --v=5
-  
+  if [ "${K8SRVIP}" = "" ];then
+    kubeadm init --pod-network-cidr=${K8CIDR} --v=5
+  else
+    #kubeadm init --apiserver-advertise-address="${K8SRVIP} --apiserver-cert-extra-sans="${K8SRVIP} --node-name ub2204-master --pod-network-cidr=${K8CIDR}
+    kubeadm init --apiserver-advertise-address="${K8SRVIP}" --apiserver-cert-extra-sans="${K8SRVIP}" --pod-network-cidr=${K8CIDR} --v=5
+  fi
   # ./fixes/fix config issues
   ${NETOP_ROOT_DIR}/install/fixes/fixcrtauth.sh
   ${NETOP_ROOT_DIR}/install/fixes/fixcontainerd.sh 
