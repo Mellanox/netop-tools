@@ -16,6 +16,8 @@ spec:
       cidrs:
         - 10.185.179.0/24
 '
+#        - 192.168.200.0/24 ???? should above CIDR be replaced with this?????
+#
 ###kubectl patch installation default --type=merge -p '{"spec":{"calicoNetwork":{"bgp":"Disabled"}}}'
 ###
 #### Wait for operator to apply
@@ -31,5 +33,6 @@ spec:
 #
 kubectl patch installation default --type=json -p='[
   {"op": "remove", "path": "/spec/calicoNetwork/nodeAddressAutodetectionV4/firstFound"},
-  {"op": "replace", "path": "/spec/calicoNetwork/nodeAddressAutodetectionV4/cidrs", "value": ["10.185.179.0/24"]}
+  {"op": "replace", "path": "/spec/calicoNetwork/nodeAddressAutodetectionV4/cidrs", "value": ["192.168.200.0/24"]}
 ]'
+#  {"op": "replace", "path": "/spec/calicoNetwork/nodeAddressAutodetectionV4/cidrs", "value": ["10.185.179.0/24"]}
