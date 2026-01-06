@@ -5,8 +5,8 @@
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 function usage()
 {
-  echo "usage:$0 {podname} {app namespace}"
-  echo "usage:$0 {podname} {app namespace} {worker node}"
+  echo "usage:$0 {podname} {num_of_pods} {app namespace}"
+  echo "usage:$0 {podname} {num_of_pods} {app namespace} {worker node}"
   exit 1
 }
 function set_gpus
@@ -39,6 +39,8 @@ done
 }
 NAME=${1}
 shift
+NUM_OF_PODS=${1}
+shift
 NETOP_APP_NAMESPACE=${1:-'default'}
 shift
 NODE=${1}
@@ -46,14 +48,20 @@ shift
 if [ "${NAME}" = "" ];then
   usage
 fi
+if [ "${NUM_OF_PODS}" = "" ];then
+  NUM_OF_PODS=1
+fi
 mkdir -p apps
 cd apps
 get_networks
-cat << HEREDOC1 > ./${NAME}.yaml
+rm -f ./${NAME}.yaml
+for i in $(seq 1 ${NUM_OF_PODS});do
+cat << HEREDOC1 >> ./${NAME}.yaml
+---
 apiVersion: v1
 kind: Pod
 metadata:
-  name: ${NAME}
+  name: ${NAME}-${i}
   annotations:
     k8s.v1.cni.cncf.io/networks: ${NETWORKS}
   namespace: ${NETOP_APP_NAMESPACE}
@@ -93,3 +101,4 @@ cat << NODEDOC >> ./${NAME}.yaml
     kubernetes.io/hostname: ${NODE}
 NODEDOC
 fi
+done
