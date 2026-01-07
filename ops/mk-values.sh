@@ -27,6 +27,24 @@ sriov-network-operator:
   sriovOperatorConfig:
     configDaemonNodeSelector:
       ${NETOP_NODESELECTOR}: "${NETOP_NODESELECTOR_VAL}"
+SRIOV_NETWORK_OPERATOR0
+
+if [ "${NIC_CONFIG_ENABLE}" = "true" ];then 
+  case ${NETOP_VERSION} in
+    25.10.*)
+cat << SRIOV_NETWORK_OPERATOR0
+      network.nvidia.com/operator.mofed.wait: "false"
+      # Enable when using together with NIC Configuration Operator to wait until
+      # all required FW parameters are successfully applied before configuring SR-IOV
+      network.nvidia.com/operator.nic-configuration.wait: "true"
+SRIOV_NETWORK_OPERATOR0
+      ;;
+    *)
+      ;;
+  esac
+fi
+
+cat << SRIOV_NETWORK_OPERATOR0
     featureGates:
       parallelNicConfig: ${FG_PARALLEL_NIC_CONFIG}
       mellanoxFirmwareReset: ${FG_MLNX_FW_RESET}

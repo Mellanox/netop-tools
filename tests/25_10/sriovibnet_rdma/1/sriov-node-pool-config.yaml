@@ -1,0 +1,11 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkPoolConfig
+metadata:
+  name: node-pool-unavailable-config
+  namespace: nvidia-network-operator
+spec:
+  maxUnavailable: 1
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/worker
+        operator: Exists
