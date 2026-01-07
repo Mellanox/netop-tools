@@ -1,0 +1,36 @@
+NETOP_VERSION=25.10.0
+
+#IPAM_TYPE="whereabouts"
+
+IPAM_TYPE="nv-ipam"
+NVIPAM_POOL_TYPE="IPPool"
+#export NVIPAM_POOL_TYPE="CIDRPool"
+
+USECASE="sriovibnet_rdma"
+NETOP_NETLIST=( a,,,0000:81:00.0 )
+#su_1=( "a,2.2.2.0/16,2.2.2.2,32" "b,1.1.1.0/16,1.1.1.1,32" )
+#USECASE="sriovibnet_rdma"
+#NETOP_NETLIST=( a,,,0000:81:00.0 )
+
+#USECASE="hostdev_rdma_sriov"
+#NETOP_NETLIST=( a,,,0000:03:00.2,0000:03:00.4 b,,,0000:03:00.3,0000:03:00.5 )
+
+#USECASE="macvlan_rdma_shared_device"
+#NETOP_NETLIST=( a,,16,ens2f0np0 b,,16,ens2f1np1 )
+
+CREATE_CONFIG_ONLY=${CREATE_CONFIG_ONLY:-"1"}
+
+NIC_CONFIG_ENABLE="false"
+DEVICE_TYPES=( "connectx-6")
+
+NUM_VFS=4
+#RDMASHAREDMODE=false
+#FW_UPGRADE_ENABLE="true"
+FG_MLNX_FW_RESET=false
+FG_PARALLEL_NIC_CONFIG=false
+FG_RESOURCE_INJECTOR_MATCH=false
+
+#export METRICS_EXPORTER=${METRICS_EXPORTER:-"false"}
+#export MANAGE_SW_BRIDGE=${MANAGE_SW_BRIDGE:-"false"}
+#
+# enable NicClusterPolicy nodeAffinity

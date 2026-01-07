@@ -1,0 +1,56 @@
+---
+apiVersion: mellanox.com/v1alpha1
+kind: NicClusterPolicy
+metadata:
+  name: nic-cluster-policy
+spec:
+  ofedDriver:
+    image: doca-driver
+    repository: nvcr.io/nvidia/mellanox
+    version: doca3.2.0-25.10-1.2.8.0-2
+    forcePrecompiled: false
+    imagePullSecrets: []
+    terminationGracePeriodSeconds: 300
+    env:
+    - name: RESTORE_DRIVER_ON_POD_TERMINATION
+      value: "true"
+    - name: UNLOAD_STORAGE_MODULES
+      value: "true"
+    - name: CREATE_IFNAMES_UDEV
+      value: "true"
+    startupProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 20
+    livenessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 30
+    readinessProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 30
+    upgradePolicy:
+      autoUpgrade: true
+      maxParallelUpgrades: 1
+      safeLoad: false
+      drain:
+        enable: true
+        force: true
+        podSelector: ""
+        timeoutSeconds: 300
+        deleteEmptyDir: true
+  secondaryNetwork:
+    cniPlugins:
+      image: plugins
+      repository: nvcr.io/nvidia/mellanox
+      version: network-operator-v25.10.0
+      imagePullSecrets: []
+    multus:
+      image: multus-cni
+      repository: nvcr.io/nvidia/mellanox
+      version: network-operator-v25.10.0
+      imagePullSecrets: []
+  nvIpam:
+    image: nvidia-k8s-ipam
+    repository: nvcr.io/nvidia/mellanox
+    version: network-operator-v25.10.0
+    imagePullSecrets: []
+    enableWebhook: false
