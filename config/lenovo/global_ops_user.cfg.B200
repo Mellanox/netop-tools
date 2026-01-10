@@ -1,0 +1,31 @@
+# B200 
+# Manufacturer: Lenovo
+# Product Name: ThinkSystem SR780a V3
+# Version: 02
+# Serial Number: JZ00ZGF4
+# UUID: f3194952-ac28-11f0-a679-c6c6e686a802
+# Wake-up Type: Power Switch
+# SKU Number: 7DJ5CTO1WW
+# Family: ThinkSystem
+NETOP_VERSION="25.10.0"
+NIC_CONFIG_ENABLE=false
+K8SVER="1.34"
+NFD_ENABLE=false
+OFED_ENABLE=false
+CREATE_CONFIG_ONLY=0
+USECASE="sriovnet_rdma"
+DEVICE_TYPES=( "connectx-7" )
+MTU_DEFAULT=9000
+# NUM_VFS=12
+NUM_VFS=4
+NUM_GPUS=8
+NETOP_NAMESPACE="nvidia-network-operator"
+NETOP_BCM_CONFIG=false
+NETOP_COMBINED=true
+NETOP_NICCLUSTER_FILE="nic-cluster-policy-b200.yaml"
+NETOP_SRIOV_NODE_POOL="100%"
+NETOP_NETLIST=( a,,,0000:19:00.0 b,,,0000:2a:00.0 c,,,0000:3b:00.0 d,,,0000:4c:00.0 e,,,0000:9b:00.0 f,,,0000:ab:00.0 g,,,0000:bc:00.0 h,,,0000:cb:00.0 )
+NETOP_NETWORK_RANGE="10.168.0.0/16"
+NETOP_APP_NAMESPACES=( "default" "runai-eval-1" )
+#NETOP_NODESELECTOR=${NETOP_NODESELECTOR:-"node-role.kubernetes.io/worker"}
+#NETOP_NODESELECTOR_VAL=${NETOP_NODESELECTOR_VAL:-""}
