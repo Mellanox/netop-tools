@@ -3,7 +3,7 @@
 # needed in worker node grub default config: iommu.passthrough=1
 NETOP_VERSION="25.10.0"
 K8SVER="1.34"
-NIC_CONFIG_ENABLE=false
+NIC_CONFIG_ENABLE=true
 FW_UPGRADE_ENABLE=false
 MAINTENANCE_OPERATOR_ENABLE=true
 NETOP_APP_NAMESPACES=( "default" "runai"  )
