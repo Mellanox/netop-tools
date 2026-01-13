@@ -2,9 +2,21 @@
 #
 # install network operator master node
 #
+set -euo pipefail  # Exit on error, undefined vars, pipe failures
 
 if [ -z ${NETOP_ROOT_DIR} ];then
-  echo "Variable NETOP_ROOT_DIR is not set"
+  echo "ERROR: Variable NETOP_ROOT_DIR is not set"
+  exit 1
+fi
+
+# Validate environment
+if [ ! -d "${NETOP_ROOT_DIR}" ]; then
+  echo "ERROR: NETOP_ROOT_DIR directory does not exist: ${NETOP_ROOT_DIR}"
+  exit 1
+fi
+
+if [ ! -f "${NETOP_ROOT_DIR}/global_ops.cfg" ]; then
+  echo "ERROR: Configuration file not found: ${NETOP_ROOT_DIR}/global_ops.cfg"
   exit 1
 fi
 
@@ -23,16 +35,55 @@ master)
   ${NETOP_ROOT_DIR}/install/${HOST_OS}/ins-docker.sh
   ;;
 init)
-  if [ "${K8SRVIP}" = "" ];then
-    kubeadm init --pod-network-cidr=${K8CIDR} --v=5
-  else
-    #kubeadm init --apiserver-advertise-address="${K8SRVIP} --apiserver-cert-extra-sans="${K8SRVIP} --node-name ub2204-master --pod-network-cidr=${K8CIDR}
-    kubeadm init --apiserver-advertise-address="${K8SRVIP}" --apiserver-cert-extra-sans="${K8SRVIP}" --pod-network-cidr=${K8CIDR} --v=5
+  # Detect container runtime and configure appropriately
+  source ${NETOP_ROOT_DIR}/install/detect_runtime.sh
+  detect_container_runtime
+  
+  # Build kubeadm init command based on runtime and configuration
+  KUBEADM_ARGS="--pod-network-cidr=${K8CIDR} --v=5"
+  
+  # Add CRI socket if needed (Docker with K8s 1.24+ or non-default runtime)
+  if [ "${NEEDS_CRI_DOCKERD}" = "true" ] || [ "${CONTAINER_RUNTIME}" != "containerd" ]; then
+    KUBEADM_ARGS="${KUBEADM_ARGS} --cri-socket=${CRI_SOCKET}"
   fi
+  
+  # Add server IP configuration if specified
+  if [ "${K8SRVIP}" != "" ]; then
+    KUBEADM_ARGS="${KUBEADM_ARGS} --apiserver-advertise-address=${K8SRVIP} --apiserver-cert-extra-sans=${K8SRVIP}"
+  fi
+  
+  echo "Initializing Kubernetes with runtime: ${CONTAINER_RUNTIME}"
+  echo "kubeadm init ${KUBEADM_ARGS}"
+  
+  # Run kubeadm init
+  if ! kubeadm init ${KUBEADM_ARGS}; then
+    echo "ERROR: kubeadm init failed"
+    exit 1
+  fi
+  
+  # Verify initialization was successful
+  if [ ! -f /etc/kubernetes/admin.conf ]; then
+    echo "ERROR: Kubernetes admin config not created - initialization may have failed"
+    exit 1
+  fi
+  
   # ./fixes/fix config issues
-  ${NETOP_ROOT_DIR}/install/fixes/fixcrtauth.sh
-  ${NETOP_ROOT_DIR}/install/fixes/fixcontainerd.sh 
-  ${NETOP_ROOT_DIR}/install/configcrictl.sh
+  if ! ${NETOP_ROOT_DIR}/install/fixes/fixcrtauth.sh; then
+    echo "ERROR: Failed to fix certificate auth configuration"
+    exit 1
+  fi
+  
+  if ! ${NETOP_ROOT_DIR}/install/fixes/fixcontainerd.sh; then
+    echo "ERROR: Failed to configure container runtime"
+    exit 1
+  fi
+  
+  if ! ${NETOP_ROOT_DIR}/install/configcrictl.sh; then
+    echo "ERROR: Failed to configure crictl"
+    exit 1
+  fi
+  
+  echo "Kubernetes master initialization completed successfully with ${CONTAINER_RUNTIME}"
   #./ins-multus.sh
   ;;
 calico)

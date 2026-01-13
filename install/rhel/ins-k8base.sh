@@ -29,10 +29,10 @@ function setup_repo()
 cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
-baseurl=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/
+baseurl=https://pkgs.k8s.io/core:/stable:/v${K8SVER}/rpm/
 enabled=1
 gpgcheck=1
-gpgkey=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/repodata/repomd.xml.key
+gpgkey=https://pkgs.k8s.io/core:/stable:/v${K8SVER}/rpm/repodata/repomd.xml.key
 EOF
 }
 disable_selinux
