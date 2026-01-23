@@ -1,0 +1,22 @@
+# Manufacturer: QEMU
+# Product Name: Standard PC (Q35 + ICH9, 2009)
+# Version: pc-q35-8.2
+# needed in worker node grub default config: iommu=pt intel_iommu=on
+NETOP_VERSION="25.10.0"
+NIC_CONFIG_ENABLE=false
+K8SVER="1.31"
+NFD_ENABLE=true
+OFED_ENABLE=false
+CREATE_CONFIG_ONLY=0
+USECASE="hostdev_rdma_sriov"
+DEVICE_TYPES=( "connectx-7" )
+NUM_VFS=8
+NUM_GPUS=1
+NETOP_NAMESPACE="network-operator"
+NETOP_BCM_CONFIG=true
+NETOP_COMBINED=true
+NETOP_SRIOV_NODE_POOL="100%"
+NETOP_NICCLUSTER_FILE="nic-cluster-policy-h100.yaml"
+NETOP_NETLIST=( a,,,0000:a0:00.0,0000:a1:00.0,0000:a2:00.0,0000:a3:00.0 b,,,0000:b0:00.0,0000:b1:00.0,0000:b2:00.0,0000:b3:00.0 )
+#NETOP_NETLIST=( a,,,ibp24s0 b,,,ibp64s0 c,,,ibp79s0 d,,,ibp94s0 e,,,ibp154s0 f,,,ibp192s0 g,,,ibp206s0 h,,,ibp220s0 )
+NETOP_NETWORK_RANGE="192.168.0.0/16"
