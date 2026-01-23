@@ -11,10 +11,11 @@ function get_cmdstr()
 #  RP_FILTER="sysctl net.ipv4.conf.all.rp_filter=0"
 #  ARP_ANNOUNCE="sysctl net.ipv4.conf.all.arp_announce=2"
 #  ARP_IGNORE="sysctl net.ipv4.conf.all.arp_ignore=1"
+  raw_frames
   if [ "${GDR}" == false ];then
-    echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a ${SIZE}" 
+    echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} ${RAWFRAMES} -x ${GID_IDX} --report_gbits -p 123 -a ${SIZE}" 
   else
-    echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a ${SIZE}"
+    echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} ${RAWFRAMES} -x ${GID_IDX} --report_gbits -p 123 --use_cuda=${CUDA_DEV} -a ${SIZE}"
   fi
 }
 function roce_config()
@@ -31,6 +32,24 @@ function ib_config()
   RDMA_DEV=$(echo ${GID_INFO} |cut -d',' -f1)
   GID_IDX=$(echo ${GID_INFO} |cut -d',' -f2)
 }
+#
+# -F = Raw Ethernet mode - sends raw Ethernet frames, bypassing the normal RoCE stack. This mode:
+# Requires special driver support
+# Often doesn't work with VFs (Virtual Functions)
+# Needs specific permissions/capabilities
+# For RoCEv2 over VFs, don't use -F. Standard RoCE mode works correctly:
+#
+function raw_frames()
+{
+case ${USECASE} in
+sriovnet_rdma|sriovinbet_rdma|hostdev_rdma_sriov)
+  RAWFRAMES=""
+  ;;
+*)
+  RAWFRAMES="-F"
+  ;;
+esac
+}
 function usage()
 {
   echo "usage:${0} <roce|ib> <server_pod> --net <netdev> [ --ns <namespace> ] --size [block size in bytes] [--gdr]|[--gpu {n}]  "
@@ -40,7 +59,6 @@ if [ $# -lt 1 ];then
   exit 1
 fi
 source ${NETOP_ROOT_DIR}/global_ops.cfg
-
 MODE=${1}
 shift
 SRVR_POD=${1}

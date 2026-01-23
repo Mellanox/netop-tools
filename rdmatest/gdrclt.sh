@@ -12,6 +12,7 @@ function get_cmdstr()
 #  RP_FILTER="sysctl net.ipv4.conf.all.rp_filter=0"
 #  ARP_ANNOUNCE="sysctl net.ipv4.conf.all.arp_announce=2"
 #  ARP_IGNORE="sysctl net.ipv4.conf.all.arp_ignore=1"
+  raw_frames
   if [ "${GDR}" == false ];then
     echo "/root/sysctl_config.sh;ib_write_bw -d ${RDMA_DEV} -F -x ${GID_IDX} --report_gbits -p 123 -a ${IP} ${SIZE}"
   else
@@ -36,6 +37,24 @@ function ib_config()
   GID_IDX=$(echo ${GID_INFO} |cut -d',' -f2)
   GID_INFO=$(${K8CL} ${NAMESPACE} exec ${SRVR_POD} -- sh -c "/root/getrdmanet.sh ${NET_DEV}" )
   IP=$(echo ${GID_INFO} |cut -d',' -f3)
+}
+#
+# -F = Raw Ethernet mode - sends raw Ethernet frames, bypassing the normal RoCE stack. This mode:
+# Requires special driver support
+# Often doesn't work with VFs (Virtual Functions)
+# Needs specific permissions/capabilities
+# For RoCEv2 over VFs, don't use -F. Standard RoCE mode works correctly:
+#
+function raw_frames()
+{
+case ${USECASE} in
+sriovnet_rdma|sriovinbet_rdma|hostdev_rdma_sriov)
+  RAWFRAMES=""
+  ;;
+*)
+  RAWFRAMES="-F"
+  ;;
+esac
 }
 function usage()
 {
