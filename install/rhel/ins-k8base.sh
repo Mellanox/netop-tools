@@ -9,9 +9,9 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 
 function cni()
 {
-  PLUGINS="cni-plugins-linux-amd64-${CNIPLUGINS_VERSION}.tgz"
+  PLUGINS="cni-plugins-linux-amd64-${CNI_PLUGINS_VERSION}.tgz"
   [ ! -d /opt/cni/bin ] && mkdir -p /opt/cni/bin
-  curl -L --insecure -o - https://github.com/containernetworking/plugins/releases/download/${CNIPLUGINS_VERSION}/${PLUGINS} | tar xfz - -C /opt/cni/bin
+  curl -L --insecure -o - https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/${PLUGINS} | tar xfz - -C /opt/cni/bin
   popd
 }
 # Set SELinux in permissive mode (effectively disabling it)
