@@ -31,7 +31,7 @@ apt-get install -y apt-transport-https ca-certificates curl
 #
 apt-get update
 #
-# netork tools
+# network tools
 disable_selinux
 #
 apt install -y net-tools
@@ -48,6 +48,10 @@ apt-get install -y kubectl kubelet kubeadm jq
 systemctl enable --now kubelet
 #
 rm -f /etc/containerd/config.toml
-systemctl restart containerd
+echo "Restarting containerd..."
+if ! systemctl restart containerd; then
+    echo "ERROR: Failed to restart containerd"
+    exit 1
+fi
 swapoff -a
 apt-get update

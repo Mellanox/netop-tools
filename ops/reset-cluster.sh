@@ -12,7 +12,11 @@ function containerd()
   sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
   
   # Restart containerd
-  systemctl restart containerd
+  echo "Restarting containerd..."
+  if ! systemctl restart containerd; then
+    echo "ERROR: Failed to restart containerd"
+    exit 1
+  fi
 }
 # Reset current cluster
 kubeadm reset -f

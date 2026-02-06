@@ -62,7 +62,7 @@ keyring2204
 #
 apt-get update
 #
-# netork tools
+# network tools
 #
 apt install -y net-tools lldpd
 lldpcli show neighbors

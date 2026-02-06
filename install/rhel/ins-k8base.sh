@@ -39,11 +39,18 @@ disable_selinux
 dnf update
 dnf install -y openssh-server vim git
 #
-# netork tools
+# network tools
 #
 dnf install -y net-tools lldpd jq
-systemctl enable lldpd
-systemctl start lldpd
+echo "Enabling and starting lldpd..."
+if ! systemctl enable lldpd; then
+    echo "ERROR: Failed to enable lldpd"
+    exit 1
+fi
+if ! systemctl start lldpd; then
+    echo "ERROR: Failed to start lldpd"
+    exit 1
+fi
 lldpcli show neighbors
 #
 #
@@ -58,5 +65,9 @@ systemctl enable --now kubelet
 #systemctl stop ufw
 #
 rm -f /etc/containerd/config.toml
-systemctl restart containerd
+echo "Restarting containerd..."
+if ! systemctl restart containerd; then
+    echo "ERROR: Failed to restart containerd"
+    exit 1
+fi
 swapoff -a

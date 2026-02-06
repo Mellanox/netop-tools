@@ -16,7 +16,7 @@ function config()
   fi
   ${NETOP_ROOT_DIR}/install/mksecret.sh
   
-  cd ${USECASE_DIR}
+  cd "${USECASE_DIR}"
   ${NETOP_ROOT_DIR}/ops/mk-config.sh
 }
 function release()
