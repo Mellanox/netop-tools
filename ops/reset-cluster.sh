@@ -37,8 +37,11 @@ mkdir -p $HOME/.kube
 cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
 chown $(id -u):$(id -g) $HOME/.kube/config
 
-# Install CNI (Calico is already present, or use Flannel)
-kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
+# Install CNI (Calico)
+# Use version from global configuration
+source "${NETOP_ROOT_DIR:-/opt/netop-tools}/global_ops.cfg" 2>/dev/null || true
+CALICO_VERSION="${CALICO_VERSION:-v3.28.2}"
+kubectl apply -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml"
 
 # Verify
 kubectl get nodes

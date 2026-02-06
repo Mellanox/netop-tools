@@ -1,6 +1,6 @@
 #!/bin/bash -e
 #
-# install network operator master node
+# Install network operator master node
 #
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
 
@@ -20,14 +20,31 @@ if [ ! -f "${NETOP_ROOT_DIR}/global_ops.cfg" ]; then
   exit 1
 fi
 
-source ${NETOP_ROOT_DIR}/global_ops.cfg
-source ${NETOP_ROOT_DIR}/k8envroot.sh
+source "${NETOP_ROOT_DIR}/global_ops.cfg"
+source "${NETOP_ROOT_DIR}/k8envroot.sh"
+
+# Input validation
+if [ $# -lt 1 ]; then
+    echo "ERROR: Missing required command parameter"
+    echo "Usage: $0 <command> [options]"
+    echo "Commands:"
+    echo "  master  - Install Kubernetes master components"
+    echo "  init    - Initialize Kubernetes cluster"  
+    echo "  calico  - Install Calico CNI"
+    echo "  netop   - Install Network Operator"
+    echo "  app <name> - Deploy application"
+    echo "  worker <node> - Configure worker node"
+    echo "  debug   - Install debug tools"
+    exit 1
+fi
 
 CMD="${1}"
 shift
+
+# Validate command parameter
 case "${CMD}" in
 master)
-  systemctl mask swap.target # permanently turn off swap
+  systemctl mask swap.target # Permanently turn off swap
   ${NETOP_ROOT_DIR}/install/ins-helm.sh
   ${NETOP_ROOT_DIR}/install/${HOST_OS}/ins-k8repo.sh
   ${NETOP_ROOT_DIR}/install/${HOST_OS}/ins-go.sh
@@ -93,32 +110,50 @@ calico)
   ;;
 netop)
   ${NETOP_ROOT_DIR}/install/wait-calicoready.sh
-  # setup helm charts
+  # Setup Helm charts
   ${NETOP_ROOT_DIR}/install/ins-netop-chart.sh
   ${NETOP_ROOT_DIR}/install/ins-network-operator.sh
   ;;
 app)
-  #
-  # deploy app
-  #
-  if [ "${1}" = "" ];then
-    echo "error:missing appname:${1}"
-    echo "install app usage:$0 app {APPNAME}"
+  # Deploy application
+  if [ $# -lt 1 ] || [ -z "${1:-}" ]; then
+    echo "ERROR: Missing required application name"
+    echo "Usage: $0 app <APPNAME>"
+    echo "Example: $0 app test"
     exit 1
   fi
-  ./insapp.sh ${1}
+  
+  # Validate application name format (basic validation)
+  if [[ ! "${1}" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]; then
+    echo "ERROR: Invalid application name '${1}'"
+    echo "Application name must start with alphanumeric character and contain only letters, numbers, hyphens, and underscores"
+    exit 1
+  fi
+  
+  echo "Deploying application: ${1}"
+  ./insapp.sh "${1}"
   ;;
 worker)
-  if [ "${1}" = "" ];then
-    echo "error:missing worker node:${1}"
-    echo "install work usage:$0 worker {NODENAME}"
+  # Configure worker node
+  if [ $# -lt 1 ] || [ -z "${1:-}" ]; then
+    echo "ERROR: Missing required worker node name"
+    echo "Usage: $0 worker <NODENAME>"
+    echo "Example: $0 worker worker-node-01"
     exit 1
   fi
-  # install a node, apply a label to the node
-  ${NETOP_ROOT_DIR}/ops/labelworker.sh ${1}
+  
+  # Validate node name format (basic validation)
+  if [[ ! "${1}" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]; then
+    echo "ERROR: Invalid node name '${1}'"
+    echo "Node name must start with alphanumeric character and contain only letters, numbers, dots, and hyphens"
+    exit 1
+  fi
+  
+  echo "Configuring worker node: ${1}"
+  "${NETOP_ROOT_DIR}/ops/labelworker.sh" "${1}"
   ;;
 debug)
-  # debug tools
+  # Debug tools
   ./inskubectx.sh
   ./insnerdctl.sh
   ;;

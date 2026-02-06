@@ -88,7 +88,8 @@ function install_cri_dockerd() {
     if [ "${NEEDS_CRI_DOCKERD}" = "true" ]; then
         echo "Installing cri-dockerd for Docker compatibility with K8s ${K8SVER}"
         
-        CRI_DOCKERD_VERSION="0.3.15"
+        # Use version from global configuration, fallback to default
+        CRI_DOCKERD_VERSION="${CRI_DOCKERD_VERSION:-0.3.15}"
         
         # Check if already installed
         if command -v cri-dockerd >/dev/null 2>&1; then
