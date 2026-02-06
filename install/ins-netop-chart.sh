@@ -16,5 +16,5 @@ fi
 }
 NETOP_CHART_DIR=${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart
 [ ! -d ${NETOP_CHART_DIR} ] && mkdir -p ${NETOP_CHART_DIR}
-cd ${NETOP_CHART_DIR}
+cd "${NETOP_CHART_DIR}"
 get_chart

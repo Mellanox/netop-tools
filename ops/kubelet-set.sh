@@ -21,7 +21,11 @@ rm /usr/lib/systemd/system/kubelet.service.d/90-kubelet.conf
 systemctl daemon-reload
 
 # Restart kubelet
-systemctl restart kubelet
+echo "Restarting kubelet..."
+if ! systemctl restart kubelet; then
+    echo "ERROR: Failed to restart kubelet"
+    exit 1
+fi
 
 # Check status
 systemctl status kubelet
