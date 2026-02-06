@@ -19,6 +19,7 @@ function runCmds()
     done
   else
     echo "ERROR:${FILE_LIST} not found"
+    echo "Note: This may indicate the temporary files were not created by mk-network-cr.sh"
   fi
 }
 function cmdNetworkCRDs()
