@@ -79,7 +79,8 @@ function NetworkCRD()
   for NETOP_SU in ${NETOP_SULIST[@]};do
     for NIDXDEF in ${NETOP_NETLIST[@]};do
       NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
-      NDEV=`echo ${NIDXDEF}|cut -d',' -f4`
+      # Extract all device fields (field 4 onwards) and format as comma-separated list
+      NDEV=`echo ${NIDXDEF} | cut -d',' -f4- | sed 's/,$//'`
       POLICY_NAME="${NETOP_NETWORK_NAME}-node-policy-${NIDX}-${NETOP_SU}"
       FILE="${POLICY_NAME}.yaml"
       case ${NETOP_NETWORK_TYPE} in
