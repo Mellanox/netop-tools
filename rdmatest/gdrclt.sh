@@ -21,13 +21,15 @@ function get_cmdstr()
 }
 function roce_config()
 {
+  # Get RDMA device and GID index from client pod
   ${K8CL} ${NAMESPACE} exec ${CLNT_POD} -- sh -c "/root/show_gids" > ${GID_INFO_FILE_CLNT}
   GID_INFO=$(gid_info ${NET_DEV} ${GID_INFO_FILE_CLNT})
   RDMA_DEV=$(echo ${GID_INFO} |cut -d' ' -f1)
   GID_IDX=$(echo ${GID_INFO} |cut -d' ' -f3)
-  ${K8CL} ${NAMESPACE} exec ${SRVR_POD} -- sh -c "/root/show_gids" > ${GID_INFO_FILE_SRVR}
-  GID_INFO=$(gid_info ${NET_DEV} ${GID_INFO_FILE_SRVR})
-  IP=$(echo ${GID_INFO} |cut -d' ' -f5)
+  
+  # Get server IP using ip command instead of gid_info
+  # ip -br a show dev net1 outputs: "net1@if123  UP  192.168.0.33/24 fe80::xxx/64"
+  IP=$(${K8CL} ${NAMESPACE} exec ${SRVR_POD} -- sh -c "ip -br a show dev ${NET_DEV}" | awk '{print $3}' | cut -d'/' -f1 | grep -v '^fe80')
 }
 function ib_config()
 {
