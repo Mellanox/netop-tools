@@ -31,7 +31,7 @@ SRIOV_NETWORK_OPERATOR0
 
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then 
   case ${NETOP_VERSION} in
-    25.10.*)
+    25.10.*|26.1.*)
 cat << SRIOV_NETWORK_OPERATOR0
       network.nvidia.com/operator.mofed.wait: "false"
       # Enable when using together with NIC Configuration Operator to wait until
@@ -87,7 +87,7 @@ nfd:
   enabled: ${NFD_ENABLE}
 VALUES_YAML0
 case "${NETOP_VERSION}" in
-25.4.0|25.7.0|25.10.*)
+25.4.0|25.7.0|25.10.*|26.1.*)
 cat << VALUES_YAML1
   deployNodeFeatureRules: ${NFD_ENABLE}
 VALUES_YAML1
@@ -314,8 +314,19 @@ function 25_10_0()
   sriovNetworkOperator
   pullSecrets
 }
+function 26_1_0()
+{
+  version
+  ipamType
+  values_yaml
+  sriovNetworkOperator
+  pullSecrets
+}
 
 case ${NETOP_VERSION} in
+  26.1.*)
+    NETOP_FUNCT=26_1_0
+    ;;
   25.10.*)
     NETOP_FUNCT=25_10_0
     ;;
