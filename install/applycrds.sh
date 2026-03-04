@@ -8,7 +8,7 @@ ${docmd} ${K8CL} apply -f ${DIRCRD}/crds
 case "${USECASE}" in
 sriovnet_rdma|sriovibnet_rdma)
   case ${NETOP_VERSION} in
-  25.10.*)
+  25.10.*|26.1.*)
     ${docmd} ${K8CL} apply -f ${DIRCRD}/charts/sriov-network-operator/crds
      ;;
   *)
