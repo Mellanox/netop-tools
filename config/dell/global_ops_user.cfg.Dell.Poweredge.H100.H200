@@ -2,6 +2,8 @@
 # Product Name: PowerEdge XE9680
 # Product Name: 0KK0RG     
 # H100, H200 same
+NETOP_VERSION="26.1.0"
+ENABLE_NFSRDMA=false
 NFD_ENABLE=true
 OFED_ENABLE=false
 CREATE_CONFIG_ONLY=0

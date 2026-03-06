@@ -1,6 +1,8 @@
 #
 # hostdev_rdma_sriov
 #
+NETOP_VERSION="26.1.0"
+ENABLE_NFSRDMA=false
 NFD_ENABLE=false
 OFED_ENABLE=true
 CREATE_CONFIG_ONLY=1

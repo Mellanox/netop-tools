@@ -1,7 +1,8 @@
 # Vendor: NVIDIA
 # Product Name: DGXGB300
 # needed in worker node grub default config: iommu.passthrough=1
-NETOP_VERSION="25.10.0"
+NETOP_VERSION="26.1.0"
+ENABLE_NFSRDMA=false
 K8SVER="1.34"
 NIC_CONFIG_ENABLE=true
 FW_UPGRADE_ENABLE=false
