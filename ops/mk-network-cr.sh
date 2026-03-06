@@ -79,7 +79,8 @@ function NetworkCRD()
   for NETOP_SU in ${NETOP_SULIST[@]};do
     for NIDXDEF in ${NETOP_NETLIST[@]};do
       NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
-      NDEV=`echo ${NIDXDEF}|cut -d',' -f4`
+      # Extract all device fields (field 4 onwards) and format as comma-separated list
+      NDEV=`echo ${NIDXDEF} | cut -d',' -f4- | sed 's/,$//'`
       POLICY_NAME="${NETOP_NETWORK_NAME}-node-policy-${NIDX}-${NETOP_SU}"
       FILE="${POLICY_NAME}.yaml"
       case ${NETOP_NETWORK_TYPE} in
@@ -175,9 +176,21 @@ function combinedNetworkCRD()
     rm -f netop_nodepolicy_files
   fi
 }
+
+# Cleanup function to remove all temporary files
+cleanup_temp_files() {
+    echo "Cleaning up temporary files..." >&2
+    rm -f netop_ippool_files netop_network_files netop_nodepolicy_files
+}
+
+# Set trap to ensure cleanup happens even on script exit/interruption
+trap cleanup_temp_files EXIT INT TERM
 IPPoolCRD
 NetworkCRD
 if [ "${NETOP_COMBINED}" == true ];then
   combinedIPPoolCRD
   combinedNetworkCRD
 fi
+
+# Explicit cleanup call (in addition to trap)
+cleanup_temp_files

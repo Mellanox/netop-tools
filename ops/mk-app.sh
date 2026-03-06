@@ -70,6 +70,7 @@ spec:
   - name: appcntr1
     #image: mellanox/rping-test
     image: harbor.runailabs-ps.com/netop/rdmadbg_cuda_x86_64:latest
+    #image: harbor.runailabs-ps.com/netop/rdmadbg_cuda_aarch64:latest
     imagePullPolicy: IfNotPresent
     env:
        - name: SYSCTL_CONFIG
