@@ -1,6 +1,8 @@
 #
 # macvlan_rdma_shared_device
 #
+NETOP_VERSION="26.1.0"
+ENABLE_NFSRDMA=false
 NIC_CONFIG_ENABLE=false
 NFD_ENABLE=false
 OFED_ENABLE=true

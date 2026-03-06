@@ -3,9 +3,10 @@
 # Product Name: SYS-421GU-TNXR
 # Version: 2.2_X13DGU_SI
 # needed in worker node grub default config: iommu=pt intel_iommu=on
-NETOP_VERSION="25.7.0"
+NETOP_VERSION="26.1.0"
+ENABLE_NFSRDMA=false
 NIC_CONFIG_ENABLE=false
-K8SVER="1.32"
+K8SVER="1.34"
 NFD_ENABLE=false
 OFED_ENABLE=true
 CREATE_CONFIG_ONLY=0
