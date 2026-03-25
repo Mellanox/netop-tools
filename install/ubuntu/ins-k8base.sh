@@ -2,7 +2,25 @@
 #
 # Update the apt package index and install packages needed to use the Kubernetes apt repository:
 #
+set -euo pipefail  # Exit on error, undefined vars, pipe failures
+
+if [ -z ${NETOP_ROOT_DIR} ];then
+    echo "ERROR: NETOP_ROOT_DIR is not set"
+    exit 1
+fi
+
 source ${NETOP_ROOT_DIR}/global_ops.cfg
+
+# Validate required variables
+if [ -z "${K8SVER}" ]; then
+    echo "ERROR: K8SVER is not set in global configuration"
+    exit 1
+fi
+
+if [ -z "${K8CL}" ]; then
+    echo "ERROR: K8CL is not set in global configuration"
+    exit 1
+fi
 
 apt-get update
 
@@ -44,7 +62,7 @@ keyring2204
 #
 apt-get update
 #
-# netork tools
+# network tools
 #
 apt install -y net-tools lldpd
 lldpcli show neighbors
@@ -57,7 +75,6 @@ if [ -f "/etc/selinux/config" ];then
 setenforce 0
 sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 #
---disableexcludes=kubernetes
 fi
 #
 # get from docker repo, not from ubuntu defaults
@@ -71,9 +88,9 @@ apt-get install -y ${K8CL} kubelet kubeadm jq
 #
 # install default plugins
 #
-PLUGINS="cni-plugins-linux-amd64-${CNIPLUGINS_VERSION}.tgz"
+PLUGINS="cni-plugins-linux-amd64-${CNI_PLUGINS_VERSION}.tgz"
 [ ! -d /opt/cni/bin ] && mkdir -p /opt/cni/bin
-curl -L --insecure -o - https://github.com/containernetworking/plugins/releases/download/${CNIPLUGINS_VERSION}/${PLUGINS} | tar xfz - -C /opt/cni/bin
+curl -L --insecure -o - https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/${PLUGINS} | tar xfz - -C /opt/cni/bin
 
 #
 # install go

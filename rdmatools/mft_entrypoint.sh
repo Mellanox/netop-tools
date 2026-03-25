@@ -11,7 +11,7 @@ function install_mft()
   TARBALL=$(ls | grep mft )
   DIR=$(echo ${TARBALL} | sed 's/.tgz//')
   tar -xvf ${TARBALL}
-  cd ${DIR}
+  cd "${DIR}"
   ./install.sh --oem
   cd /root
 }

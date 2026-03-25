@@ -2,8 +2,21 @@
 #
 # install a network operator worker node
 #
+set -euo pipefail  # Exit on error, undefined vars, pipe failures
+
 if [ -z ${NETOP_ROOT_DIR} ];then
-    echo "NETOP_ROOT_DIR is not set"
+    echo "ERROR: NETOP_ROOT_DIR is not set"
+    exit 1
+fi
+
+# Validate environment
+if [ ! -d "${NETOP_ROOT_DIR}" ]; then
+    echo "ERROR: NETOP_ROOT_DIR directory does not exist: ${NETOP_ROOT_DIR}"
+    exit 1
+fi
+
+if [ ! -f "${NETOP_ROOT_DIR}/global_ops.cfg" ]; then
+    echo "ERROR: Configuration file not found: ${NETOP_ROOT_DIR}/global_ops.cfg"
     exit 1
 fi
 
@@ -14,11 +27,21 @@ ${NETOP_ROOT_DIR}/install/${HOST_OS}/ins-k8repo.sh
 ${NETOP_ROOT_DIR}/install/${HOST_OS}/ins-go.sh
 ${NETOP_ROOT_DIR}/install/${HOST_OS}/ins-k8base.sh
 ${NETOP_ROOT_DIR}/install/${HOST_OS}/ins-docker.sh 
+# Configure container runtime first
 ${NETOP_ROOT_DIR}/install/fixes/fixcrtauth.sh
 ${NETOP_ROOT_DIR}/install/fixes/fixcontainerd.sh
 ${NETOP_ROOT_DIR}/install/configcrictl.sh
 ${NETOP_ROOT_DIR}/install/ins-nerdctl.sh
 systemctl mask swap.target # permanently turn off swap
+
+# Display runtime information for worker join
+source ${NETOP_ROOT_DIR}/install/detect_runtime.sh
+detect_container_runtime
+echo "Worker node configured with container runtime: ${CONTAINER_RUNTIME}"
+if [ "${NEEDS_CRI_DOCKERD}" = "true" ]; then
+  echo "NOTE: When joining this worker to the cluster, use CRI socket: ${CRI_SOCKET}"
+  echo "Example join command should include: --cri-socket=${CRI_SOCKET}"
+fi
 #./check_rdma.sh
 ${NETOP_ROOT_DIR}/ops/reconnectworker.sh 
 cat << HERE_DOC

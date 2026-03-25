@@ -27,7 +27,7 @@ mkdir -p "$ARTIFACT_DIR"
 
 echo
 
-exec 1> >(tee $ARTIFACT_DIR/must-gather.log)
+exec 1> >(tee "$ARTIFACT_DIR/must-gather.log")
 exec 2> $ARTIFACT_DIR/must-gather.stderr.log
 
 if [[ "$0" == "/usr/bin/gather" ]]; then

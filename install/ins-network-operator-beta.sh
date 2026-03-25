@@ -16,7 +16,7 @@ function config()
   fi
   ${NETOP_ROOT_DIR}/install/mksecret.sh
   
-  cd ${USECASE_DIR}
+  cd "${USECASE_DIR}"
   ${NETOP_ROOT_DIR}/ops/mk-config.sh
 }
 function release()
@@ -26,7 +26,7 @@ function release()
   [[ -r ${RELEASE_VALUES} ]] && RELEASE_VALUES="-f ${RELEASE_VALUES}" || RELEASE_VALUES=""
   
   pushd .
-  cd ${RELEASE_DIR}
+  cd "${RELEASE_DIR}"
   helm uninstall -n ${NETOP_NAMESPACE} network-operator 
   helm install --debug -n ${NETOP_NAMESPACE} network-operator ./network-operator ${RELEASE_VALUES} \
    -f ${USECASE_DIR}/${NETOP_VALUES_FILE} --wait
