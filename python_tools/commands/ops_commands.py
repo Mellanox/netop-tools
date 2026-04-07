@@ -59,13 +59,19 @@ class NetworkOperatorOps:
         logger.info("Getting Network Attachment Definitions...")
         result = kubectl("get", "network-attachment-definitions", "-A", output="json")
         if result.success:
-            data = json.loads(result.stdout)
-            status["network_attachments"] = data.get("items", [])
-        
+            try:
+                data = json.loads(result.stdout)
+                status["network_attachments"] = data.get("items", [])
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse network-attachment-definitions output: {e}")
+
         logger.info("Getting NicClusterPolicy...")
         result = kubectl("get", "NicClusterPolicy", "nic-cluster-policy", output="json")
         if result.success:
-            status["nic_cluster_policy"] = json.loads(result.stdout)
+            try:
+                status["nic_cluster_policy"] = json.loads(result.stdout)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse NicClusterPolicy output: {e}")
         
         # Get worker nodes
         result = kubectl("get", "nodes", "--no-headers")
@@ -337,14 +343,20 @@ class NetworkOperatorOps:
             # Check IPPools
             result = kubectl("get", "ippools", "-A", output="json")
             if result.success:
-                data = json.loads(result.stdout)
-                ipam_status["pools"] = data.get("items", [])
-            
+                try:
+                    data = json.loads(result.stdout)
+                    ipam_status["pools"] = data.get("items", [])
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse ippools output: {e}")
+
             # Check IPAMClaims
             result = kubectl("get", "ipamclaims", "-A", output="json")
             if result.success:
-                data = json.loads(result.stdout)
-                ipam_status["claims"] = data.get("items", [])
+                try:
+                    data = json.loads(result.stdout)
+                    ipam_status["claims"] = data.get("items", [])
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse ipamclaims output: {e}")
         
         return ipam_status
     
@@ -359,20 +371,29 @@ class NetworkOperatorOps:
         # Get SR-IOV Network Node Policies
         result = kubectl("get", "sriovnetworknodepolicies", "-A", output="json")
         if result.success:
-            data = json.loads(result.stdout)
-            sriov_state["node_policies"] = data.get("items", [])
-        
+            try:
+                data = json.loads(result.stdout)
+                sriov_state["node_policies"] = data.get("items", [])
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse sriovnetworknodepolicies output: {e}")
+
         # Get SR-IOV Network Node States
         result = kubectl("get", "sriovnetworknodestates", "-A", output="json")
         if result.success:
-            data = json.loads(result.stdout)
-            sriov_state["node_states"] = data.get("items", [])
-        
+            try:
+                data = json.loads(result.stdout)
+                sriov_state["node_states"] = data.get("items", [])
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse sriovnetworknodestates output: {e}")
+
         # Get SR-IOV Networks
         result = kubectl("get", "sriovnetworks", "-A", output="json")
         if result.success:
-            data = json.loads(result.stdout)
-            sriov_state["networks"] = data.get("items", [])
+            try:
+                data = json.loads(result.stdout)
+                sriov_state["networks"] = data.get("items", [])
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse sriovnetworks output: {e}")
         
         return sriov_state
 
