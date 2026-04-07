@@ -84,7 +84,7 @@ OFED_DRIVER8
     if [ "${OFED_BLACKLIST_ENABLE}" = "true" ];then
 cat << OFED_DRIVER4
     - name: OFED_BLACKLIST_MODULES_FILE
-      value: "/host/etc/modprobe.d/blacklist-ofed-modules.conf"
+      value: "${OFED_BLACKLIST_MODULES_FILE}"
 OFED_DRIVER4
     fi
     if [ "${OFED_BLACKLIST_ADD}" != "" ];then
