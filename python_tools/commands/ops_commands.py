@@ -168,12 +168,12 @@ class NetworkOperatorOps:
         if self.config.usecase in ["ipoib_rdma_shared_device", "macvlan_rdma_shared_device"]:
             values["rdmaSharedDevicePlugin"] = {
                 "deploy": True,
-                "resources": self._get_rdma_device_resources()
+                "resources": self._get_device_resources(include_link_types=True)
             }
         elif self.config.usecase == "hostdev_rdma_sriov":
             values["sriovDevicePlugin"] = {
                 "deploy": True,
-                "resources": self._get_sriov_device_resources()
+                "resources": self._get_device_resources()
             }
         
         # Add secondary network settings
@@ -192,33 +192,20 @@ class NetworkOperatorOps:
             raise ImportError("pyyaml is required for YAML output. Install with: pip install pyyaml")
         return yaml.dump(values, default_flow_style=False)
     
-    def _get_rdma_device_resources(self) -> List[Dict[str, Any]]:
-        """Get RDMA device plugin resources"""
+    def _get_device_resources(self, include_link_types: bool = False) -> List[Dict[str, Any]]:
+        """Get device plugin resource list, optionally including linkTypes for RDMA shared device"""
         resources = []
-        for i, device_type in enumerate(self.config.device_types):
-            resource = {
+        for i, _device_type in enumerate(self.config.device_types):
+            resource: Dict[str, Any] = {
                 "name": f"{self.config.netop_vendor}_{i}",
                 "vendors": [self.config.netop_vendor]
             }
-            if self.config.usecase == "ipoib_rdma_shared_device":
-                resource["linkTypes"] = ["IB"]
-            elif self.config.usecase == "macvlan_rdma_shared_device":
-                resource["linkTypes"] = ["ether"]
-            
+            if include_link_types:
+                if self.config.usecase == "ipoib_rdma_shared_device":
+                    resource["linkTypes"] = ["IB"]
+                elif self.config.usecase == "macvlan_rdma_shared_device":
+                    resource["linkTypes"] = ["ether"]
             resources.append(resource)
-        
-        return resources
-    
-    def _get_sriov_device_resources(self) -> List[Dict[str, Any]]:
-        """Get SR-IOV device plugin resources"""
-        resources = []
-        for i, device_type in enumerate(self.config.device_types):
-            resource = {
-                "name": f"{self.config.netop_vendor}_{i}",
-                "vendors": [self.config.netop_vendor]
-            }
-            resources.append(resource)
-        
         return resources
     
     def apply_network_cr(self, cr_file: Optional[str] = None) -> bool:
