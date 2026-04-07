@@ -1,5 +1,7 @@
 #!/bin/bash
 #
+# Generate IB test MPIJob YAML for GB200 (nvbandwidth)
+# Renamed from mk-ib-test.yaml — this is a shell script, not a YAML file.
 #
 source "${NETOP_ROOT_DIR}/global_ops.cfg"
 cat << HEREDOC0
@@ -58,13 +60,11 @@ spec:
           labels:
             mpi-memcpy-dra-test-replica: mpi-worker
           annotations:
-            k8s.v1.cni.cncf.io/networks: >
-HEREDOC0
+            k8s.v1.cni.cncf.io/networks: >-
               sriovibnet-rdma-default-a-su-1,
               sriovibnet-rdma-default-b-su-1,
               sriovibnet-rdma-default-c-su-1,
               sriovibnet-rdma-default-d-su-1
-cat << HEREDOC1
         spec:
           containers:
             - name: mpi-worker
@@ -79,15 +79,13 @@ cat << HEREDOC1
               resources:
                 limits:
                   nvidia.com/gpu: ${NUM_GPUS}
-HEREDOC1
                   nvidia.com/sriovib_resource_a: "1"
                   nvidia.com/sriovib_resource_b: "1"
                   nvidia.com/sriovib_resource_c: "1"
                   nvidia.com/sriovib_resource_d: "1"
-cat << HEREDOC2
           tolerations:
             - key: "key"
               operator: "Equal"
               value: "value"
               effect: "NoSchedule"
-HEREDOC2
+HEREDOC0
