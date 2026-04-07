@@ -14,8 +14,6 @@ USAGE
   exit 1
   ;;
 esac
-shift
 NS=${1:-${NETOP_NAMESPACE}}
-shift
 #${K8CL} -n ${NS} get ippool.nv-ipam.nvidia.com -o yaml
 ${K8CL} -n ${NS} get ippool.nv-ipam.nvidia.com
