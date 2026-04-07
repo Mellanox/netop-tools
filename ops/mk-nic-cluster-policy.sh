@@ -250,7 +250,7 @@ SECONDARY_NETWORK3
     ;;
 esac
 if [ "${IPAM_TYPE}" = "whereabouts" ];then
-cat << SECONDARY_NETWORK4 >> ${FILE}
+cat << SECONDARY_NETWORK4
     ipamPlugin:
       image: whereabouts
       repository: $(get_repository whereabouts required)
@@ -343,20 +343,9 @@ fi
 }
 function maintenanceOperator()
 {
-  return # defined in helm chart, not nic-cluster-policy.
-if [ "${MAINTENANCE_OPERATOR_ENABLE}" != true ];then
+  # maintenanceOperator is now defined in the Helm chart values, not in
+  # NicClusterPolicy. This function is intentionally empty.
   return
-fi
-REPOSITORY=$(get_repository maintenance-operator optional)
-if [ "${REPOSITORY}" = "" ];then
-  return
-fi
-cat << MAINTENANCE_OPERATOR
-  maintenanceOperator:
-    image: maintenance-operator
-    repository: ${REPOSITORY}
-    version: $(get_release_tag maintenance-operator)
-MAINTENANCE_OPERATOR
 }
 function docaTelemetryService()
 {

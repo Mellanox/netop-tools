@@ -121,10 +121,10 @@ function NetworkCRD()
       done
     done
   done
-  if [ ${#NETOP_NODEPOLICY_FILES} -gt 0 ];then
+  if [ ${#NETOP_NODEPOLICY_FILES[@]} -gt 0 ];then
     echo ${NETOP_NODEPOLICY_FILES[@]} > netop_nodepolicy_files
   fi
-  if [ ${#NETOP_NETWORK_FILES} -gt 0 ];then
+  if [ ${#NETOP_NETWORK_FILES[@]} -gt 0 ];then
     echo ${NETOP_NETWORK_FILES[@]} > netop_network_files
   fi
 }
