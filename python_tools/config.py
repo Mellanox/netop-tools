@@ -167,8 +167,14 @@ class NetOpConfig:
     def _parse_shell_config(self, config_path: str) -> None:
         """Parse shell-style config file and update configuration values"""
         config_values = {}
-        
-        with open(config_path, 'r') as f:
+
+        try:
+            f_handle = open(config_path, 'r')
+        except OSError as e:
+            logger.error(f"Failed to open config file {config_path}: {e}")
+            return
+
+        with f_handle as f:
             for line_num, line in enumerate(f, 1):
                 original_line = line
                 line = line.strip()
@@ -445,20 +451,31 @@ class NetOpConfig:
     
     def save_to_file(self, filepath: str) -> None:
         """Save configuration to JSON file"""
-        with open(filepath, 'w') as f:
-            json.dump(self.to_dict(), f, indent=2)
-    
+        try:
+            with open(filepath, 'w') as f:
+                json.dump(self.to_dict(), f, indent=2)
+        except OSError as e:
+            logger.error(f"Failed to save configuration to {filepath}: {e}")
+            raise
+
     @classmethod
     def load_from_file(cls, filepath: str) -> 'NetOpConfig':
         """Load configuration from JSON file"""
-        with open(filepath, 'r') as f:
-            data = json.load(f)
-        
+        try:
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+        except OSError as e:
+            logger.error(f"Failed to open configuration file {filepath}: {e}")
+            raise
+        except json.JSONDecodeError as e:
+            logger.error(f"Configuration file {filepath} contains invalid JSON: {e}")
+            raise
+
         config = cls()
         for key, value in data.items():
             if hasattr(config, key):
                 setattr(config, key, value)
-        
+
         return config
 
 def get_config() -> NetOpConfig:
