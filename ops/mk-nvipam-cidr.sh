@@ -1,32 +1,27 @@
 #!/bin/bash
 #
-# define nvipam resources
+# define nvipam CIDRPool resource - writes to stdout
+# Args: IPPOOL_NAME NETWORK_RANGE GATEWAY_INDEX PER_NODE_PREFIX
 #
-source ${NETOP_ROOT_DIR}/global_ops.cfg
-function nv_cidrpool()
-{
-FILE=${1}
-shift
-NIDX=${1}
-shift
-NETOP_SU=${1}
-shift
-NETWORK_RANGE=${1}
-shift
-NETWORK_GW_IDX=${1}
-shift
-NETWORK_PREFIX=${1}
-shift
-cat <<POOLHEREDOC > ${FILE}
+# Called from mk-network-cr.sh as:
+#   mk-nvipam-cidr.sh "${IPPOOL_NAME}" "${RANGE}" "${GW}" "${NETOP_PERNODE_BLOCKSIZE}" >> ${FILE}
+#
+source "${NETOP_ROOT_DIR}/global_ops.cfg"
+IPPOOL_NAME="${1}"
+NETWORK_RANGE="${2}"
+GATEWAY_INDEX="${3}"
+PER_NODE_PREFIX="${4}"
+
+cat <<POOLHEREDOC
 apiVersion: nv-ipam.nvidia.com/v1alpha1
 kind: CIDRPool
 metadata:
-  name: ${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}
+  name: ${IPPOOL_NAME}
   namespace: ${NETOP_NAMESPACE}
 spec:
   cidr: ${NETWORK_RANGE}
-  gatewayIndex: ${NETWORK_GW_IDX}
-  perNodeNetworkPrefix: ${NETWORK_PREFIX}
+  gatewayIndex: ${GATEWAY_INDEX}
+  perNodeNetworkPrefix: ${PER_NODE_PREFIX}
   nodeSelector:
     nodeSelectorTerms:
     - matchExpressions:
@@ -35,33 +30,3 @@ spec:
 #       - key: node.su/${NETOP_SU}
 #         operator: Exists
 POOLHEREDOC
-}
-nv_cidrpool ${*}
-#
-#cat <<HEREDOC2> "${FILE}"
-#apiVersion: nv-ipam.nvidia.com/v1alpha1
-#kind: CIDRPool
-#metadata:
-#  name: ${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}
-#  namespace: ${NETOP_NAMESPACE}
-#spec:
-#  cidr: ${NETWORK_RANGE}
-#  gatewayIndex: 1
-#  perNodeNetworkPrefix: 24
-#  exclusions: # optional
-#    - startIP: 192.169.0.1
-#      endIP: 192.169.0.255
-#  staticAllocations:
-#    - nodeName: node-33
-#      prefix: 192.169.33.0/24
-#      gateway: 192.169.33.1
-#    - prefix: 192.169.1.0/24
-#  nodeSelector: # optional
-#    nodeSelectorTerms:
-#      - matchExpressions:
-#          - key: ${NETOP_NODESELECTOR}
-#            operator: Exists
-#  defaultGateway: true # optional
-#  routes: # optional
-#  - dst: 5.5.0.0/24
-#HEREDOC2
