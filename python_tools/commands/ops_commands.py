@@ -7,8 +7,13 @@ import os
 import sys
 import argparse
 import logging
-import yaml
 import json
+
+try:
+    import yaml
+    _YAML_AVAILABLE = True
+except ImportError:
+    _YAML_AVAILABLE = False
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 
@@ -183,6 +188,8 @@ class NetworkOperatorOps:
         if not self.config.prod_version:
             values["imagePullSecrets"] = ["ngc-image-secret"]
         
+        if not _YAML_AVAILABLE:
+            raise ImportError("pyyaml is required for YAML output. Install with: pip install pyyaml")
         return yaml.dump(values, default_flow_style=False)
     
     def _get_rdma_device_resources(self) -> List[Dict[str, Any]]:
