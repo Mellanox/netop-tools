@@ -25,5 +25,5 @@ ${NETOP_ROOT_DIR}/uninstall/delsecret.sh
 X=$(${K8CL} get secret -n ${NETOP_NAMESPACE} | grep -c "${NGC_SECRET}")
 if [ "${X}" = "0" ];then
   #${K8CL} -n ${NETOP_NAMESPACE} create secret generic ${NGC_SECRET} --from-file=.dockerconfigjson=${FILE} --type=kubernetes.io/dockerconfigjson
-  ${K8CL} -n ${NETOP_NAMESPACE} create secret docker-registry ${NGC_SECRET} --docker-server=nvcr.io --docker-username='$oauthtoken' --docker-password=${NGC_API_KEY}
+  ${K8CL} -n ${NETOP_NAMESPACE} create secret docker-registry ${NGC_SECRET} --docker-server=nvcr.io --docker-username='$oauthtoken' --docker-password="${NGC_API_KEY}"
 fi
