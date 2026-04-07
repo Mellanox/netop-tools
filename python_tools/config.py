@@ -478,9 +478,21 @@ class NetOpConfig:
 
         return config
 
+_config_instance: Optional[NetOpConfig] = None
+
+
 def get_config() -> NetOpConfig:
-    """Get the global configuration instance"""
-    return NetOpConfig.from_env()
+    """Get the global configuration instance (cached per process)"""
+    global _config_instance
+    if _config_instance is None:
+        _config_instance = NetOpConfig.from_env()
+    return _config_instance
+
+
+def reset_config() -> None:
+    """Clear the cached configuration (used in tests or after env changes)"""
+    global _config_instance
+    _config_instance = None
 
 def validate_environment() -> bool:
     """Validate that required environment variables are set"""
