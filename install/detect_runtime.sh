@@ -5,9 +5,12 @@
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
+# Returns 0 (true) if version $1 is greater than $2 using sort -V
+function version_gt() { test "$(printf '%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" && test "$1" != "$2"; }
+
 function detect_container_runtime() {
     echo "Detecting container runtime..."
-    
+
     # Check what's actually running and configured
     if systemctl is-active docker >/dev/null 2>&1; then
         # Docker is running - check if it's the K8s runtime
@@ -16,7 +19,7 @@ function detect_container_runtime() {
             if grep -q "docker" /var/lib/kubelet/config.yaml 2>/dev/null || \
                grep -q "cri-dockerd" /var/lib/kubelet/config.yaml 2>/dev/null; then
                 CONTAINER_RUNTIME="docker"
-                if [ "${K8SVER}" \> "1.23" ]; then
+                if version_gt "${K8SVER}" "1.23"; then
                     # K8s 1.24+ needs cri-dockerd
                     CRI_SOCKET="unix:///var/run/cri-dockerd.sock"
                     NEEDS_CRI_DOCKERD=true
@@ -38,7 +41,7 @@ function detect_container_runtime() {
                 NEEDS_CRI_DOCKERD=false
             else
                 CONTAINER_RUNTIME="docker"
-                if [ "${K8SVER}" \> "1.23" ]; then
+                if version_gt "${K8SVER}" "1.23"; then
                     CRI_SOCKET="unix:///var/run/cri-dockerd.sock"
                     NEEDS_CRI_DOCKERD=true
                 else
@@ -63,7 +66,7 @@ function detect_container_runtime() {
             NEEDS_CRI_DOCKERD=false
         elif command -v docker >/dev/null 2>&1; then
             CONTAINER_RUNTIME="docker"
-            if [ "${K8SVER}" \> "1.23" ]; then
+            if version_gt "${K8SVER}" "1.23"; then
                 CRI_SOCKET="unix:///var/run/cri-dockerd.sock"
                 NEEDS_CRI_DOCKERD=true
             else
