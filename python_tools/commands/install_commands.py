@@ -16,7 +16,7 @@ try:
     from ..config import get_config, validate_environment
     from ..utils import (
         run_command, kubectl, helm, setup_logging,
-        wait_for_pods_ready, ensure_directory
+        wait_for_pods_ready, wait_for_nodes_ready, ensure_directory
     )
 except ImportError:
     # Handle both direct execution and module import
@@ -24,7 +24,7 @@ except ImportError:
         from config import get_config, validate_environment
         from utils import (
             run_command, kubectl, helm, setup_logging,
-            wait_for_pods_ready, ensure_directory
+            wait_for_pods_ready, wait_for_nodes_ready, ensure_directory
         )
     except ImportError:
         import sys
@@ -32,7 +32,7 @@ except ImportError:
         from config import get_config, validate_environment
         from utils import (
             run_command, kubectl, helm, setup_logging,
-            wait_for_pods_ready, ensure_directory
+            wait_for_pods_ready, wait_for_nodes_ready, ensure_directory
         )
 
 logger = logging.getLogger(__name__)
@@ -333,45 +333,7 @@ spec:
     def wait_k8s_ready(self) -> bool:
         """Wait for Kubernetes to be ready - equivalent to install/wait-k8sready.sh"""
         logger.info("Waiting for Kubernetes to be ready...")
-        
-        import time
-        timeout = 300  # 5 minutes
-        start_time = time.time()
-        
-        while time.time() - start_time < timeout:
-            # Check if all nodes are ready
-            result = kubectl("get", "nodes", output="json")
-            if result.success:
-                try:
-                    data = json.loads(result.stdout)
-                    nodes = data.get('items', [])
-                    
-                    if not nodes:
-                        logger.info("No nodes found yet, waiting...")
-                        time.sleep(10)
-                        continue
-                    
-                    all_ready = True
-                    for node in nodes:
-                        conditions = node.get('status', {}).get('conditions', [])
-                        ready_condition = next((c for c in conditions if c['type'] == 'Ready'), None)
-                        
-                        if not ready_condition or ready_condition['status'] != 'True':
-                            all_ready = False
-                            break
-                    
-                    if all_ready:
-                        logger.info("All nodes are ready")
-                        return True
-                    
-                except json.JSONDecodeError:
-                    logger.error("Failed to parse kubectl output")
-            
-            logger.info("Waiting for nodes to be ready...")
-            time.sleep(10)
-        
-        logger.error("Timeout waiting for Kubernetes to be ready")
-        return False
+        return wait_for_nodes_ready(timeout=300)
     
     def wait_calico_ready(self) -> bool:
         """Wait for Calico to be ready - equivalent to install/wait-calicoready.sh"""

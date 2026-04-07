@@ -21,7 +21,7 @@ try:
     from ..config import get_config, validate_environment
     from ..utils import (
         run_command, kubectl, helm, setup_logging,
-        cordon_nodes, uncordon_nodes, wait_for_pods_ready
+        get_nodes, cordon_nodes, uncordon_nodes, wait_for_pods_ready
     )
     from .. import device_tools
 except ImportError:
@@ -30,7 +30,7 @@ except ImportError:
         from config import get_config, validate_environment
         from utils import (
             run_command, kubectl, helm, setup_logging,
-            cordon_nodes, uncordon_nodes, wait_for_pods_ready
+            get_nodes, cordon_nodes, uncordon_nodes, wait_for_pods_ready
         )
         import device_tools
     except ImportError:
@@ -39,7 +39,7 @@ except ImportError:
         from config import get_config, validate_environment
         from utils import (
             run_command, kubectl, helm, setup_logging,
-            cordon_nodes, uncordon_nodes, wait_for_pods_ready
+            get_nodes, cordon_nodes, uncordon_nodes, wait_for_pods_ready
         )
         import device_tools
 
@@ -78,15 +78,15 @@ class NetworkOperatorOps:
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse NicClusterPolicy output: {e}")
         
-        # Get worker nodes
+        # Get worker nodes (excluding cordoned nodes)
+        all_worker_nodes = get_nodes("worker")
         result = kubectl("get", "nodes", "--no-headers")
         if result.success:
-            worker_nodes = []
-            for line in result.stdout.strip().split('\n'):
-                if 'worker' in line and 'SchedulingDisabled' not in line:
-                    parts = line.split()
-                    if parts:
-                        worker_nodes.append(parts[0])
+            worker_nodes = [
+                n for n in all_worker_nodes
+                if not any(n in line and "SchedulingDisabled" in line
+                           for line in result.stdout.strip().split('\n'))
+            ]
             
             # Get node resources and network status
             for node in worker_nodes:
@@ -262,17 +262,11 @@ class NetworkOperatorOps:
     # Node Management
     def label_worker_nodes(self, label: str, value: str = "") -> bool:
         """Label worker nodes - equivalent to labelworker.sh"""
-        result = kubectl("get", "nodes", "--no-headers")
-        if not result.success:
+        worker_nodes = get_nodes("worker")
+        if not worker_nodes:
+            logger.warning("No worker nodes found")
             return False
-        
-        worker_nodes = []
-        for line in result.stdout.strip().split('\n'):
-            if 'worker' in line:
-                parts = line.split()
-                if parts:
-                    worker_nodes.append(parts[0])
-        
+
         success = True
         for node in worker_nodes:
             logger.info(f"Labeling node {node} with {label}={value}")

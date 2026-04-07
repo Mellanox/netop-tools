@@ -244,38 +244,6 @@ def uncordon_nodes(node_type: str = "worker") -> bool:
     return success
 
 
-def find_device_files(search_dirs: List[str], extensions: List[str]) -> Dict[str, List[str]]:
-    """
-    Find files with specified extensions in given directories
-    
-    Args:
-        search_dirs: Directories to search
-        extensions: File extensions to look for
-        
-    Returns:
-        Dictionary mapping extension to list of files
-    """
-    config = get_config()
-    found_files = {ext: [] for ext in extensions}
-    
-    for search_dir in search_dirs:
-        full_path = os.path.join(config.netop_root_dir, search_dir)
-        if os.path.exists(full_path):
-            for ext in extensions:
-                find_cmd = f"find {full_path} -name '*.{ext}'"
-                result = run_command(find_cmd, capture_output=True)
-                
-                if result.success and result.stdout.strip():
-                    files = result.stdout.strip().split('\n')
-                    found_files[ext].extend(files)
-    
-    # Also check root directory
-    for ext in extensions:
-        pattern = f"*.{ext}"
-        for file_path in Path(config.netop_root_dir).glob(pattern):
-            found_files[ext].append(str(file_path))
-    
-    return found_files
 
 def create_symlink(target: str, link_name: str, force: bool = True) -> bool:
     """
@@ -354,6 +322,52 @@ def wait_for_pods_ready(namespace: str, timeout: int = 300) -> bool:
     
     logger.error(f"Timeout waiting for pods in {namespace} to be ready")
     return False
+
+def wait_for_nodes_ready(timeout: int = 300) -> bool:
+    """
+    Wait for all nodes to report Ready
+
+    Args:
+        timeout: Timeout in seconds
+
+    Returns:
+        True if all nodes are ready within the timeout
+    """
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        result = kubectl("get", "nodes", output="json")
+        if result.success:
+            try:
+                data = json.loads(result.stdout)
+                nodes = data.get('items', [])
+
+                if not nodes:
+                    logger.info("No nodes found yet, waiting...")
+                    time.sleep(10)
+                    continue
+
+                all_ready = True
+                for node in nodes:
+                    conditions = node.get('status', {}).get('conditions', [])
+                    ready_condition = next((c for c in conditions if c['type'] == 'Ready'), None)
+                    if not ready_condition or ready_condition['status'] != 'True':
+                        all_ready = False
+                        break
+
+                if all_ready:
+                    logger.info("All nodes are ready")
+                    return True
+
+            except json.JSONDecodeError:
+                logger.error("Failed to parse kubectl nodes output")
+
+        logger.info("Waiting for nodes to be ready...")
+        time.sleep(10)
+
+    logger.error("Timeout waiting for nodes to be ready")
+    return False
+
 
 def get_pod_logs(pod_name: str, namespace: str, container: str = "") -> str:
     """
