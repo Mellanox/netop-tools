@@ -9,6 +9,7 @@ NFD_ENABLE=true
 OFED_ENABLE=false
 CREATE_CONFIG_ONLY=0
 USECASE="sriovibnet_rdma"
+##USECASE="ipoib_rdma_shared_device"
 DEVICE_TYPES=( "connectx-7" )
 NUM_VFS=16
 NUM_GPUS=4
