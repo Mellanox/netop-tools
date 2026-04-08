@@ -23,6 +23,7 @@
   - [Step 13: Upgrade](#step-13-upgrade)
   - [Step 14: Restart and Recovery](#step-14-restart-and-recovery)
   - [Step 15: Cleanup and Uninstall](#step-15-cleanup-and-uninstall)
+- [Python CLI](#python-cli)
 - [Container Registry Tools](#container-registry-tools)
 - [RDMA Debug Containers](#rdma-debug-containers)
 - [ARP Tools](#arp-tools)
@@ -74,6 +75,12 @@ cp config/dell/global_ops_user.cfg.Dell.Poweredge.H100.H200 global_ops_user.cfg
 
 # Example: DGX B200 with BCM
 cp config/dgx/global_ops_user.cfg.DGXB200.bcm global_ops_user.cfg
+
+# Example: DGX GB200 (ConnectX-7, 16 VFs)
+cp config/dgx/global_ops_user.cfg.DGXGB200.bcm global_ops_user.cfg
+
+# Example: DGX GB300 (ConnectX-8, 16 VFs, NIC config enabled)
+cp config/dgx/global_ops_user.cfg.DGXGB300.bcm global_ops_user.cfg
 
 # Example: OCI cloud
 cp config/oci/global_ops_user.cfg.oci global_ops_user.cfg
@@ -356,7 +363,18 @@ export CREATE_CONFIG_ONLY=0
 ./install/ins-network-operator.sh
 ```
 
-#### 5.3 Alternative installation methods
+#### 5.3 Python CLI alternative
+
+```bash
+python3 python_tools/netop_tools.py install helm
+python3 python_tools/netop_tools.py install chart
+python3 python_tools/netop_tools.py install network-operator
+python3 python_tools/netop_tools.py install calico
+python3 python_tools/netop_tools.py install crds
+python3 python_tools/netop_tools.py install wait k8s
+```
+
+#### 5.4 Alternative installation methods
 
 ```bash
 ./install/ins-network-operator-default.sh    # Default/stable release
@@ -470,6 +488,9 @@ kubectl describe pod test-1
 
 # Pod-level network details
 ./ops/getpodnetworkstatus.sh
+
+# Python CLI alternative (JSON output)
+python3 python_tools/netop_tools.py ops network status
 ```
 
 #### 8.2 IPAM status
@@ -477,6 +498,7 @@ kubectl describe pod test-1
 ```bash
 # Node IPAM annotations (IP block allocations)
 ./ops/checkipam.sh
+# Python CLI: python3 python_tools/netop_tools.py ops check ipam
 
 # IP pool usage on a specific node
 ./ops/checkippool.sh <NODENAME>
@@ -497,6 +519,7 @@ kubectl describe pod test-1
 ```bash
 # SR-IOV synchronization state
 ./ops/checksriovstate.sh
+# Python CLI: python3 python_tools/netop_tools.py ops check sriov
 
 # Wait for SR-IOV sync to complete (can take up to 10 minutes)
 ./ops/syncsriov.sh
@@ -738,6 +761,9 @@ uncordon                          # Uncordon all worker nodes
 
 ```bash
 ./must-gather-network.sh
+
+# Python CLI alternative
+python3 python_tools/netop_tools.py must-gather --output-dir /tmp/diagnostics
 ```
 
 Collects all diagnostic data into `/tmp/nvidia-network-operator_YYYYMMDD_HHMM/`:
@@ -839,6 +865,9 @@ This runs `kubeadm reset`, cleans up `/etc/cni`, `/var/lib/etcd`, `/etc/kubernet
 
 ```bash
 ./uninstall/unins-network-operator.sh
+
+# Python CLI alternative
+python3 python_tools/netop_tools.py uninstall network-operator
 ```
 
 Cleanup sequence:
@@ -873,6 +902,51 @@ Cleanup sequence:
 ./ops/delete-network-cr.sh       # Delete all network CRDs (reverse order)
 ./ops/fluship.sh                 # Flush IP addresses
 ```
+
+---
+
+## Python CLI
+
+The `python_tools/` directory provides a unified Python CLI as an alternative to the bash scripts. It requires only Python 3 (stdlib); PyYAML is optional for YAML output.
+
+### Invocation
+
+```bash
+python3 python_tools/netop_tools.py [--verbose] [--config-file PATH] COMMAND
+```
+
+### Config management
+
+```bash
+python3 python_tools/netop_tools.py config show         # Display loaded config as JSON
+python3 python_tools/netop_tools.py config validate      # Validate environment
+python3 python_tools/netop_tools.py config export --format yaml --output config.yaml
+```
+
+### Implemented commands
+
+| Command | Subcommands | Description |
+|---|---|---|
+| `install` | `helm`, `network-operator`, `chart`, `calico`, `crds`, `wait {k8s\|calico}` | Installation operations |
+| `ops` | `network {status\|apply\|delete}`, `config values`, `node {label\|annotate\|cordon\|uncordon}`, `device {set-vfs\|get-vfs}`, `check {ipam\|sriov}` | Operational commands |
+| `uninstall` | `network-operator`, `calico`, `evicted-pods`, `secret` | Cleanup operations |
+| `must-gather` | `--output-dir DIR` | Collect diagnostics |
+| `config` | `show`, `validate`, `export` | Configuration management |
+
+### Legacy commands (backward compatible)
+
+| Command | Description |
+|---|---|
+| `subnet <CIDR> <COUNT>` | Generate IPv4 subnet sequences |
+| `setvfs <NUM> <BDF...>` | Configure SR-IOV VFs |
+| `finddev` | Find device files in netop directories |
+| `setuc [--usecase NAME]` | Setup use case symlink |
+| `ins-k8 [--stage STAGE]` | Install K8s master (stages: master, init, calico, netop, all) |
+| `start-k8` | Restart K8s master |
+
+### Stub commands (not yet implemented)
+
+`rdma`, `repo`, `restart`, `test`, `upgrade` — these exist as placeholders for future implementation.
 
 ---
 
@@ -1119,6 +1193,7 @@ CI runs `tests/unitest.sh` on ubuntu-22.04 on every push (`.github/workflows/mai
 
 | Variable | Default | Description |
 |---|---|---|
+| `OFED_BLACKLIST_MODULES_FILE` | `/host/etc/modprobe.d/blacklist-ofed-modules.conf` | Path to OFED module blacklist file |
 | `SYSCTL_CONFIG` | (empty) | Override ARP config inside test pods |
 | `NCP_NODE_AFFINITY` | `false` | Enable NicClusterPolicy node affinity |
 | `DOCA_TELEMETRY_SERVICE` | `false` | DOCA Telemetry Service |
@@ -1134,7 +1209,7 @@ Pre-built configurations in `config/`:
 
 | Platform | Directory | Key Variants |
 |---|---|---|
-| **DGX** | `config/dgx/` | DGXB200 (BCM), DGXB300, DGXGB200, DGXGB300, DGXH100, DGXH200, DGXSpark |
+| **DGX** | `config/dgx/` | DGXB200 (BCM), DGXB300 (sriovnet/macvlan), DGXGB200 (ConnectX-7), DGXGB300 (ConnectX-8), DGXH100, DGXH200, DGXSpark |
 | **Dell** | `config/dell/` | PowerEdge H100/H200 |
 | **Lenovo** | `config/lenovo/` | ThinkSystem SR780a/SR675 (B200) |
 | **SuperMicro** | `config/smc/` | A22GA-NBRT (B200, H200) |
@@ -1163,6 +1238,7 @@ Key platform differences:
 
 | Directory | Purpose |
 |---|---|
+| `python_tools/` | Python CLI: unified command interface, config management, ops/install/uninstall commands |
 | `ops/` | Core operations: config generation (`mk-*.sh`), CR management, device tools (~110 scripts) |
 | `install/` | K8s cluster bootstrap, component installers, platform-specific (`ubuntu/`, `rhel/`), bug fixes (`fixes/`) |
 | `uninstall/` | Cleanup and removal scripts |
