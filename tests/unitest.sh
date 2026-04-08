@@ -22,12 +22,12 @@ res=0
 
 for CONF in ${CONFIGS};do
   export GLOBAL_OPS_USER=${CONF}
-  source ${GLOBAL_OPS_USER}
-  if [ ! -r ${GLOBAL_OPS_USER} ];then
-    echo "Configration file ${GLOBAL_OPS_USER} not found"
+  if [ ! -r "${GLOBAL_OPS_USER}" ];then
+    echo "Configuration file ${GLOBAL_OPS_USER} not found"
     res=$((res + 1))
     continue
   fi
+  source "${GLOBAL_OPS_USER}"
   echo "Using configuration from ${GLOBAL_OPS_USER}"
   TDIR=${GLOBAL_OPS_USER%/*}
   $NETOP_ROOT_DIR/install/ins-network-operator.sh

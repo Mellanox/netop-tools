@@ -52,5 +52,4 @@ ${K8CL} delete --force NicClusterPolicy nic-cluster-policy
 ${K8CL} delete --force ns "${NETOP_NAMESPACE}"
 ${NETOP_ROOT_DIR}/uninstall/delstucknamespace.sh "${NETOP_NAMESPACE}"
 helm uninstall network-operator -n ${NETOP_NAMESPACE} --no-hooks
-helm uninstall -n ${NETOP_NAMESPACE} network-operator
 helm repo list -n ${NETOP_NAMESPACE}

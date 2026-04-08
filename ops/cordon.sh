@@ -4,20 +4,18 @@
 #
 function cordon()
 {
-  NODES=`${K8CL} get nodes | grep worker | grep -v 'control-plane' | grep -v SchedulingDisabled | cut -d' ' -f1`
-  for NODE in ${NODES};do
+  while IFS= read -r NODE; do
     echo "cordon ${NODE}"
-    ${K8CL} cordon ${NODE}
-  done
+    ${K8CL} cordon "${NODE}"
+  done < <(${K8CL} get nodes --no-headers | grep worker | grep -v 'control-plane' | grep -v SchedulingDisabled | awk '{print $1}')
 }
 #
 # "uncordon the worker nodes"
 #
 function uncordon()
 {
-  NODES=`${K8CL} get nodes | grep worker | grep -v 'control-plane' | grep SchedulingDisabled | cut -d' ' -f1`
-  for NODE in ${NODES};do
+  while IFS= read -r NODE; do
     echo "uncordon ${NODE}"
-    ${K8CL} uncordon ${NODE}
-  done
+    ${K8CL} uncordon "${NODE}"
+  done < <(${K8CL} get nodes --no-headers | grep worker | grep -v 'control-plane' | grep SchedulingDisabled | awk '{print $1}')
 }
