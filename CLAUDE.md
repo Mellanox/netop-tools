@@ -6,122 +6,102 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **netop-tools** automates deployment and management of NVIDIA Network Operator in Kubernetes clusters. It handles RDMA networking, SR-IOV Virtual Functions (VFs), IPoIB, Macvlan, and HostDev network configurations for AI/ML workloads on bare metal and virtualized Kubernetes environments.
 
-The tooling is undergoing a migration from Bash scripts (legacy, 228+ scripts) to a unified Python CLI (`python_tools/`).
+The codebase is ~250 Bash scripts organized by function.
 
 ## Setup
 
 ```bash
-# Set the required environment variable
-source NETOP_ROOT_DIR.sh
-
-# Copy and customize platform config
-cp config/{platform}/global_ops_user.cfg global_ops_user.cfg
-# Edit global_ops_user.cfg for your environment
-
-# Load full configuration
-source global_ops.cfg
+source NETOP_ROOT_DIR.sh                    # exports NETOP_ROOT_DIR=$(pwd)
+cp config/{platform}/global_ops_user.cfg.{variant} global_ops_user.cfg
+# edit global_ops_user.cfg for your environment
+source global_ops.cfg                       # loads all config (requires global_ops_user.cfg)
+./setuc.sh [usecase]                        # creates uc/ symlink → usecase/{USECASE}/
 ```
 
 ## Testing
 
+Tests use YAML diff validation — scripts generate config with `CREATE_CONFIG_ONLY=1` and compare against baseline YAML files in `tests/{usecase}/`.
+
 ```bash
-# Unit tests only (safe, no infrastructure required)
-./run_tests.sh unit
+# Run all tests (requires NETOP_ROOT_DIR to be set)
+source NETOP_ROOT_DIR.sh
+./tests/unitest.sh
 
-# Test a specific command
-./run_tests.sh command subnet
-
-# Quick validation
-./run_tests.sh quick
-
-# Full integration tests (requires K8s cluster + hardware)
-./run_tests.sh integration
-
-# Direct Python test file
-python3 test_netop_tools.py
+# Run a single test by passing its config file path
+./tests/unitest.sh tests/sriovnet_rdma/config
 ```
 
-GitHub Actions (`.github/workflows/main.yml`) runs tests on every push against ubuntu-22.04.
+CI (`.github/workflows/main.yml`) runs `tests/unitest.sh` on ubuntu-22.04 on every push.
+
+**Adding tests**: Create a directory under `tests/` with a `config` file (sourced as `GLOBAL_OPS_USER`), optional `netop.cfg` overrides, and `*.yaml` baseline files. The test harness discovers test directories by finding `config` files via `find`.
 
 ## Architecture
 
-### Configuration System
+### Configuration Cascade
 
-The configuration system is the foundation of the entire toolset:
+**Priority**: ENV vars > `global_ops_user.cfg` > `usecase/{USECASE}/netop.cfg` > defaults in `global_ops.cfg`
 
-- `global_ops.cfg` — master config with 250+ variables (K8s, network, hardware, operator versions). Sources `global_ops_user.cfg` and use-case-specific `netop.cfg`.
-- `global_ops_user.cfg` — user/platform overrides (not committed per platform)
-- `config/{platform}/global_ops_user.cfg.*` — pre-built platform configs (dgx, dell, lenovo, oci, pdx, smc)
-- `usecase/{usecase}/netop.cfg` — use-case-specific overrides
+- `global_ops.cfg` — master config (~250 lines). Sources `global_ops_user.cfg` first, then `usecase/${USECASE}/netop.cfg` at the end. Exports 40+ variables controlling K8s version, operator version, IPAM, VF counts, feature gates, etc.
+- `global_ops_user.cfg` — platform/user overrides (not committed). Copy from `config/{platform}/` variants.
+- `usecase/{usecase}/netop.cfg` — use-case-specific overrides (device lists, network files, etc.)
 
-**Priority**: ENV vars > user config > use-case config > defaults in `global_ops.cfg`
+`NETOP_ROOT_DIR` must be set before sourcing any config. The `CREATE_CONFIG_ONLY` variable (default `"1"`) controls whether scripts actually execute `helm`/`kubectl` commands or just echo them — this is how the test harness works.
 
-`NETOP_ROOT_DIR` must be set before sourcing any config.
+### Deployment Pipeline
 
-### Python Tools (`python_tools/`)
+```
+ins-network-operator.sh
+  ├─ setuc.sh                    → validate + create uc/ symlink
+  ├─ mksecret.sh                 → image pull secret
+  ├─ ops/mk-config.sh            → orchestrates all config generation:
+  │   ├─ ops/mk-values.sh        → Helm values.yaml (feature flags, images)
+  │   ├─ ops/mk-nic-cluster-policy.sh → NicClusterPolicy CRD
+  │   ├─ ops/mk-network-cr.sh    → SriovNetwork + NetworkAttachmentDefinition
+  │   ├─ ops/mk-ipam-cr.sh       → IPPool or CIDRPool
+  │   ├─ ops/mk-sriov-node-pool.sh → SR-IOV VF allocation policy
+  │   └─ ops/mk-nic-config.sh    → NIC firmware config (if NIC_CONFIG_ENABLE=true)
+  ├─ helm install network-operator
+  └─ ops/apply-network-cr.sh     → kubectl apply all generated CRDs
+```
 
-Unified CLI replacing the legacy bash scripts:
+### Key Conventions
 
-- `netop_tools.py` — main entry point, argparse setup, command dispatch
-- `config.py` — `NetOpConfig` dataclass + config loading from shell-sourced variables
-- `utils.py` — shared subprocess helpers, logging
-- `subnet_generator.py` — IP subnet generation for IPAM
-- `device_tools.py` — SR-IOV VF configuration, PCI device management
-- `k8s_tools.py` — kubectl/helm operations, K8s resource management
-- `must_gather.py` — diagnostic collection from K8s cluster
-- `commands/` — hierarchical command implementations (ops, install, uninstall, arp, harbor, etc.)
+- **Use-case symlink**: `./setuc.sh` creates `uc/` → `usecase/${USECASE}/`. Scripts reference `${USECASE_DIR}` or `./uc/` interchangeably. Generated YAML files land in the use-case directory.
+- **Device list format**: `NETOP_NETLIST=( a,,,0000:08:00.0 b,,,0000:86:00.1 )` — tuple of `device_index,reserved,reserved,pci_bdf`. Separate IPPool/SriovNetwork CRDs are generated per device.
+- **Combined mode**: When `NETOP_BCM_CONFIG=true`, multiple network definitions are merged into single `combined-*.yaml` files instead of separate per-device files.
+- **Subnet generation**: `ops/generate_subnets.sh` splits `NETOP_NETWORK_RANGE` into per-node blocks of `NETOP_PERNODE_BLOCKSIZE` (default 32) IPs.
 
-### Legacy Bash Scripts
+### Directory Layout
 
-Organized by function:
-- `ops/` — network operations, resource generation (mk-network-cr.sh, mk-values.sh, apply-network-cr.sh)
-- `install/` — K8s and component installation
-- `uninstall/` — cleanup scripts
-- `arptools/`, `rdmatest/`, `harbor/`, `repotools/` — specialized tools
+| Directory | Purpose |
+|---|---|
+| `ops/` | Core operations: config generation (`mk-*.sh`), CR management, device tools (~110 scripts) |
+| `install/` | K8s cluster bootstrap, platform-specific installers (`ubuntu/`, `rhel/`) |
+| `uninstall/` | Cleanup/removal scripts |
+| `config/{platform}/` | Pre-built platform configs: bcm11, dell, dgx, examples, igx, kvm, lenovo, oci, pdx, smc |
+| `usecase/{name}/` | Use-case definitions with `netop.cfg` and generated YAML output |
+| `tests/` | Test configs + baseline YAML files |
+| `release/` | Versioned Helm chart configurations (controlled by `NETOP_VERSION`, default `26.1.0`) |
 
 ### Use Cases
 
-Each use case directory (`usecase/{name}/`) contains network definitions, IP pool configs, and app templates:
-
-| Use Case | Description |
-|---|---|
-| `sriovnet_rdma` | SR-IOV with RDMA (most common) |
-| `sriovibnet_rdma` | SR-IOV InfiniBand with RDMA |
-| `hostdev_rdma_sriov` | HostDevice with SR-IOV |
-| `ipoib_rdma_shared_device` | IPoIB with shared device |
-| `macvlan_rdma_shared_device` | Macvlan with shared RDMA |
-
-### Network CR Generation Workflow
-
-```
-global_ops.cfg + global_ops_user.cfg
-    ↓
-ops/mk-network-cr.sh
-    ├─ mk-nic-cluster-policy.sh  → NicClusterPolicy CRD
-    ├─ mk-sriovnet-node-policy.sh → SriovNetworkNodePolicy
-    ├─ mk-network-attachment.sh  → NetworkAttachmentDefinition
-    └─ mk-ipam-cr.sh             → IPPool or CIDRPool
-    ↓
-ops/mk-values.sh → Helm values (operator feature flags, image versions)
-    ↓
-helm install network-operator + kubectl apply CRDs
-```
-
-### Helm Charts
-
-`release/` contains versioned Helm chart configurations from 24.10.0 through 26.1.0. The active version is controlled by `NETOP_VERSION` in config.
+| Use Case | Description | VFs |
+|---|---|---|
+| `sriovnet_rdma` | SR-IOV with RDMA (default) | 8 |
+| `sriovibnet_rdma` | SR-IOV InfiniBand with RDMA | 8 |
+| `hostdev_rdma_sriov` | HostDevice with SR-IOV | 8 |
+| `ipoib_rdma_shared_device` | IPoIB with shared device | 0 |
+| `macvlan_rdma_shared_device` | Macvlan with shared RDMA | 0 |
 
 ### Key Configuration Variables
 
-- `NETOP_VERSION` — Network Operator helm chart version
-- `NETOP_NAMESPACE` / `NETOP_NETWORK_RANGE` — deployment namespace and CIDR
-- `NETOP_VENDOR` — PCI vendor ID (default `"15b3"` for Mellanox/NVIDIA)
-- `NUM_VFS` — number of SR-IOV virtual functions
-- `IPAM_TYPE` / `NVIPAM_POOL_TYPE` — IP address management configuration
-- `NFD_ENABLE` / `NIC_CONFIG_ENABLE` / `MAINTENANCE_OPERATOR_ENABLE` — operator feature flags
-- `K8CL` — Kubernetes cluster name / `K8SVER` — K8s version
-- `USECASE` — active use case (e.g., `sriovnet_rdma`)
-
-## Bash-to-Python Migration
-
-See `BASH_TO_PYTHON_CONVERSION.md` for mapping between legacy bash commands and their Python equivalents. When adding new functionality, prefer Python in `python_tools/commands/` and maintain backward-compatible command names.
+- `NETOP_VERSION` — Helm chart version (default `26.1.0`)
+- `NETOP_NAMESPACE` — operator namespace (default `nvidia-network-operator`)
+- `NETOP_NETWORK_RANGE` — secondary RDMA network CIDR (L2, not routed)
+- `NETOP_NETLIST` — array of PCI devices to configure
+- `USECASE` — active use case (default `sriovnet_rdma`)
+- `NUM_VFS` — SR-IOV virtual function count
+- `IPAM_TYPE` — IP management (`nv-ipam` for large clusters, `whereabouts` for <60 nodes)
+- `DEVICE_TYPES` — NIC types array (e.g., `connectx-6`, `connectx-7`)
+- `CREATE_CONFIG_ONLY` — `"1"` to generate YAML only without deploying
+- `NETOP_BCM_CONFIG` — `"true"` enables combined multi-device YAML mode
