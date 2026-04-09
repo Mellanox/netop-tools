@@ -23,6 +23,7 @@
   - [Step 13: Upgrade](#step-13-upgrade)
   - [Step 14: Restart and Recovery](#step-14-restart-and-recovery)
   - [Step 15: Cleanup and Uninstall](#step-15-cleanup-and-uninstall)
+- [AI Agent Skills](#ai-agent-skills)
 - [Python CLI](#python-cli)
 - [Container Registry Tools](#container-registry-tools)
 - [RDMA Debug Containers](#rdma-debug-containers)
@@ -905,6 +906,104 @@ Cleanup sequence:
 
 ---
 
+## AI Agent Skills
+
+netop-tools ships with reusable AI agent skills that encode operational workflows as slash commands. Skills are cross-agent portable — they work with Claude Code, Cursor, and any agent supporting the `.agents/` convention.
+
+### Architecture
+
+```
+skills/                          # SSOT (Single Source of Truth)
+  deploying-network-operator/
+    SKILL.md
+  troubleshooting-network-operator/
+    SKILL.md
+  configuring-netop-platform/
+    SKILL.md
+  managing-netop-devices/
+    SKILL.md
+  upgrading-network-operator/
+    SKILL.md
+  testing-netop-configs/
+    SKILL.md
+
+.agents/skills/  -> symlinks     # Cross-agent standard (skills.sh)
+.claude/skills/  -> symlinks     # Claude Code auto-discovery
+.cursor/skills/  -> symlinks     # Cursor auto-discovery
+```
+
+Skills are authored once in `skills/` and symlinked into each agent's directory. One file, every agent sees the same content.
+
+### Installation
+
+**Option 1: Setup script (all agents at once)**
+
+```bash
+./scripts/setup-skills.sh
+```
+
+Creates symlinks from `.agents/skills/`, `.claude/skills/`, and `.cursor/skills/` to the canonical `skills/` directory.
+
+**Option 2: Manual symlink (single agent)**
+
+```bash
+# Claude Code
+mkdir -p .claude/skills
+for s in skills/*/; do ln -sfn "../../$s" ".claude/skills/$(basename $s)"; done
+
+# Cursor
+mkdir -p .cursor/skills
+for s in skills/*/; do ln -sfn "../../$s" ".cursor/skills/$(basename $s)"; done
+
+# Cross-agent standard (.agents/)
+mkdir -p .agents/skills
+for s in skills/*/; do ln -sfn "../../$s" ".agents/skills/$(basename $s)"; done
+```
+
+**Option 3: npx skills CLI** (if using [skills.sh](https://skills.sh))
+
+```bash
+npx skills add smarunich/netop-tools --all
+```
+
+### Available Skills
+
+| Skill | Invoke | Description |
+|---|---|---|
+| **deploying-network-operator** | `/deploying-network-operator` | Full deployment pipeline: config generation, Helm install, CRD application, verification |
+| **troubleshooting-network-operator** | `/troubleshooting-network-operator` | Systematic diagnostics: must-gather, operator health, SR-IOV sync, IPAM, decision tree |
+| **configuring-netop-platform** | `/configuring-netop-platform` | Platform setup: use case selection, NETOP_NETLIST format, feature flags, IPAM options |
+| **managing-netop-devices** | `/managing-netop-devices` | Device ops: VF management, PCI tools, link speed, RDMA testing, node labeling |
+| **upgrading-network-operator** | `/upgrading-network-operator` | Version upgrade: pre-flight checks, helm upgrade, rollback, version-specific notes |
+| **testing-netop-configs** | `/testing-netop-configs` | Test framework: run tests, create baselines, debug failures, CI integration |
+
+### Writing New Skills
+
+Create a new skill directory in `skills/` with a `SKILL.md` file:
+
+```markdown
+---
+name: my-new-skill
+description: Use when [triggering conditions]. Keywords for discovery.
+---
+
+# Skill Title
+
+## Workflow
+1. Step one
+2. Step two
+```
+
+Then run `./scripts/setup-skills.sh` to symlink it into all agent directories.
+
+**Conventions**:
+- `name`: lowercase with hyphens (e.g., `deploying-network-operator`)
+- `description`: starts with "Use when...", lists triggering conditions, max 1024 chars
+- Body: concise command references, tables, common failures — under 500 words
+- No agent-specific syntax — plain markdown works everywhere
+
+---
+
 ## Python CLI
 
 The `python_tools/` directory provides a unified Python CLI as an alternative to the bash scripts. It requires only Python 3 (stdlib); PyYAML is optional for YAML output.
@@ -1238,6 +1337,7 @@ Key platform differences:
 
 | Directory | Purpose |
 |---|---|
+| `skills/` | AI agent skills (SSOT): cross-agent portable workflows for deploy, troubleshoot, configure, test |
 | `python_tools/` | Python CLI: unified command interface, config management, ops/install/uninstall commands |
 | `ops/` | Core operations: config generation (`mk-*.sh`), CR management, device tools (~110 scripts) |
 | `install/` | K8s cluster bootstrap, component installers, platform-specific (`ubuntu/`, `rhel/`), bug fixes (`fixes/`) |
