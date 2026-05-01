@@ -35,6 +35,29 @@ function get_release_tag()
   LINE=$(get_container ${1})
   echo "${LINE}" | cut -d, -f5
 }
+function globalConfig()
+{
+case ${NETOP_VERSION} in
+  26.4.*)
+    ;;
+  *)
+    return
+    ;;
+esac
+if [ "${NCP_GLOBAL_CONFIG}" != "true" ];then
+  return
+fi
+# Default repo/version from network-operator-init-container, which shares the
+# same registry and tag as all other core network-operator components.
+GLOBAL_REPO=${NCP_GLOBAL_REPO:-$(get_repository network-operator-init-container required)}
+GLOBAL_VER=${NCP_GLOBAL_VER:-$(get_release_tag network-operator-init-container)}
+cat << GLOBAL_CONFIG
+  global:
+    repository: ${GLOBAL_REPO}
+    version: ${GLOBAL_VER}
+    imagePullSecrets: [${NGC_SECRET}]
+GLOBAL_CONFIG
+}
 function ofedDriver()
 {
 if [ "${OFED_ENABLE}" != true ];then
@@ -98,6 +121,16 @@ cat << OFED_DRIVER6
     - name: ENABLE_NFSRDMA
       value: "${ENABLE_NFSRDMA}"
 OFED_DRIVER6
+    fi
+    if [ "${UNLOAD_THIRD_PARTY_RDMA}" = "true" ];then
+      case ${NETOP_VERSION} in
+        26.4.*)
+cat << OFED_DRIVER9
+    - name: UNLOAD_THIRD_PARTY_RDMA_MODULES
+      value: "true"
+OFED_DRIVER9
+          ;;
+      esac
     fi
 cat << OFED_DRIVER7
     startupProbe:
@@ -215,6 +248,26 @@ cat << RDMA_SDP3
       }
 RDMA_SDP3
 }
+function ibKubernetes()
+{
+if [ "${IB_KUBERNETES_ENABLE}" != "true" ];then
+  return
+fi
+REPOSITORY=$(get_repository ib-kubernetes optional)
+if [ "${REPOSITORY}" = "" ];then
+  return
+fi
+cat << IB_KUBERNETES
+  ibKubernetes:
+    image: ib-kubernetes
+    repository: ${REPOSITORY}
+    version: $(get_release_tag ib-kubernetes)
+    imagePullSecrets: [${NGC_SECRET}]
+    pKeyGUIDPoolRangeStart: "${IB_GUID_RANGE_START}"
+    pKeyGUIDPoolRangeEnd: "${IB_GUID_RANGE_END}"
+    ufmSecret: ${IB_UFM_SECRET}
+IB_KUBERNETES
+}
 function secondaryNetwork()
 {
 cat << SECONDARY_NETWORK1
@@ -326,7 +379,7 @@ NIC_CONFIGURATION
 
 if [ "${FW_UPGRADE_ENABLE}" = "true" ];then
   case "${NETOP_VERSION}" in
-    25.4.0|25.7.0|25.10.*|26.1.*)
+    25.4.0|25.7.0|25.10.*|26.1.*|26.4.*)
 cat << NIC_CONFIGURATION
     nicFirmwareStorage:
       create: ${NETOP_BCM_CONFIG}
@@ -339,6 +392,40 @@ NIC_CONFIGURATION
 *)
 ;;
 esac
+fi
+}
+function spectrumXOperator()
+{
+if [ "${SPECTRUM_X_ENABLE}" != "true" ];then
+  return
+fi
+case ${NETOP_VERSION} in
+  26.4.*)
+    ;;
+  *)
+    return
+    ;;
+esac
+REPOSITORY=$(get_repository spectrum-x-operator optional)
+if [ "${REPOSITORY}" = "" ];then
+  return
+fi
+cat << SPECTRUMX
+  spectrumXOperator:
+    image: spectrum-x-operator
+    repository: ${REPOSITORY}
+    version: $(get_release_tag spectrum-x-operator)
+    imagePullSecrets: [${NGC_SECRET}]
+SPECTRUMX
+XPLANE_REPO=$(get_repository xplane optional)
+if [ "${XPLANE_REPO}" != "" ];then
+cat << SPECTRUMX_XPLANE
+    xPlane:
+      image: xplane
+      repository: ${XPLANE_REPO}
+      version: $(get_release_tag xplane)
+      imagePullSecrets: [${NGC_SECRET}]
+SPECTRUMX_XPLANE
 fi
 }
 function maintenanceOperator()
@@ -390,9 +477,11 @@ metadata:
   name: nic-cluster-policy
 spec:
 HEREDOC1
+globalConfig >> ${FILE}
 docaTelemetryService >> ${FILE}
 node_affinity >> ${FILE}
 ofedDriver >> ${FILE}
+ibKubernetes >> ${FILE}
 case ${USECASE} in
 ipoib_rdma_shared_device)
   #LINK_TYPES='"IB"' breaks plugin
@@ -412,6 +501,7 @@ nvIpam >> ${FILE}
 nodeFeatureDiscovery >> ${FILE}
 nicFeatureDiscovery >> ${FILE}
 nicConfigurationOperator >> ${FILE}
+spectrumXOperator >> ${FILE}
 maintenanceOperator >> ${FILE}
 }
 NETOP_JINGA_CONFIG=false

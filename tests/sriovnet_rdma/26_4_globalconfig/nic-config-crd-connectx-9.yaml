@@ -1,0 +1,37 @@
+apiVersion: configuration.net.nvidia.com/v1alpha1
+kind: NicConfigurationTemplate
+metadata:
+   name: connectx-9-config
+   #namespace: nic-configuration-operator
+   namespace: nvidia-network-operator
+spec:
+   nodeSelector:
+      feature.node.kubernetes.io/network-sriov.capable: "true"
+   nicSelector:
+      # nicType selector is mandatory the rest are optional. Only a single type can be specified.
+      nicType: "1025"
+#      pciAddresses:
+#         - "0000:07:00.0"
+#         - “0000:08:00.0”
+#      serialNumbers:
+#         - "mt1910x14362"
+   resetToDefault: false # if set, template is ignored, device configuration should reset
+   template:
+      # numVfs and linkType fields are mandatory, the rest are optional
+      numVfs: 8
+      linkType: Ethernet
+      pciPerformanceOptimized:
+         enabled: true
+         # maxAccOutRead: 0 # see https://github.com/Mellanox/nic-configuration-operator/blob/main/README.md for details
+         maxReadRequest: 4096
+      roceOptimized:
+         enabled: true
+         qos:
+           trust: dscp
+           pfc: "0,0,0,1,0,0,0,0"
+      gpuDirectOptimized:
+         enabled: true
+         env: Baremetal
+      spectrumXOptimized:
+         enabled: true
+         version: RA3.0

@@ -1,0 +1,17 @@
+---
+nfd:
+  enabled: true
+  deployNodeFeatureRules: true
+maintenanceOperator:
+  enabled: true
+nvIpam:
+  deploy: true
+sriovNetworkOperator:
+  enabled: true
+sriov-network-operator:
+  sriovOperatorConfig:
+    configDaemonNodeSelector:
+      node-role.kubernetes.io/worker: ""
+    featureGates:
+      parallelNicConfig: true
+      mellanoxFirmwareReset: false

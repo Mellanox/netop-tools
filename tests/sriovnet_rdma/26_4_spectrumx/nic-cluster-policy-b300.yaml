@@ -1,0 +1,27 @@
+---
+apiVersion: mellanox.com/v1alpha1
+kind: NicClusterPolicy
+metadata:
+  name: nic-cluster-policy
+spec:
+  secondaryNetwork:
+    cniPlugins:
+      image: plugins
+      repository: nvcr.io/nvidia/mellanox
+      version: network-operator-v25.10.0
+      imagePullSecrets: []
+    multus:
+      image: multus-cni
+      repository: nvcr.io/nvidia/mellanox
+      version: network-operator-v25.10.0
+      imagePullSecrets: []
+      containerResources:
+        - name: "kube-multus"
+          limits: {memory: "100Mi"}
+          requests: {memory: "100Mi"}
+  nvIpam:
+    image: nvidia-k8s-ipam
+    repository: nvcr.io/nvidia/mellanox
+    version: network-operator-v25.10.0
+    imagePullSecrets: []
+    enableWebhook: false
