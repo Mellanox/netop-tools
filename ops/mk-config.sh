@@ -14,15 +14,15 @@ else
     rm -f "nic-config-crd-${DEVICE_TYPE}.yaml"
   done
 fi
-if [ "${NIC_NODE_POLICY_ENABLE}" = "true" ];then
-  case ${NETOP_VERSION} in
-    26.4.*)
+case ${NETOP_VERSION} in
+  26.4.*)
+    if [ "${NIC_NODE_POLICY_ENABLE}" = "true" ];then
       ${NETOP_ROOT_DIR}/ops/mk-nic-node-policy.sh
-      ;;
-    *)
+    else
       rm -f "${NIC_NODE_POLICY_FILE}"
-      ;;
-  esac
-else
-  rm -f "${NIC_NODE_POLICY_FILE}"
-fi
+    fi
+    ;;
+  *)
+    rm -f "${NIC_NODE_POLICY_FILE}"
+    ;;
+esac
