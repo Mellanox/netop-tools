@@ -5,6 +5,27 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 NFD_ENABLE=${NFD_ENABLE:-true}
 NIC_CONFIG_ENABLE=${NIC_CONFIG_ENABLE:-true}
 
+function get_container()
+{
+  while read LINE;do
+    CONTAINER=$(echo ${LINE}|cut -d, -f4)
+    if [ "${CONTAINER}" == "${1}" ];then
+       echo "${LINE}"
+    fi
+  done <"${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}"
+}
+function get_repository()
+{
+  LINE=$(get_container ${1})
+  REPOSITORY=$(echo "${LINE}" | cut -d, -f3)
+  echo ${REPOSITORY}
+}
+function get_release_tag()
+{
+  LINE=$(get_container ${1})
+  echo "${LINE}" | cut -d, -f5
+}
+
 function sriovNetworkOperator()
 {
 case ${USECASE} in
@@ -29,9 +50,9 @@ sriov-network-operator:
       ${NETOP_NODESELECTOR}: "${NETOP_NODESELECTOR_VAL}"
 SRIOV_NETWORK_OPERATOR0
 
-if [ "${NIC_CONFIG_ENABLE}" = "true" ];then 
+if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
   case ${NETOP_VERSION} in
-    25.10.*|26.1.*)
+    25.10.*|26.1.*|26.4.*)
 cat << SRIOV_NETWORK_OPERATOR0
       network.nvidia.com/operator.mofed.wait: "false"
       # Enable when using together with NIC Configuration Operator to wait until
@@ -55,6 +76,19 @@ cat << SRIOV_NETWORK_OPERATOR1
       metricsExporter: ${METRICS_EXPORTER}
       manageSoftwareBridges: ${MANAGE_SW_BRIDGE}
 SRIOV_NETWORK_OPERATOR1
+fi
+if [ "${DRA_ENABLE}" = "true" ];then
+  case ${NETOP_VERSION} in
+    26.4.*)
+cat << SRIOV_DRA
+  images:
+    sriovDraDriver: $(get_repository dra-driver-sriov)/dra-driver-sriov:$(get_release_tag dra-driver-sriov)
+draDriver:
+  cdiRoot: "${DRA_CDI_ROOT}"
+  defaultInterfacePrefix: "${DRA_IFACE_PREFIX}"
+SRIOV_DRA
+      ;;
+  esac
 fi
 }
 function pullSecrets()
@@ -87,7 +121,7 @@ nfd:
   enabled: ${NFD_ENABLE}
 VALUES_YAML0
 case "${NETOP_VERSION}" in
-25.4.0|25.7.0|25.10.*|26.1.*)
+25.4.0|25.7.0|25.10.*|26.1.*|26.4.*)
 cat << VALUES_YAML1
   deployNodeFeatureRules: ${NFD_ENABLE}
 VALUES_YAML1
@@ -322,8 +356,19 @@ function 26_1_0()
   sriovNetworkOperator
   pullSecrets
 }
+function 26_4_0()
+{
+  version
+  ipamType
+  values_yaml
+  sriovNetworkOperator
+  pullSecrets
+}
 
 case ${NETOP_VERSION} in
+  26.4.*)
+    NETOP_FUNCT=26_4_0
+    ;;
   26.1.*)
     NETOP_FUNCT=26_1_0
     ;;

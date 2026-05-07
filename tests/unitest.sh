@@ -30,6 +30,8 @@ for CONF in ${CONFIGS};do
   source "${GLOBAL_OPS_USER}"
   echo "Using configuration from ${GLOBAL_OPS_USER}"
   TDIR=${GLOBAL_OPS_USER%/*}
+  find "${NETOP_ROOT_DIR}/usecase" -name "*.yaml" -type f -delete 2>/dev/null || true
+  find "${NETOP_ROOT_DIR}/usecase" -name "netop_*_files" -type f -delete 2>/dev/null || true
   $NETOP_ROOT_DIR/install/ins-network-operator.sh
   for FILE in $(find ${TDIR} -type f -name '*.yaml'  | xargs -I % -r basename %);do
     echo "Validating ${TDIR}/${FILE}"

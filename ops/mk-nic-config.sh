@@ -13,6 +13,7 @@ NIC_TYPE_MAP=(
   [connectx-6lx]=101f
   [connectx-7]=1021
   [connectx-8]=1023
+  [connectx-9]=1025
   [bf2]=a2d6
   [bf3]=a2dc
 )
@@ -75,6 +76,17 @@ cat << NIC_CONFIG2 >> ${FILE}
          enabled: true
          env: Baremetal
 NIC_CONFIG2
+  if [ "${SPECTRUM_X_RA_VERSION}" != "" ];then
+    case ${NETOP_VERSION} in
+      26.4.*)
+cat << NIC_CONFIG3 >> ${FILE}
+      spectrumXOptimized:
+         enabled: true
+         version: ${SPECTRUM_X_RA_VERSION}
+NIC_CONFIG3
+        ;;
+    esac
+  fi
 done
 }
 function fw_update_pv()

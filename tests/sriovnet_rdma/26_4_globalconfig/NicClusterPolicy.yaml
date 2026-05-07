@@ -1,0 +1,60 @@
+---
+apiVersion: mellanox.com/v1alpha1
+kind: NicClusterPolicy
+metadata:
+  name: nic-cluster-policy
+spec:
+  global:
+    repository: nvcr.io/nvstaging/mellanox
+    version: network-operator-v26.4.0-beta.5
+    imagePullSecrets: [ngc-image-secret]
+  ofedDriver:
+    image: doca-driver
+    repository: nvcr.io/nvstaging/mellanox
+    version: doca3.4.0-26.04-0.4.2.0-0
+    forcePrecompiled: false
+    imagePullSecrets: [ngc-image-secret]
+    terminationGracePeriodSeconds: 300
+    env:
+    - name: RESTORE_DRIVER_ON_POD_TERMINATION
+      value: "true"
+    - name: UNLOAD_STORAGE_MODULES
+      value: "true"
+    - name: CREATE_IFNAMES_UDEV
+      value: "true"
+    startupProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 20
+    livenessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 30
+    readinessProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 30
+    upgradePolicy:
+      autoUpgrade: true
+      maxParallelUpgrades: 1
+      safeLoad: false
+      drain:
+        enable: true
+        force: true
+        podSelector: ""
+        timeoutSeconds: 300
+        deleteEmptyDir: true
+  secondaryNetwork:
+    cniPlugins:
+      image: plugins
+      repository: nvcr.io/nvstaging/mellanox
+      version: network-operator-v26.4.0-beta.5
+      imagePullSecrets: [ngc-image-secret]
+    multus:
+      image: multus-cni
+      repository: nvcr.io/nvstaging/mellanox
+      version: network-operator-v26.4.0-beta.5
+      imagePullSecrets: [ngc-image-secret]
+  nvIpam:
+    image: nvidia-k8s-ipam
+    repository: nvcr.io/nvstaging/mellanox
+    version: network-operator-v26.4.0-beta.5
+    imagePullSecrets: [ngc-image-secret]
+    enableWebhook: false
