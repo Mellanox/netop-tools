@@ -35,6 +35,14 @@ function cmdIPAM_CRDs()
     runCmds ${1} netop_ippool_files
   fi
 }
+function cmdSriovNetworkPoolConfig()
+{
+  case ${USECASE} in
+  sriovnet_rdma|sriovibnet_rdma)
+    runCmds ${1} netop_sriov_pool_files
+    ;;
+  esac
+}
 function cmdSriovNodePolicy()
 {
   if [ "${NETOP_BCM_CONFIG}" == false ];then

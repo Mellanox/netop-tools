@@ -22,9 +22,18 @@ spec:
       - key: ${NETOP_NODESELECTOR}
         operator: Exists
 HEREDOC
+if [ "${RDMASHAREDMODE}" == "false" ];then
+cat << HEREDOC
+  rdmaMode: exclusive
+HEREDOC
+fi
 }
 case ${USECASE} in
 sriovnet_rdma|sriovibnet_rdma)
    sriov_node_pool > ${NETOP_SRIOV_NODE_POOL_FILE}
+   echo "${NETOP_SRIOV_NODE_POOL_FILE}" > netop_sriov_pool_files
+   ;;
+*)
+   rm -f netop_sriov_pool_files
    ;;
 esac
