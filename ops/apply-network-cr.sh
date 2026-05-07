@@ -7,6 +7,7 @@ source ${NETOP_ROOT_DIR}/ops/cmd-network-cr.sh
 case ${NETOP_NETWORK_TYPE} in
 SriovNetwork|SriovIBNetwork)
   cmdSriovNodePolicy apply
+  cmdSriovNetworkPoolConfig apply
   ;;
 esac 
 cmdNetworkCRDs apply
