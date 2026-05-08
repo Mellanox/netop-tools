@@ -480,7 +480,9 @@ HEREDOC1
 globalConfig >> ${FILE}
 docaTelemetryService >> ${FILE}
 node_affinity >> ${FILE}
-ofedDriver >> ${FILE}
+if [ ${#NETOP_NODEPOOLS[@]} -eq 0 ] && [ "${NIC_NODE_POLICY_ENABLE}" != "true" ]; then
+  ofedDriver >> ${FILE}
+fi
 ibKubernetes >> ${FILE}
 if [ ${#NETOP_NODEPOOLS[@]} -eq 0 ] && [ "${NIC_NODE_POLICY_ENABLE}" != "true" ]; then
   case ${USECASE} in
