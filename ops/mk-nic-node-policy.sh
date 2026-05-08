@@ -65,6 +65,10 @@ metadata:
 spec:
   nodeSelector:
     ${NETOP_NODESELECTOR}: "${NETOP_NODESELECTOR_VAL}"
+HEREDOC
+
+if [ "${OFED_ENABLE}" = true ]; then
+cat << HEREDOC >> ${FILE}
   ofedDriver:
     image: doca-driver
     repository: $(get_repository doca-driver required)
@@ -109,6 +113,7 @@ cat << HEREDOC >> ${FILE}
         timeoutSeconds: 300
         deleteEmptyDir: true
 HEREDOC
+fi
 
 case ${USECASE} in
 sriovnet_rdma|sriovibnet_rdma)
