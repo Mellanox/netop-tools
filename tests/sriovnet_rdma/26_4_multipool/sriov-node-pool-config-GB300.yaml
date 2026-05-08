@@ -8,4 +8,6 @@ spec:
   nodeSelector:
     matchExpressions:
       - key: node-role.kubernetes.io/worker
-        operator: Exists
+        operator: In
+        values:
+          - gb300

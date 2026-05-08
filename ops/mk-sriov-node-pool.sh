@@ -21,8 +21,18 @@ spec:
   nodeSelector:
     matchExpressions:
       - key: ${NETOP_NODESELECTOR}
+HEREDOC
+if [ -n "${NETOP_NODESELECTOR_VAL}" ]; then
+cat << HEREDOC
+        operator: In
+        values:
+          - ${NETOP_NODESELECTOR_VAL}
+HEREDOC
+else
+cat << HEREDOC
         operator: Exists
 HEREDOC
+fi
 }
 case ${USECASE} in
 sriovnet_rdma|sriovibnet_rdma)
