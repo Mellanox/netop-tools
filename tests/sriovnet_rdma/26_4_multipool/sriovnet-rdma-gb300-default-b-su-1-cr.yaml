@@ -2,12 +2,12 @@
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetwork
 metadata:
-  name: "sriovnet-rdma-GB300-default-a-su-1"
+  name: "sriovnet-rdma-gb300-default-b-su-1"
   namespace: nvidia-network-operator
 spec:
   vlan: 0
   networkNamespace: "default"
-  resourceName: "sriov_resource_a"
+  resourceName: "sriov_resource_b"
   ipam: |
     {
       "type": "nv-ipam",
@@ -17,6 +17,6 @@ spec:
       },
       "log_file": "/var/log/SriovNetwork_nv-ipam.log",
       "log_level": "debug",
-      "poolName": "sriovnet-pool-a-su-1-west",
+      "poolName": "sriovnet-pool-b-su-1",
       "poolType": "IPPool"
     }

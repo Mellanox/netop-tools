@@ -2,7 +2,7 @@
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetwork
 metadata:
-  name: "sriovnet-rdma-H200-default-b-su-1"
+  name: "sriovnet-rdma-h200-default-b-su-1"
   namespace: nvidia-network-operator
 spec:
   vlan: 0
@@ -17,6 +17,6 @@ spec:
       },
       "log_file": "/var/log/SriovNetwork_nv-ipam.log",
       "log_level": "debug",
-      "poolName": "sriovnet-pool-b-su-1",
+      "poolName": "sriovnet-pool-b-su-1-east",
       "poolType": "IPPool"
     }
