@@ -1,0 +1,24 @@
+---
+nfd:
+  enabled: false
+  deployNodeFeatureRules: false
+maintenanceOperator:
+  enabled: false
+nvIpam:
+  deploy: true
+sriovNetworkOperator:
+  enabled: true
+sriov-network-operator:
+  sriovOperatorConfig:
+    configDaemonNodeSelector:
+      node-role.kubernetes.io/worker: ""
+    featureGates:
+      parallelNicConfig: true
+      mellanoxFirmwareReset: false
+      resourceInjectorMatchCondition: false
+      metricsExporter: false
+      manageSoftwareBridges: false
+  imagePullSecrets: [ngc-image-secret]   # <- specify your created pull secrets for ngc private repo
+
+# NicClusterPolicy CR values:
+imagePullSecrets: [ngc-image-secret]   # <- specify your created pull secrets for ngc private repo

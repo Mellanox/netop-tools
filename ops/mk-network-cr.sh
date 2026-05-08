@@ -6,6 +6,9 @@
 # echo 0 > /sys/devices/pci0000:20/0000:20:01.5/0000:23:00.0/sriov_numvfs
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
+# IPPool suffix: derived from fabric group label so pools on the same fabric share IPPools.
+# Empty when no fabric is assigned (all pools share a single unsuffixed set).
+POOL_SUFFIX="${NETOP_ACTIVE_FABRIC:+-${NETOP_ACTIVE_FABRIC}}"
 function init_file()
 {
   if [ "${NETOP_TAG_VERSION}" == true ];then
@@ -30,7 +33,6 @@ function IPPoolCRD()
          rm -f ${SUBNET_FILE}
          exit 1
       fi
-      POOL_SUFFIX="${NETOP_ACTIVE_POOL:+-${NETOP_ACTIVE_POOL}}"
       for NIDXDEF in ${NETOP_NETLIST[@]};do
         NIDX=$(echo ${NIDXDEF}|cut -d',' -f1)
         LINE=$(sed -n ${LINE_NUM}p ${SUBNET_FILE})
@@ -104,7 +106,7 @@ function NetworkCRD()
         NETOP_NETWORK_FILES[${NETWORK_IDX}]="${FILE}"
         let NETWORK_IDX=NETWORK_IDX+1
         init_file ${FILE} 
-        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}
+        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}${POOL_SUFFIX}
         case ${NETOP_NETWORK_TYPE} in
         HostDeviceNetwork)
           ${NETOP_ROOT_DIR}/ops/mk-hostdev-sriov-ipam-cr.sh ${NETWORK_NAME} ${IPPOOL_NAME} ${NIDX} ${NETOP_APP_NAMESPACE} >> ${FILE}
@@ -178,9 +180,13 @@ function combinedNetworkCRD()
   fi
 }
 
-IPPoolCRD
+if [ "${NETOP_SKIP_IPPOOL:-false}" != "true" ]; then
+  IPPoolCRD
+fi
 NetworkCRD
 if [ "${NETOP_COMBINED}" == true ];then
-  combinedIPPoolCRD
+  if [ "${NETOP_SKIP_IPPOOL:-false}" != "true" ]; then
+    combinedIPPoolCRD
+  fi
   combinedNetworkCRD
 fi
