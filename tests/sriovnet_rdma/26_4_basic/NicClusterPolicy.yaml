@@ -7,7 +7,7 @@ spec:
   ofedDriver:
     image: doca-driver
     repository: nvcr.io/nvstaging/mellanox
-    version: doca3.4.0-26.04-0.4.2.0-0
+    version: doca3.4.0-26.04-0.6.1.0-0
     forcePrecompiled: false
     imagePullSecrets: [ngc-image-secret]
     terminationGracePeriodSeconds: 300
@@ -41,16 +41,16 @@ spec:
     cniPlugins:
       image: plugins
       repository: nvcr.io/nvstaging/mellanox
-      version: network-operator-v26.4.0-beta.5
+      version: network-operator-v26.4.0-beta.7
       imagePullSecrets: [ngc-image-secret]
     multus:
       image: multus-cni
       repository: nvcr.io/nvstaging/mellanox
-      version: network-operator-v26.4.0-beta.5
+      version: network-operator-v26.4.0-beta.7
       imagePullSecrets: [ngc-image-secret]
   nvIpam:
     image: nvidia-k8s-ipam
     repository: nvcr.io/nvstaging/mellanox
-    version: network-operator-v26.4.0-beta.5
+    version: network-operator-v26.4.0-beta.7
     imagePullSecrets: [ngc-image-secret]
     enableWebhook: false
