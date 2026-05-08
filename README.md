@@ -11,6 +11,7 @@
   - [Step 1: Environment Setup](#step-1-environment-setup)
   - [Step 2: Use Case Selection](#step-2-use-case-selection)
   - [Step 3: Configuration](#step-3-configuration)
+  - [3.6 Multi-pool and fabric groups](#36-multi-pool-and-fabric-groups)
   - [Step 4: K8s Cluster Bootstrap](#step-4-k8s-cluster-bootstrap)
   - [Step 5: Network Operator Installation](#step-5-network-operator-installation)
   - [Step 6: Network Configuration and Deployment](#step-6-network-configuration-and-deployment)
@@ -239,6 +240,88 @@ NETOP_SULIST=( "su-runai" "su-ml" "su-inference" )
 ```
 
 Each SU generates its own IPPool and network CRDs per device. Resource naming pattern: `sriovnet-pool-{device}-{su}`.
+
+#### 3.6 Multi-pool and fabric groups
+
+Clusters with mixed GPU types (e.g., H200 and GB300 nodes) can require different NIC configurations per node group. Multi-pool support (Network Operator 26.4.0+) generates a separate `NicNodePolicy` per node pool, each with its own device list and node selector.
+
+##### Defining node pools
+
+```bash
+# Single pool — backward-compatible default (empty = use NETOP_NETLIST directly)
+NETOP_NODEPOOLS=()
+
+# Multiple pools — list the NETOP_NETLIST variable names for each pool
+NETOP_NODEPOOLS=( "NETOP_NETLIST_H200" "NETOP_NETLIST_GB300" )
+```
+
+Each pool ID is derived from the variable name by stripping the `NETOP_NETLIST` prefix (e.g., `NETOP_NETLIST_H200` → pool ID `H200`).
+
+For each pool, define its device list and node selector:
+
+```bash
+# H200 pool — two NICs per node, select by node label
+NETOP_NETLIST_H200=( a,,,0000:03:00.0 b,,,0000:03:00.1 )
+NETOP_NODESELECTOR_H200="node-role.kubernetes.io/worker"
+NETOP_NODESELECTOR_VAL_H200="h200"
+
+# GB300 pool — different PCI addresses, different node label
+NETOP_NETLIST_GB300=( a,,,0000:82:00.0 b,,,0000:82:00.1 )
+NETOP_NODESELECTOR_GB300="node-role.kubernetes.io/worker"
+NETOP_NODESELECTOR_VAL_GB300="gb300"
+```
+
+Each pool generates:
+
+| Resource | Name pattern | Scope |
+|---|---|---|
+| `NicNodePolicy` | `nic-node-policy-{pool-id}` | Per pool |
+| `SriovNetworkNodePolicy` | `sriovnet-rdma-{pool-id}-node-policy-{idx}-su-1` | Per pool × device |
+| `SriovNetwork` CR | `sriovnet-rdma-{pool-id}-{namespace}-{idx}-su-1` | Per pool × device |
+| `SriovNetworkPoolConfig` | `{pool-id}-node-pool-unavailable-config` | Per pool |
+| `NicClusterPolicy` | `nic-cluster-policy` | Shared (one per cluster) |
+| `values.yaml` | `values.yaml` | Shared |
+
+When `NETOP_NODEPOOLS` is non-empty, device plugin sections (`sriovDevicePlugin`, `rdmaSharedDevicePlugin`) are moved from `NicClusterPolicy` into the per-pool `NicNodePolicy`. This requires `NETOP_VERSION=26.4.*` or later.
+
+##### Fabric groups
+
+Nodes in the same pool share L2 switch fabric and therefore share IPPools. Pools on different fabrics need separate IPPools with distinct CIDRs.
+
+Assign each pool a fabric label via `NETOP_FABRIC_<POOL_ID>`. Pools with the same label share one set of IPPools; pools with no label all share a single unsuffixed set.
+
+**All pools on the same fabric (default — no labels needed):**
+
+```bash
+NETOP_NODEPOOLS=( "NETOP_NETLIST_H200" "NETOP_NETLIST_GB300" )
+# No NETOP_FABRIC_* set → shared unsuffixed IPPools: sriovnet-pool-a-su-1
+```
+
+**Pools on separate fabrics:**
+
+```bash
+NETOP_FABRIC_H200="east"
+NETOP_FABRIC_GB300="west"
+NETOP_NETWORK_RANGE_east="192.168.0.0/16"    # note: underscores in var names
+NETOP_NETWORK_RANGE_west="192.172.0.0/16"    # for pools with hyphens: east-fabric → east_fabric
+```
+
+This generates `sriovnet-pool-a-su-1-east` and `sriovnet-pool-a-su-1-west` as separate IPPool objects. SriovNetwork CRs for each pool reference their fabric's pool name.
+
+**Two pools sharing a fabric, one on its own:**
+
+```bash
+NETOP_FABRIC_H200="gpu-fabric"    # H200 and H100 share east fabric
+NETOP_FABRIC_H100="gpu-fabric"
+NETOP_FABRIC_GB300="west"         # GB300 is isolated
+NETOP_NETWORK_RANGE_gpu_fabric="192.168.0.0/16"
+NETOP_NETWORK_RANGE_west="192.172.0.0/16"
+NETOP_NODEPOOLS=( "NETOP_NETLIST_H200" "NETOP_NETLIST_H100" "NETOP_NETLIST_GB300" )
+```
+
+IPPools for `gpu-fabric` are generated once (H100 iteration reuses H200's pools). H200 and H100 SriovNetwork CRs both reference `sriovnet-pool-a-su-1-gpu-fabric`; GB300 references `sriovnet-pool-a-su-1-west`.
+
+> **Note on variable naming**: Fabric names may contain hyphens (e.g., `gpu-fabric`) for use in K8s object names. When constructing bash variable names for CIDR overrides, substitute hyphens with underscores: `NETOP_NETWORK_RANGE_gpu_fabric` corresponds to fabric label `gpu-fabric`.
 
 ---
 
@@ -1281,6 +1364,18 @@ CI runs `tests/unitest.sh` on ubuntu-22.04 on every push (`.github/workflows/mai
 | `NETOP_BCM_CONFIG` | `false` | Combined multi-device YAML mode |
 | `NETOP_COMBINED` | `false` | Combined YAML mode |
 | `NETOP_TAG_VERSION` | `false` | Tag generated YAML with version |
+
+### Multi-pool and Fabric Groups (26.4.0+)
+
+| Variable | Default | Description |
+|---|---|---|
+| `NETOP_NODEPOOLS` | `()` | List of `NETOP_NETLIST` variable names, one per node pool. Empty = single pool. |
+| `NETOP_NETLIST_<ID>` | — | Device list for pool `<ID>` (same format as `NETOP_NETLIST`) |
+| `NETOP_NODESELECTOR_<ID>` | — | Node label key for pool `<ID>` |
+| `NETOP_NODESELECTOR_VAL_<ID>` | — | Node label value for pool `<ID>` |
+| `NETOP_FABRIC_<ID>` | — | Fabric label for pool `<ID>`. Pools sharing a label share IPPools. |
+| `NETOP_NETWORK_RANGE_<FABRIC>` | — | CIDR override for the given fabric (hyphens → underscores in var name) |
+| `NETOP_NETWORK_GW_<FABRIC>` | — | Gateway override for the given fabric |
 
 ### SR-IOV Node Pool
 
