@@ -1,0 +1,25 @@
+# Platform: NVIDIA RTX PRO 6000 Blackwell Server
+# NIC: BlueField-3 SuperNIC (NIC mode) or ConnectX-8 SuperNIC
+# OS: Ubuntu 22.04 / 24.04 (x86), Red Hat OpenShift
+# Added in Network Operator 26.4.0
+#
+NETOP_VERSION="26.4.0"
+K8SVER="1.34"
+USECASE="sriovnet_rdma"
+DEVICE_TYPES=( "connectx-8" )
+NUM_VFS=8
+NETOP_NAMESPACE="nvidia-network-operator"
+NFD_ENABLE=true
+NIC_CONFIG_ENABLE=false
+FW_UPGRADE_ENABLE=false
+MAINTENANCE_OPERATOR_ENABLE=true
+OFED_ENABLE=true
+NETOP_MTU=9000
+NETOP_NETWORK_RANGE="192.170.0.0/16"
+IPAM_TYPE="nv-ipam"
+NVIPAM_POOL_TYPE="IPPool"
+# Set NETOP_NETLIST to the PCI BDFs of your ConnectX-8 or BF3-SuperNIC ports
+# Example for 2-port config:
+# NETOP_NETLIST=( a,,,0000:41:00.0 b,,,0000:41:00.1 )
+NETOP_NETLIST=( a,,,0000:41:00.0 b,,,0000:41:00.1 )
+CREATE_CONFIG_ONLY=0
