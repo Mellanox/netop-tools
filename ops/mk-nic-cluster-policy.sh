@@ -482,20 +482,22 @@ docaTelemetryService >> ${FILE}
 node_affinity >> ${FILE}
 ofedDriver >> ${FILE}
 ibKubernetes >> ${FILE}
-case ${USECASE} in
-ipoib_rdma_shared_device)
-  #LINK_TYPES='"IB"' breaks plugin
-  LINK_TYPES=""
-  rdmaSharedDevicePlugin >> ${FILE}
-  ;;
-macvlan_rdma_shared_device)
-  LINK_TYPES='"ether"'
-  rdmaSharedDevicePlugin >> ${FILE}
-  ;;
-hostdev_rdma_sriov)
-  sriovDevicePlugin >> ${FILE}
-  ;;
-esac
+if [ ${#NETOP_NODEPOOLS[@]} -eq 0 ] && [ "${NIC_NODE_POLICY_ENABLE}" != "true" ]; then
+  case ${USECASE} in
+  ipoib_rdma_shared_device)
+    #LINK_TYPES='"IB"' breaks plugin
+    LINK_TYPES=""
+    rdmaSharedDevicePlugin >> ${FILE}
+    ;;
+  macvlan_rdma_shared_device)
+    LINK_TYPES='"ether"'
+    rdmaSharedDevicePlugin >> ${FILE}
+    ;;
+  hostdev_rdma_sriov)
+    sriovDevicePlugin >> ${FILE}
+    ;;
+  esac
+fi
 secondaryNetwork >> ${FILE}
 nvIpam >> ${FILE}
 nodeFeatureDiscovery >> ${FILE}

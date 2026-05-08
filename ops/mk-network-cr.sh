@@ -30,13 +30,14 @@ function IPPoolCRD()
          rm -f ${SUBNET_FILE}
          exit 1
       fi
+      POOL_SUFFIX="${NETOP_ACTIVE_POOL:+-${NETOP_ACTIVE_POOL}}"
       for NIDXDEF in ${NETOP_NETLIST[@]};do
         NIDX=$(echo ${NIDXDEF}|cut -d',' -f1)
         LINE=$(sed -n ${LINE_NUM}p ${SUBNET_FILE})
         RANGE=$(echo ${LINE}|cut -d' ' -f1)
         GW=$(echo ${LINE}|cut -d' ' -f3)
-        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}
-        FILE="ippool-${NIDX}-${NETOP_SU}.yaml"
+        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}${POOL_SUFFIX}
+        FILE="ippool-${NIDX}-${NETOP_SU}${POOL_SUFFIX}.yaml"
         NETOP_IPPOOL_FILES[${IPPOOL_IDX}]="${FILE}"
         let IPPOOL_IDX=IPPOOL_IDX+1
         init_file ${FILE}
