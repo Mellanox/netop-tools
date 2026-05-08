@@ -54,12 +54,14 @@ function init_file()
 FILE="${NIC_NODE_POLICY_FILE}"
 init_file "${FILE}"
 
+NIC_NODE_POLICY_NAME="nic-node-policy${NETOP_ACTIVE_POOL:+-${NETOP_ACTIVE_POOL,,}}"
+
 cat << HEREDOC >> ${FILE}
 ---
 apiVersion: mellanox.com/v1alpha1
 kind: NicNodePolicy
 metadata:
-  name: nic-node-policy
+  name: ${NIC_NODE_POLICY_NAME}
 spec:
   nodeSelector:
     ${NETOP_NODESELECTOR}: "${NETOP_NODESELECTOR_VAL}"
