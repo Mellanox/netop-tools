@@ -132,7 +132,7 @@ esac
 if [ "${NFD_ENABLE}" = "true" ]; then
 cat << VALUES_NFD_PULL
   imagePullSecrets:
-    - name: ${NGC_SECRET}
+    - name: ${NGC_SECRET:-ngc-image-secret}
 VALUES_NFD_PULL
 fi
 
