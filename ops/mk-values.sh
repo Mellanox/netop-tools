@@ -129,6 +129,12 @@ VALUES_YAML1
 *)
   ;;
 esac
+if [ "${NFD_ENABLE}" = "true" ]; then
+cat << VALUES_NFD_PULL
+  imagePullSecrets:
+    - name: ${NGC_SECRET}
+VALUES_NFD_PULL
+fi
 
 case "${NETOP_VERSION}" in
   25.1.0)
