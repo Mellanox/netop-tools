@@ -1,7 +1,7 @@
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkPoolConfig
 metadata:
-  name: H200-node-pool-unavailable-config
+  name: h200-node-pool-unavailable-config
   namespace: nvidia-network-operator
 spec:
   maxUnavailable: 1

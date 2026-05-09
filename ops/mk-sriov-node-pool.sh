@@ -9,7 +9,7 @@ if [[ "${NETOP_SRIOV_NODE_POOL}" == *% ]];then
 else
   QUOTE=""
 fi
-POOL_CONFIG_NAME="${NETOP_ACTIVE_POOL:+${NETOP_ACTIVE_POOL}-}node-pool-unavailable-config"
+POOL_CONFIG_NAME="${NETOP_ACTIVE_POOL:+${NETOP_ACTIVE_POOL,,}-}node-pool-unavailable-config"
 cat << HEREDOC
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkPoolConfig
