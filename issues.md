@@ -6,6 +6,13 @@ Track open bugs and pending work. Add entries as issues are discovered; remove o
 
 ## Bugs
 
+### Network Operator chart does not propagate `imagePullSecrets` to NFD subchart
+**File**: upstream `network-operator` Helm chart (subchart wiring)
+**Symptom**: NFD pods (`network-operator-node-feature-discovery-*`) fail with `401 Unauthorized` when the NFD image is pulled from a private registry (e.g. `nvcr.io/nvstaging/mellanox`).
+**Root cause**: Documentation states the top-level `imagePullSecrets` value covers all components, but Helm only auto-propagates values under `global:` to subcharts. The parent chart sets `imagePullSecrets:` at the top level, so the NFD subchart's own `imagePullSecrets: []` is never populated.
+**Workaround in netop-tools**: `mk-values.sh` emits `nfd.imagePullSecrets` explicitly when `NFD_ENABLE=true` (see commit `fe0cd79`).
+**Upstream fix**: chart should either move the secret list under `global.imagePullSecrets`, or document that `nfd.imagePullSecrets` must be set separately when overriding the NFD image repository.
+
 ### subnet: `--gateway-pattern` rejects bare host offset
 **File**: `python_tools/subnet_generator.py:102-105`
 **Symptom**: `netop-tools subnet 10.0.0.0/24 2 --gateway-pattern 254` fails with `ERROR - Invalid gateway pattern: 254`
