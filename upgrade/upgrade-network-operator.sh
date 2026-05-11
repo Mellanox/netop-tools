@@ -17,14 +17,11 @@ popd
 pushd .
 USECASE_DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
 cd "${USECASE_DIR}"
-${NETOP_ROOT_DIR}/ops/mk-values.sh
-${NETOP_ROOT_DIR}/ops/mk-nic-cluster-policy.sh
-${NETOP_ROOT_DIR}/ops/mk-network-cr.sh
+${NETOP_ROOT_DIR}/ops/mk-config.sh
 ${K8CL} apply -f ${NETOP_NICCLUSTER_FILE}
 ${NETOP_ROOT_DIR}/install/applycrds.sh
 ${NETOP_ROOT_DIR}/ops/apply-network-cr.sh
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
-  ${NETOP_ROOT_DIR}/ops/mk-nic-config.sh
   for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
     ${K8CL} apply -f ${USECASE_DIR}/nic-config-crd-${DEVICE_TYPE}.yaml
   done

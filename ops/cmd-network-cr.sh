@@ -35,6 +35,13 @@ function cmdIPAM_CRDs()
     runCmds ${1} netop_ippool_files
   fi
 }
+function cmdNicNodePolicy()
+{
+  DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
+  if [ -f "${DIR}/netop_nicnode_files" ];then
+    runCmds ${1} netop_nicnode_files
+  fi
+}
 function cmdSriovNodePolicy()
 {
   if [ "${NETOP_BCM_CONFIG}" == false ];then

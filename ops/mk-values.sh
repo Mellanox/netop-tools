@@ -130,11 +130,15 @@ VALUES_YAML1
   ;;
 esac
 if [ "${NFD_ENABLE}" = "true" ]; then
+  case "${NETOP_VERSION}" in
+  26.4.*)
 cat << VALUES_NFD_PULL
 node-feature-discovery:
   imagePullSecrets:
     - name: ${NGC_SECRET:-ngc-image-secret}
 VALUES_NFD_PULL
+    ;;
+  esac
 fi
 
 case "${NETOP_VERSION}" in

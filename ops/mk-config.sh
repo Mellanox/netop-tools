@@ -12,6 +12,7 @@ else
     rm -f "nic-config-crd-${DEVICE_TYPE}.yaml"
   done
 fi
+NETOP_NICNODE_FILES=()
 if [ ${#NETOP_NODEPOOLS[@]} -gt 0 ]; then
   declare -A _FABRICS_DONE
   for NETLIST_VAR in "${NETOP_NODEPOOLS[@]}"; do
@@ -23,6 +24,7 @@ if [ ${#NETOP_NODEPOOLS[@]} -gt 0 ]; then
     case ${NETOP_VERSION} in
       26.4.*)
         ${NETOP_ROOT_DIR}/ops/mk-nic-node-policy.sh
+        NETOP_NICNODE_FILES+=("${NIC_NODE_POLICY_FILE}")
         ;;
     esac
     # Determine this pool's fabric label (same variable name as in global_ops.cfg lookup).
@@ -47,6 +49,7 @@ else
     26.4.*)
       if [ "${NIC_NODE_POLICY_ENABLE}" = "true" ];then
         ${NETOP_ROOT_DIR}/ops/mk-nic-node-policy.sh
+        NETOP_NICNODE_FILES+=("${NIC_NODE_POLICY_FILE}")
       else
         rm -f "${NIC_NODE_POLICY_FILE}"
       fi
@@ -55,4 +58,9 @@ else
       rm -f "${NIC_NODE_POLICY_FILE}"
       ;;
   esac
+fi
+if [ ${#NETOP_NICNODE_FILES[@]} -gt 0 ]; then
+  echo "${NETOP_NICNODE_FILES[@]}" > netop_nicnode_files
+else
+  rm -f netop_nicnode_files
 fi
