@@ -131,6 +131,7 @@ VALUES_YAML1
 esac
 if [ "${NFD_ENABLE}" = "true" ]; then
 cat << VALUES_NFD_PULL
+node-feature-discovery:
   imagePullSecrets:
     - name: ${NGC_SECRET:-ngc-image-secret}
 VALUES_NFD_PULL
