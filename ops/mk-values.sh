@@ -129,7 +129,7 @@ VALUES_YAML1
 *)
   ;;
 esac
-if [ "${NFD_ENABLE}" = "true" ]; then
+if [ "${NFD_ENABLE}" = "true" ] && [ "${PROD_VER}" = "0" ]; then
   case "${NETOP_VERSION}" in
   26.4.*)
 cat << VALUES_NFD_PULL
