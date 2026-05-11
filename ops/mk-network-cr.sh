@@ -166,6 +166,21 @@ function combineNetwork()
 }
 function combinedNetworkCRD()
 {
+# Multi-pool BCM mode: append this pool's SriovNetworkNodePolicy + SriovNetwork
+# CRs to the per-pool nic-node-policy file so the pool is self-contained.
+# Skip the cluster-wide combined network file.
+  if [ -n "${NETOP_ACTIVE_POOL:-}" ] && [ -f "${NIC_NODE_POLICY_FILE:-}" ];then
+    for LIST in netop_nodepolicy_files netop_network_files;do
+      if [ -f ${LIST} ];then
+        for FILE in $(cat ${LIST});do
+          cat ${FILE} >> ${NIC_NODE_POLICY_FILE}
+          rm -f ${FILE}
+        done
+        rm -f ${LIST}
+      fi
+    done
+    return
+  fi
    combineNodePolicy
    combineNetwork
 #
