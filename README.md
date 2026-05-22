@@ -271,18 +271,22 @@ NETOP_NODESELECTOR_GB300="node-role.kubernetes.io/worker"
 NETOP_NODESELECTOR_VAL_GB300="gb300"
 ```
 
-Each pool generates:
+Each pool generates (pool ID is lowercased in K8s object names to satisfy RFC 1123):
 
 | Resource | Name pattern | Scope |
 |---|---|---|
-| `NicNodePolicy` | `nic-node-policy-{pool-id}` | Per pool |
-| `SriovNetworkNodePolicy` | `sriovnet-rdma-{pool-id}-node-policy-{idx}-su-1` | Per pool × device |
-| `SriovNetwork` CR | `sriovnet-rdma-{pool-id}-{namespace}-{idx}-su-1` | Per pool × device |
-| `SriovNetworkPoolConfig` | `{pool-id}-node-pool-unavailable-config` | Per pool |
+| `NicNodePolicy` | `nic-node-policy-<pool-id>` | Per pool |
+| `SriovNetworkNodePolicy` | `sriovnet-rdma-<pool-id>-node-policy-<idx>-su-1` | Per pool × device |
+| `SriovNetwork` CR | `sriovnet-rdma-<pool-id>-<namespace>-<idx>-su-1` | Per pool × device |
+| `SriovNetworkPoolConfig` | `<pool-id>-node-pool-unavailable-config` | Per pool |
 | `NicClusterPolicy` | `nic-cluster-policy` | Shared (one per cluster) |
 | `values.yaml` | `values.yaml` | Shared |
 
-When `NETOP_NODEPOOLS` is non-empty, device plugin sections (`sriovDevicePlugin`, `rdmaSharedDevicePlugin`) are moved from `NicClusterPolicy` into the per-pool `NicNodePolicy`. This requires `NETOP_VERSION=26.4.*` or later.
+When `NETOP_NODEPOOLS` is non-empty, the `ofedDriver` section is moved from `NicClusterPolicy` into the per-pool `NicNodePolicy` so each node group can drive its own driver (e.g., for mixed-arch arm64/amd64 clusters). The device plugin (`sriovDevicePlugin` or `rdmaSharedDevicePlugin`) follows the same pattern. Requires `NETOP_VERSION=26.4.*` or later.
+
+If `OFED_ENABLE=false`, the `ofedDriver` block is suppressed in both `NicClusterPolicy` and `NicNodePolicy` — driver is assumed to be already installed on the host.
+
+**Combined BCM mode (`NETOP_BCM_CONFIG=true` with multi-pool):** Per-pool `NicNodePolicy`, `SriovNetworkNodePolicy`, and `SriovNetwork` CRs are concatenated into a single self-contained `nic-node-policy-<POOL>.yaml` per pool. `kubectl apply -f nic-node-policy-<POOL>.yaml` deploys everything for that node group. IPPool generation is still combined cluster-wide into `combined-ippools.yaml` (with fabric-aware deduplication).
 
 ##### Fabric groups
 
@@ -430,13 +434,16 @@ ins-network-operator.sh
   ├─ ops/mk-config.sh              → Generate all YAML config:
   │   ├─ ops/mk-values.sh          → Helm values.yaml
   │   ├─ ops/mk-nic-cluster-policy.sh → NicClusterPolicy CRD
+  │   ├─ ops/mk-nic-node-policy.sh → NicNodePolicy CRD per pool (26.4.0+)
   │   ├─ ops/mk-network-cr.sh      → Network + IPAM CRDs
   │   ├─ ops/mk-sriov-node-pool.sh → SriovNetworkPoolConfig
   │   └─ ops/mk-nic-config.sh      → NIC config (if NIC_CONFIG_ENABLE=true)
   ├─ helm install network-operator → Deploy operator via Helm
   ├─ install/applycrds.sh          → Apply base CRDs
-  └─ ops/apply-network-cr.sh       → Apply network resources
+  └─ ops/apply-network-cr.sh       → Apply network resources (incl. NicNodePolicy)
 ```
+
+`mksecret.sh` creates the `ngc-image-secret` docker-registry secret from `NGC_API_KEY` in the operator namespace. Pre-release pulls from `nvcr.io/nvstaging/mellanox` (when `PROD_VER=0`) additionally propagate this secret to the NFD subchart via `node-feature-discovery.imagePullSecrets` in `values.yaml`.
 
 #### 5.2 Config-only mode (dry run)
 
@@ -482,9 +489,12 @@ ${NETOP_ROOT_DIR}/ops/mk-config.sh
 |---|---|---|
 | `ops/mk-values.sh` | `values.yaml` | Helm values (feature flags, image versions, operator config) |
 | `ops/mk-nic-cluster-policy.sh` | `NicClusterPolicy.yaml` | NicClusterPolicy CRD (OFED, NFD, device plugins) |
+| `ops/mk-nic-node-policy.sh` | `nic-node-policy[-<POOL>].yaml` | NicNodePolicy CRD per pool (26.4.0+, when `NETOP_NODEPOOLS` set or `NIC_NODE_POLICY_ENABLE=true`) |
 | `ops/mk-network-cr.sh` | `network.yaml` + `ippool-*.yaml` | Network + IPAM CRDs per device |
-| `ops/mk-sriov-node-pool.sh` | `sriov-node-pool-config.yaml` | SR-IOV VF allocation policy |
+| `ops/mk-sriov-node-pool.sh` | `sriov-node-pool-config[-<POOL>].yaml` | SR-IOV VF allocation policy |
 | `ops/mk-nic-config.sh` | `nic-config-crd-{type}.yaml` | NIC firmware config (if enabled) |
+
+In multi-pool mode (`NETOP_NODEPOOLS` set), `mk-config.sh` iterates over each pool and writes generated NicNodePolicy filenames to `netop_nicnode_files` (consumed by `apply-network-cr.sh`).
 
 #### 6.2 Apply network resources
 
@@ -493,9 +503,10 @@ ${NETOP_ROOT_DIR}/ops/apply-network-cr.sh
 ```
 
 This applies in order:
-1. SriovNetworkNodePolicy CRDs (SR-IOV use cases)
-2. Network CRDs (SriovNetwork, SriovIBNetwork, HostDeviceNetwork, etc.)
-3. IPAM CRDs (IPPool or CIDRPool)
+1. NicNodePolicy CRDs (26.4.0+, per pool — driven by `netop_nicnode_files`)
+2. SriovNetworkNodePolicy CRDs (SR-IOV use cases)
+3. Network CRDs (SriovNetwork, SriovIBNetwork, HostDeviceNetwork, etc.)
+4. IPAM CRDs (IPPool or CIDRPool)
 
 #### 6.3 Delete network resources
 
@@ -902,15 +913,15 @@ export NETOP_VERSION="26.1.0"
 The upgrade workflow:
 1. Cordons all worker nodes
 2. Scales Network Operator deployment to 0 replicas
-3. Regenerates config for the new version (`mk-values.sh`, `mk-nic-cluster-policy.sh`, `mk-network-cr.sh`)
+3. Regenerates all config for the new version via `mk-config.sh` (handles multi-pool, NicNodePolicy, SriovNetworkPoolConfig, etc.)
 4. Applies updated NicClusterPolicy and CRDs
-5. Applies updated network resources
+5. Applies updated network resources (including per-pool NicNodePolicy)
 6. Runs `helm upgrade` with new version
 7. Uncordons worker nodes
 
 #### 13.2 Supported versions
 
-Available Helm chart versions: `24.7.0`, `24.10.0`, `24.10.1`, `25.1.0`, `25.4.0`, `25.7.0`, `25.10.0`, `26.1.0` (default)
+Available Helm chart versions: `24.7.0`, `24.10.0`, `24.10.1`, `25.1.0`, `25.4.0`, `25.7.0`, `25.10.0`, `26.1.0` (default), `26.4.0-beta.*`
 
 ---
 
@@ -1376,6 +1387,8 @@ CI runs `tests/unitest.sh` on ubuntu-22.04 on every push (`.github/workflows/mai
 | `NETOP_FABRIC_<ID>` | — | Fabric label for pool `<ID>`. Pools sharing a label share IPPools. |
 | `NETOP_NETWORK_RANGE_<FABRIC>` | — | CIDR override for the given fabric (hyphens → underscores in var name) |
 | `NETOP_NETWORK_GW_<FABRIC>` | — | Gateway override for the given fabric |
+| `NIC_NODE_POLICY_ENABLE` | `false` | Generate a single-pool `NicNodePolicy` (when `NETOP_NODEPOOLS` is empty). Suppresses `ofedDriver` in `NicClusterPolicy`. |
+| `OFED_ENABLE` | `true` | Deploy DOCA-OFED driver. `false` = use host-installed OFED, suppress `ofedDriver` everywhere. |
 
 ### SR-IOV Node Pool
 
