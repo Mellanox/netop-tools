@@ -42,6 +42,13 @@ function cmdNicNodePolicy()
     runCmds ${1} netop_nicnode_files
   fi
 }
+function cmdDRA()
+{
+  DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
+  if [ -f "${DIR}/netop_dra_files" ];then
+    runCmds ${1} netop_dra_files
+  fi
+}
 function cmdSriovNodePolicy()
 {
   if [ "${NETOP_BCM_CONFIG}" == false ];then

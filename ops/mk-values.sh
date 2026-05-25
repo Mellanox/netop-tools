@@ -29,7 +29,7 @@ function get_release_tag()
 function sriovNetworkOperator()
 {
 case ${USECASE} in
-sriovnet_rdma)
+sriovnet_rdma|sriovnet_dra)
   SRIOVNET="true"
   IPOIBVAL="false"
   ;;

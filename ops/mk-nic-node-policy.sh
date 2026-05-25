@@ -3,8 +3,9 @@
 # Generate NicNodePolicy CR — per-node-group OFED driver and device plugin config.
 # NicNodePolicy is a sibling to NicClusterPolicy that targets a specific node subset
 # via nodeSelector. Supported from 26.4.0+.
-# For sriovnet_rdma/sriovibnet_rdma use cases, only ofedDriver is emitted here;
-# the SR-IOV device plugin is managed by the SR-IOV network operator.
+# For sriovnet_rdma/sriovibnet_rdma/sriovnet_dra use cases, only ofedDriver is emitted here;
+# the SR-IOV device plugin is managed by the SR-IOV network operator
+# (or by the DRA driver for sriovnet_dra — neither needs a per-pool plugin block).
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
@@ -116,9 +117,10 @@ HEREDOC
 fi
 
 case ${USECASE} in
-sriovnet_rdma|sriovibnet_rdma)
-  # SR-IOV device plugin is managed by the SR-IOV network operator; NicNodePolicy
-  # only needs to configure ofedDriver for these use cases.
+sriovnet_rdma|sriovibnet_rdma|sriovnet_dra)
+  # SR-IOV device plugin (or DRA driver for sriovnet_dra) is managed by the
+  # SR-IOV network operator; NicNodePolicy only needs to configure ofedDriver
+  # for these use cases.
   ;;
 ipoib_rdma_shared_device)
   LINK_TYPES=""

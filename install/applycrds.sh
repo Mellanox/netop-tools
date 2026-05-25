@@ -6,7 +6,7 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 DIRCRD="${NETOP_ROOT_DIR}/release/${NETOP_VERSION}/netop-chart/network-operator"
 ${docmd} ${K8CL} apply -f ${DIRCRD}/crds
 case "${USECASE}" in
-sriovnet_rdma|sriovibnet_rdma)
+sriovnet_rdma|sriovibnet_rdma|sriovnet_dra)
   case ${NETOP_VERSION} in
   25.10.*|26.1.*|26.4.*)
     ${docmd} ${K8CL} apply -f ${DIRCRD}/charts/sriov-network-operator/crds

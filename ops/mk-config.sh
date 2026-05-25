@@ -64,3 +64,12 @@ if [ ${#NETOP_NICNODE_FILES[@]} -gt 0 ]; then
 else
   rm -f netop_nicnode_files
 fi
+if [ "${DRA_ENABLE}" = "true" ]; then
+  case ${NETOP_VERSION} in
+    26.4.*)
+      ${NETOP_ROOT_DIR}/ops/mk-dra-cr.sh
+      ;;
+  esac
+else
+  rm -f netop_dra_files
+fi

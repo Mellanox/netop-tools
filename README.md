@@ -115,6 +115,7 @@ This sources `global_ops_user.cfg` first, then `usecase/${USECASE}/netop.cfg`, a
 | Use Case | Description | VFs | Device ID Format |
 |---|---|---|---|
 | `sriovnet_rdma` | SR-IOV Ethernet with RDMA (default) | 8 | PCI BDF: `0000:08:00.0` |
+| `sriovnet_dra` | SR-IOV Ethernet via Dynamic Resource Allocation (26.4.0+; `DRA_ENABLE=true` by default; suppresses `sriovDevicePlugin` and emits `DeviceClass` + `ResourceClaimTemplate` instead) | 8 | PCI BDF: `0000:08:00.0` |
 | `sriovibnet_rdma` | SR-IOV InfiniBand with RDMA | 8 | IB interface: `ibs0f1` |
 | `hostdev_rdma_sriov` | HostDevice passthrough with SR-IOV | 8 | Multi-PCI: `0000:07:00.0,0000:08:00.0` |
 | `ipoib_rdma_shared_device` | IPoIB with shared RDMA device | 0 | IB interface: `ibs0f0` |
@@ -493,6 +494,7 @@ ${NETOP_ROOT_DIR}/ops/mk-config.sh
 | `ops/mk-network-cr.sh` | `network.yaml` + `ippool-*.yaml` | Network + IPAM CRDs per device |
 | `ops/mk-sriov-node-pool.sh` | `sriov-node-pool-config[-<POOL>].yaml` | SR-IOV VF allocation policy |
 | `ops/mk-nic-config.sh` | `nic-config-crd-{type}.yaml` | NIC firmware config (if enabled) |
+| `ops/mk-dra-cr.sh` | `dra-<idx>-<su>.yaml` | `DeviceClass` + `ResourceClaimTemplate` per device (26.4.0+, when `DRA_ENABLE=true`) |
 
 In multi-pool mode (`NETOP_NODEPOOLS` set), `mk-config.sh` iterates over each pool and writes generated NicNodePolicy filenames to `netop_nicnode_files` (consumed by `apply-network-cr.sh`).
 
@@ -507,6 +509,7 @@ This applies in order:
 2. SriovNetworkNodePolicy CRDs (SR-IOV use cases)
 3. Network CRDs (SriovNetwork, SriovIBNetwork, HostDeviceNetwork, etc.)
 4. IPAM CRDs (IPPool or CIDRPool)
+5. DRA CRs — `DeviceClass` + `ResourceClaimTemplate` (when `DRA_ENABLE=true`, driven by `netop_dra_files`)
 
 #### 6.3 Delete network resources
 
@@ -1389,6 +1392,11 @@ CI runs `tests/unitest.sh` on ubuntu-22.04 on every push (`.github/workflows/mai
 | `NETOP_NETWORK_GW_<FABRIC>` | — | Gateway override for the given fabric |
 | `NIC_NODE_POLICY_ENABLE` | `false` | Generate a single-pool `NicNodePolicy` (when `NETOP_NODEPOOLS` is empty). Suppresses `ofedDriver` in `NicClusterPolicy`. |
 | `OFED_ENABLE` | `true` | Deploy DOCA-OFED driver. `false` = use host-installed OFED, suppress `ofedDriver` everywhere. |
+| `DRA_ENABLE` | `false` | Enable the SR-IOV DRA driver (26.4.0+). Mutually exclusive with the SR-IOV device plugin. `sriovnet_dra` use case defaults this to `true`. |
+| `DRA_CDI_ROOT` | `/var/run/cdi` | CDI spec directory for the DRA driver. |
+| `DRA_IFACE_PREFIX` | `net` | Default interface prefix the DRA driver assigns inside pods. |
+| `DRA_API_VERSION` | `resource.k8s.io/v1beta1` | DRA API group/version for generated DeviceClass / ResourceClaimTemplate CRs (K8s 1.32+ default; use `v1alpha3` for older clusters). |
+| `DRA_DRIVER_NAME` | `TODO_DRIVER_NAME` | Driver name used in the DeviceClass CEL selector. Must match the value the `dra-driver-sriov` DaemonSet publishes in `ResourceSlice.spec.driver`. |
 
 ### SR-IOV Node Pool
 

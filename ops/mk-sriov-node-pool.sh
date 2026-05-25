@@ -35,7 +35,7 @@ HEREDOC
 fi
 }
 case ${USECASE} in
-sriovnet_rdma|sriovibnet_rdma)
+sriovnet_rdma|sriovibnet_rdma|sriovnet_dra)
    sriov_node_pool > ${NETOP_SRIOV_NODE_POOL_FILE}
    ;;
 esac

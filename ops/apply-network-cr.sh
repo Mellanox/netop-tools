@@ -10,6 +10,7 @@ SriovNetwork|SriovIBNetwork)
   cmdSriovNodePolicy apply
   ;;
 esac
+cmdDRA apply
 cmdNetworkCRDs apply
 if [ "${CREATE_CONFIG_ONLY}" != "1" ];then
   sleep 5

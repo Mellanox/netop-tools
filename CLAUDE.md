@@ -119,6 +119,7 @@ ins-network-operator.sh
 | Use Case | Description | VFs |
 |---|---|---|
 | `sriovnet_rdma` | SR-IOV with RDMA (default) | 8 |
+| `sriovnet_dra` | SR-IOV via Dynamic Resource Allocation (DRA driver, 26.4.0+) | 8 |
 | `sriovibnet_rdma` | SR-IOV InfiniBand with RDMA | 8 |
 | `hostdev_rdma_sriov` | HostDevice with SR-IOV | 8 |
 | `ipoib_rdma_shared_device` | IPoIB with shared device | 0 |
