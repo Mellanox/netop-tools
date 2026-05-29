@@ -158,6 +158,17 @@ ${param}:
 nvIpam:
   deploy: ${NVIPAMVAL}
 VALUES_YAML2
+if [ "${MAINTENANCE_OPERATOR_ENABLE}" = "true" ] && [ "${PROD_VER}" = "0" ]; then
+  case "${NETOP_VERSION}" in
+  26.4.*)
+cat << VALUES_MAINT_PULL
+maintenance-operator-chart:
+  imagePullSecrets:
+    - name: ${NGC_SECRET:-ngc-image-secret}
+VALUES_MAINT_PULL
+    ;;
+  esac
+fi
 }
 function deployCR()
 {

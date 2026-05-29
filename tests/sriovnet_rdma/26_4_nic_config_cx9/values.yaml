@@ -6,6 +6,9 @@ maintenanceOperator:
   enabled: true
 nvIpam:
   deploy: true
+maintenance-operator-chart:
+  imagePullSecrets:
+    - name: ngc-image-secret
 sriovNetworkOperator:
   enabled: true
 sriov-network-operator:
