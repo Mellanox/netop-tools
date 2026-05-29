@@ -40,6 +40,20 @@ CI (`.github/workflows/main.yml`) runs `tests/unitest.sh` on ubuntu-22.04 on eve
 
 **Adding tests**: Create a directory under `tests/` with a `config` file (sourced as `GLOBAL_OPS_USER`), optional `netop.cfg` overrides, and `*.yaml` baseline files. The test harness discovers test directories by finding `config` files via `find`.
 
+## Internal vs public
+
+This repo is published; only intentionally-public files belong in git. Everything else — cluster/customer logs, debug captures, credentials, internal analyses — lives under `internal/` (gitignored). Conventional layout:
+
+```
+internal/
+  analyses/    # markdown debug write-ups (e.g. *.log.md)
+  logs/        # captured pod/container logs
+  keys/        # NGC tokens, SSH keys, GPG keys
+  misc/        # one-off scripts, scratch files
+```
+
+`.gitignore` also blocks broad patterns (`*.log`, `*key`, `*.pem`, `GPG-KEY-*`, generated runtime tracker files in the repo root, generated YAML in `usecase/*/`, etc.) so `git add .` can't accidentally pick up an internal file. Always prefer `git add <explicit-path>` when committing.
+
 ## Architecture
 
 ### Configuration Cascade
