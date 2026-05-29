@@ -8,6 +8,7 @@ cmdNicNodePolicy apply
 case ${NETOP_NETWORK_TYPE} in
 SriovNetwork|SriovIBNetwork)
   cmdSriovNodePolicy apply
+  cmdSriovNetworkPoolConfig apply
   ;;
 esac
 cmdDRA apply
