@@ -1,0 +1,26 @@
+#!/bin/bash
+# Pre-commit hook for netop-tools.
+#
+# Refuses commits that:
+#   1. Contain content that looks like a secret (PEM private key, NGC API key,
+#      NGC docker registry token).
+#   2. Stage any file under internal/ (that directory is for non-public material).
+#
+# Install with: ./tools/install-hooks.sh
+# Bypass once with: git commit --no-verify   (use sparingly)
+
+set -e
+
+if git diff --cached -U0 \
+   | grep -E "(-----BEGIN [A-Z ]*PRIVATE KEY-----|nvapi-[A-Za-z0-9_-]{32,}|nvcr-token-[A-Za-z0-9]{40,})" -q; then
+  echo "ERROR: staged content contains what looks like a secret"
+  echo "       (private key block, NGC API key, or NGC registry token)."
+  echo "If this is a false positive: git commit --no-verify"
+  exit 1
+fi
+
+if git diff --cached --name-only | grep -E "^(\.)?internal/" -q; then
+  echo "ERROR: refusing to commit files under internal/ — that directory is for"
+  echo "       non-public material (cluster logs, debug captures, credentials)."
+  exit 1
+fi

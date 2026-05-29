@@ -54,6 +54,14 @@ internal/
 
 `.gitignore` also blocks broad patterns (`*.log`, `*key`, `*.pem`, `GPG-KEY-*`, generated runtime tracker files in the repo root, generated YAML in `usecase/*/`, etc.) so `git add .` can't accidentally pick up an internal file. Always prefer `git add <explicit-path>` when committing.
 
+After a fresh clone, install the pre-commit guard hook (rejects PEM private keys, NGC tokens, and any path under `internal/`):
+
+```bash
+./tools/install-hooks.sh
+```
+
+This symlinks `.git/hooks/pre-commit` to `tools/git-hooks/pre-commit` so updates to the hook script are picked up automatically.
+
 ## Architecture
 
 ### Configuration Cascade
