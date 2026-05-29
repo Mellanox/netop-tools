@@ -49,6 +49,17 @@ function cmdDRA()
     runCmds ${1} netop_dra_files
   fi
 }
+function cmdSriovNetworkPoolConfig()
+{
+  case ${USECASE} in
+  sriovnet_rdma|sriovibnet_rdma|sriovnet_dra)
+    DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
+    if [ -f "${DIR}/netop_sriov_pool_files" ];then
+      runCmds ${1} netop_sriov_pool_files
+    fi
+    ;;
+  esac
+}
 function cmdSriovNodePolicy()
 {
   if [ "${NETOP_BCM_CONFIG}" == false ];then
