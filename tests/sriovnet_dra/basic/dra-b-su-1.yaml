@@ -6,7 +6,7 @@ metadata:
 spec:
   selectors:
     - cel:
-        expression: device.driver == "TODO_DRIVER_NAME"
+        expression: device.driver == "sriovnetwork.k8snetworkplumbingwg.io"
 ---
 apiVersion: resource.k8s.io/v1beta1
 kind: ResourceClaimTemplate

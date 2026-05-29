@@ -9,10 +9,11 @@
 #   NETOP_NETLIST, NETOP_SULIST, NETOP_NETWORK_NAME, NETOP_NAMESPACE,
 #   NETOP_RESOURCE, NETOP_TAG_VERSION, NETOP_VERSION
 #
-# TODO_DRIVER_NAME placeholder must be replaced with the actual driver name
-# that the dra-driver-sriov DaemonSet publishes in ResourceSlice.spec.driver
-# (e.g. "sriov.network-operator.nvidia.com" — confirm against running cluster
-# or v26.4.0 docs once published).
+# DRA_DRIVER_NAME defaults to the upstream constant published by
+# k8snetworkplumbingwg/dra-driver-sriov (pkg/consts/consts.go). NVIDIA's
+# nvcr.io/nvstaging/mellanox/dra-driver-sriov is a rebuild of the same source,
+# so the driver name matches. Override via env / global_ops_user.cfg if a
+# downstream fork ever changes it.
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
@@ -26,7 +27,7 @@ case ${NETOP_VERSION} in
 esac
 
 DRA_API_VERSION="${DRA_API_VERSION:-resource.k8s.io/v1beta1}"
-DRA_DRIVER_NAME="${DRA_DRIVER_NAME:-TODO_DRIVER_NAME}"
+DRA_DRIVER_NAME="${DRA_DRIVER_NAME:-sriovnetwork.k8snetworkplumbingwg.io}"
 
 function init_file()
 {
