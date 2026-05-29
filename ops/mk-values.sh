@@ -29,7 +29,7 @@ function get_release_tag()
 function sriovNetworkOperator()
 {
 case ${USECASE} in
-sriovnet_rdma)
+sriovnet_rdma|sriovnet_dra)
   SRIOVNET="true"
   IPOIBVAL="false"
   ;;
@@ -129,6 +129,17 @@ VALUES_YAML1
 *)
   ;;
 esac
+if [ "${NFD_ENABLE}" = "true" ] && [ "${PROD_VER}" = "0" ]; then
+  case "${NETOP_VERSION}" in
+  26.4.*)
+cat << VALUES_NFD_PULL
+node-feature-discovery:
+  imagePullSecrets:
+    - name: ${NGC_SECRET:-ngc-image-secret}
+VALUES_NFD_PULL
+    ;;
+  esac
+fi
 
 case "${NETOP_VERSION}" in
   25.1.0)
@@ -147,6 +158,17 @@ ${param}:
 nvIpam:
   deploy: ${NVIPAMVAL}
 VALUES_YAML2
+if [ "${MAINTENANCE_OPERATOR_ENABLE}" = "true" ] && [ "${PROD_VER}" = "0" ]; then
+  case "${NETOP_VERSION}" in
+  26.4.*)
+cat << VALUES_MAINT_PULL
+maintenance-operator-chart:
+  imagePullSecrets:
+    - name: ${NGC_SECRET:-ngc-image-secret}
+VALUES_MAINT_PULL
+    ;;
+  esac
+fi
 }
 function deployCR()
 {

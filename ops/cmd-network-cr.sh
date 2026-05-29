@@ -35,11 +35,28 @@ function cmdIPAM_CRDs()
     runCmds ${1} netop_ippool_files
   fi
 }
+function cmdNicNodePolicy()
+{
+  DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
+  if [ -f "${DIR}/netop_nicnode_files" ];then
+    runCmds ${1} netop_nicnode_files
+  fi
+}
+function cmdDRA()
+{
+  DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
+  if [ -f "${DIR}/netop_dra_files" ];then
+    runCmds ${1} netop_dra_files
+  fi
+}
 function cmdSriovNetworkPoolConfig()
 {
   case ${USECASE} in
-  sriovnet_rdma|sriovibnet_rdma)
-    runCmds ${1} netop_sriov_pool_files
+  sriovnet_rdma|sriovibnet_rdma|sriovnet_dra)
+    DIR="${NETOP_ROOT_DIR}/usecase/${USECASE}"
+    if [ -f "${DIR}/netop_sriov_pool_files" ];then
+      runCmds ${1} netop_sriov_pool_files
+    fi
     ;;
   esac
 }

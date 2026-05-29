@@ -11,3 +11,54 @@ install/insk8base.sh
 global_ops_user.cfg
 ngc/ngc-cli
 ./ngc/ngcconfig.dat
+
+# ---------------------------------------------------------------
+# Internal-only — never committed.
+# Put internal analyses, customer/cluster logs, and credentials under internal/.
+# Use git-add explicitly to commit anything outside it; never `git add .` blindly.
+# ---------------------------------------------------------------
+internal/
+.internal/
+
+# Secrets / credentials
+*key
+*_key
+*.key
+*api_key*
+*.pem
+ngc-image-secret*
+GPG-KEY-*
+
+# Debug/log artifacts
+*.log
+*.log.md
+*_bug.log
+
+# Generated runtime tracker files (mk-config.sh / mk-network-cr.sh output)
+netop_ippool_files
+netop_network_files
+netop_nodepolicy_files
+netop_nicnode_files
+netop_dra_files
+
+# Generated YAML output (in uc/ symlink target — usecase/<name>/)
+usecase/*/NicClusterPolicy*.yaml
+usecase/*/values.yaml
+usecase/*/netop-values.yaml
+usecase/*/ippool*.yaml
+usecase/*/sriovnet-*.yaml
+usecase/*/sriovibnet-*.yaml
+usecase/*/macvlan-*.yaml
+usecase/*/hostdev-*.yaml
+usecase/*/nic-node-policy*.yaml
+usecase/*/nic-config-crd-*.yaml
+usecase/*/sriov-node-pool-config*.yaml
+usecase/*/dra-*.yaml
+usecase/*/combined-*.yaml
+usecase/*/network.yaml
+usecase/*/node-policy.yaml
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo

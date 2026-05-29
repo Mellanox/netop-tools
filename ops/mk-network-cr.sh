@@ -6,6 +6,9 @@
 # echo 0 > /sys/devices/pci0000:20/0000:20:01.5/0000:23:00.0/sriov_numvfs
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
+# IPPool suffix: derived from fabric group label so pools on the same fabric share IPPools.
+# Empty when no fabric is assigned (all pools share a single unsuffixed set).
+POOL_SUFFIX="${NETOP_ACTIVE_FABRIC:+-${NETOP_ACTIVE_FABRIC}}"
 function init_file()
 {
   if [ "${NETOP_TAG_VERSION}" == true ];then
@@ -35,8 +38,8 @@ function IPPoolCRD()
         LINE=$(sed -n ${LINE_NUM}p ${SUBNET_FILE})
         RANGE=$(echo ${LINE}|cut -d' ' -f1)
         GW=$(echo ${LINE}|cut -d' ' -f3)
-        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}
-        FILE="ippool-${NIDX}-${NETOP_SU}.yaml"
+        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}${POOL_SUFFIX}
+        FILE="ippool-${NIDX}-${NETOP_SU}${POOL_SUFFIX}.yaml"
         NETOP_IPPOOL_FILES[${IPPOOL_IDX}]="${FILE}"
         let IPPOOL_IDX=IPPOOL_IDX+1
         init_file ${FILE}
@@ -103,7 +106,7 @@ function NetworkCRD()
         NETOP_NETWORK_FILES[${NETWORK_IDX}]="${FILE}"
         let NETWORK_IDX=NETWORK_IDX+1
         init_file ${FILE} 
-        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}
+        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}${POOL_SUFFIX}
         case ${NETOP_NETWORK_TYPE} in
         HostDeviceNetwork)
           ${NETOP_ROOT_DIR}/ops/mk-hostdev-sriov-ipam-cr.sh ${NETWORK_NAME} ${IPPOOL_NAME} ${NIDX} ${NETOP_APP_NAMESPACE} >> ${FILE}
@@ -163,6 +166,21 @@ function combineNetwork()
 }
 function combinedNetworkCRD()
 {
+# Multi-pool BCM mode: append this pool's SriovNetworkNodePolicy + SriovNetwork
+# CRs to the per-pool nic-node-policy file so the pool is self-contained.
+# Skip the cluster-wide combined network file.
+  if [ -n "${NETOP_ACTIVE_POOL:-}" ] && [ -f "${NIC_NODE_POLICY_FILE:-}" ];then
+    for LIST in netop_nodepolicy_files netop_network_files;do
+      if [ -f ${LIST} ];then
+        for FILE in $(cat ${LIST});do
+          cat ${FILE} >> ${NIC_NODE_POLICY_FILE}
+          rm -f ${FILE}
+        done
+        rm -f ${LIST}
+      fi
+    done
+    return
+  fi
    combineNodePolicy
    combineNetwork
 #
@@ -177,9 +195,13 @@ function combinedNetworkCRD()
   fi
 }
 
-IPPoolCRD
+if [ "${NETOP_SKIP_IPPOOL:-false}" != "true" ]; then
+  IPPoolCRD
+fi
 NetworkCRD
 if [ "${NETOP_COMBINED}" == true ];then
-  combinedIPPoolCRD
+  if [ "${NETOP_SKIP_IPPOOL:-false}" != "true" ]; then
+    combinedIPPoolCRD
+  fi
   combinedNetworkCRD
 fi

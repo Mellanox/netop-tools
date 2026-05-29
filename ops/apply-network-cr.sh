@@ -4,12 +4,14 @@
 # typically in a GPU/NIC system you'll deploy multiple parallel 2ndary networks.
 #
 source ${NETOP_ROOT_DIR}/ops/cmd-network-cr.sh
+cmdNicNodePolicy apply
 case ${NETOP_NETWORK_TYPE} in
 SriovNetwork|SriovIBNetwork)
   cmdSriovNodePolicy apply
   cmdSriovNetworkPoolConfig apply
   ;;
-esac 
+esac
+cmdDRA apply
 cmdNetworkCRDs apply
 if [ "${CREATE_CONFIG_ONLY}" != "1" ];then
   sleep 5

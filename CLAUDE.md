@@ -40,6 +40,28 @@ CI (`.github/workflows/main.yml`) runs `tests/unitest.sh` on ubuntu-22.04 on eve
 
 **Adding tests**: Create a directory under `tests/` with a `config` file (sourced as `GLOBAL_OPS_USER`), optional `netop.cfg` overrides, and `*.yaml` baseline files. The test harness discovers test directories by finding `config` files via `find`.
 
+## Internal vs public
+
+This repo is published; only intentionally-public files belong in git. Everything else — cluster/customer logs, debug captures, credentials, internal analyses — lives under `internal/` (gitignored). Conventional layout:
+
+```
+internal/
+  analyses/    # markdown debug write-ups (e.g. *.log.md)
+  logs/        # captured pod/container logs
+  keys/        # NGC tokens, SSH keys, GPG keys
+  misc/        # one-off scripts, scratch files
+```
+
+`.gitignore` also blocks broad patterns (`*.log`, `*key`, `*.pem`, `GPG-KEY-*`, generated runtime tracker files in the repo root, generated YAML in `usecase/*/`, etc.) so `git add .` can't accidentally pick up an internal file. Always prefer `git add <explicit-path>` when committing.
+
+After a fresh clone, install the pre-commit guard hook (rejects PEM private keys, NGC tokens, and any path under `internal/`):
+
+```bash
+./tools/install-hooks.sh
+```
+
+This symlinks `.git/hooks/pre-commit` to `tools/git-hooks/pre-commit` so updates to the hook script are picked up automatically.
+
 ## Architecture
 
 ### Configuration Cascade
@@ -82,19 +104,23 @@ ins-network-operator.sh
   ├─ ops/mk-config.sh            → orchestrates all config generation:
   │   ├─ ops/mk-values.sh        → Helm values.yaml (feature flags, images)
   │   ├─ ops/mk-nic-cluster-policy.sh → NicClusterPolicy CRD
+  │   ├─ ops/mk-nic-node-policy.sh → NicNodePolicy CRD per pool (26.4.0+)
   │   ├─ ops/mk-network-cr.sh    → SriovNetwork + NetworkAttachmentDefinition
   │   ├─ ops/mk-ipam-cr.sh       → IPPool or CIDRPool
   │   ├─ ops/mk-sriov-node-pool.sh → SR-IOV VF allocation policy
   │   └─ ops/mk-nic-config.sh    → NIC firmware config (if NIC_CONFIG_ENABLE=true)
   ├─ helm install network-operator
   └─ ops/apply-network-cr.sh     → kubectl apply all generated CRDs
+                                   (NicNodePolicy → SriovNetworkNodePolicy → SriovNetwork → IPPool)
 ```
 
 ### Key Conventions
 
 - **Use-case symlink**: `./setuc.sh` creates `uc/` → `usecase/${USECASE}/`. Scripts reference `${USECASE_DIR}` or `./uc/` interchangeably. Generated YAML files land in the use-case directory.
 - **Device list format**: `NETOP_NETLIST=( a,,,0000:08:00.0 b,,,0000:86:00.1 )` — tuple of `device_index,reserved,reserved,pci_bdf`. Separate IPPool/SriovNetwork CRDs are generated per device.
-- **Combined mode**: When `NETOP_BCM_CONFIG=true`, multiple network definitions are merged into single `combined-*.yaml` files instead of separate per-device files.
+- **Combined mode**: When `NETOP_BCM_CONFIG=true`, multiple network definitions are merged into single `combined-*.yaml` files instead of separate per-device files. In multi-pool BCM mode (`NETOP_NODEPOOLS` set), per-pool CRs (NicNodePolicy + SriovNetworkNodePolicy + SriovNetwork) are grouped into `nic-node-policy-<POOL>.yaml` so each pool is self-contained.
+- **Multi-pool (26.4.0+)**: `NETOP_NODEPOOLS=( "NETOP_NETLIST_<ID>" ... )` enables per-pool NicNodePolicy generation. Each pool defines `NETOP_NETLIST_<ID>`, `NETOP_NODESELECTOR_<ID>`, `NETOP_NODESELECTOR_VAL_<ID>`. Pool IDs are lowercased in K8s object names (RFC 1123). Pools sharing a fabric label (`NETOP_FABRIC_<ID>`) share IPPools; fabric-specific CIDR via `NETOP_NETWORK_RANGE_<FABRIC>` (hyphens → underscores).
+- **OFED ownership**: `NETOP_NODEPOOLS` set (or `NIC_NODE_POLICY_ENABLE=true`) moves `ofedDriver` from NicClusterPolicy into NicNodePolicy. `OFED_ENABLE=false` suppresses `ofedDriver` everywhere (host-installed driver).
 - **Subnet generation**: `ops/generate_subnets.sh` splits `NETOP_NETWORK_RANGE` into per-node blocks of `NETOP_PERNODE_BLOCKSIZE` (default 32) IPs.
 
 ### Directory Layout
@@ -115,6 +141,7 @@ ins-network-operator.sh
 | Use Case | Description | VFs |
 |---|---|---|
 | `sriovnet_rdma` | SR-IOV with RDMA (default) | 8 |
+| `sriovnet_dra` | SR-IOV via Dynamic Resource Allocation (DRA driver, 26.4.0+) | 8 |
 | `sriovibnet_rdma` | SR-IOV InfiniBand with RDMA | 8 |
 | `hostdev_rdma_sriov` | HostDevice with SR-IOV | 8 |
 | `ipoib_rdma_shared_device` | IPoIB with shared device | 0 |

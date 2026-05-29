@@ -1,0 +1,23 @@
+---
+apiVersion: resource.k8s.io/v1beta1
+kind: DeviceClass
+metadata:
+  name: sriovnet-dra-a-su-1-class
+spec:
+  selectors:
+    - cel:
+        expression: device.driver == "TODO_DRIVER_NAME"
+---
+apiVersion: resource.k8s.io/v1beta1
+kind: ResourceClaimTemplate
+metadata:
+  name: sriovnet-dra-a-su-1-claim
+  namespace: nvidia-network-operator
+spec:
+  spec:
+    devices:
+      requests:
+        - name: sriov_resource-a
+          exactly:
+            deviceClassName: sriovnet-dra-a-su-1-class
+            count: 1

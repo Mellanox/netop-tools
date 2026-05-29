@@ -2,6 +2,9 @@
 nfd:
   enabled: true
   deployNodeFeatureRules: true
+node-feature-discovery:
+  imagePullSecrets:
+    - name: ngc-image-secret
 maintenanceOperator:
   enabled: false
 nvIpam:

@@ -4,10 +4,13 @@
 # typically in a GPU/NIC system you'll deploy multiple parallel 2ndary networks.
 #
 source ${NETOP_ROOT_DIR}/ops/cmd-network-cr.sh
+cmdDRA delete
 cmdNetworkCRDs delete
 cmdIPAM_CRDs delete
 case ${NETOP_NETWORK_TYPE} in
 SriovNetwork|SriovIBNetwork)
   cmdSriovNodePolicy delete
   ;;
-esac 
+esac
+cmdNicNodePolicy delete
+
