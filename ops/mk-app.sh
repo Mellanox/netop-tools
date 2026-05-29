@@ -137,21 +137,31 @@ spec:
       capabilities:
         add: ["IPC_LOCK"]
     resources:
-      requests:
 HEREDOC2
-set_gpus >> ./${NAME}.yaml
+# Only emit requests:/limits: when something will live under them.
+# - GPU lines are present iff NUM_GPUS > 0 (set_gpus already guards on that).
+# - Network device-plugin resources are present iff USECASE != sriovnet_dra.
+HAS_GPU=false
+HAS_NETRES=false
+if [ "${NUM_GPUS}" != "" ] && [ "${NUM_GPUS}" -gt 0 ]; then
+  HAS_GPU=true
+fi
 case ${USECASE} in
-sriovnet_dra) ;;                          # no device-plugin network resource
-*) set_network_resource >> ./${NAME}.yaml ;;
+sriovnet_dra) ;;
+*) HAS_NETRES=true ;;
 esac
-cat <<HEREDOC3 >> ./${NAME}.yaml
+if [ "${HAS_GPU}" = "true" ] || [ "${HAS_NETRES}" = "true" ]; then
+cat <<RESHDR >> ./${NAME}.yaml
+      requests:
+RESHDR
+  set_gpus >> ./${NAME}.yaml
+  [ "${HAS_NETRES}" = "true" ] && set_network_resource >> ./${NAME}.yaml
+cat <<RESHDR2 >> ./${NAME}.yaml
       limits:
-HEREDOC3
-set_gpus >> ./${NAME}.yaml
-case ${USECASE} in
-sriovnet_dra) ;;                          # no device-plugin network resource
-*) set_network_resource >> ./${NAME}.yaml ;;
-esac
+RESHDR2
+  set_gpus >> ./${NAME}.yaml
+  [ "${HAS_NETRES}" = "true" ] && set_network_resource >> ./${NAME}.yaml
+fi
 case ${USECASE} in
 sriovnet_dra)
   set_container_claims >> ./${NAME}.yaml
