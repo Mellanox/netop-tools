@@ -6,6 +6,27 @@ Track open bugs and pending work. Add entries as issues are discovered; remove o
 
 ## Bugs
 
+### nic-configuration-operator not supported on IGX (PCIe domain != 0000)
+**Affects**: NVIDIA Network Operator 26.4.0-beta.7 nic-configuration-operator daemon on IGX Orin (Grace SoC) hosts.
+**Symptom**: `nic-configuration-daemon-*` pods discover ConnectX-7 NICs at PCI domain `0005:` but fail every device with:
+```
+both mlxvpd and mstvpd failed:
+  mlxvpd: mlxvpd failed after 3 attempts: exit status 8
+  mstvpd: mstvpd failed: exit status 1
+```
+Every device is skipped — no NIC firmware/template management possible. Pod also eventually crashes:
+```
+timed out waiting for cache to be synced for Kind *v1alpha1.NodeMaintenance
+problem running manager
+```
+**Root cause**:
+1. `mlxvpd` (PCIe VPD extended-capability read) and `mstvpd` (MFT I2C/MCTP path) do not work against ConnectX-7 NICs on IGX's non-zero PCIe domain. IGX Orin uses domains `0001`–`0008` because of the Grace SoC PCIe topology; the VPD tools assume domain `0000` or expect MCTP-over-PCIe access that IGX doesn't expose.
+2. Independently, `NodeMaintenance.maintenance.nvidia.com/v1alpha1` CRD is not installed (requires `MAINTENANCE_OPERATOR_ENABLE=true` in netop-tools, or manual `kubectl apply -f .../maintenance-operator-chart/crds`). Without it the daemon's controller-runtime cache sync times out at 2 min and the pod restarts in a loop.
+**Workaround in netop-tools**: keep `NIC_CONFIG_ENABLE=false` (the default for IGX configs); ensure `mk-config.sh` is re-run and the resulting `NicClusterPolicy.yaml` (which omits the `nicConfigurationOperator` block) is `kubectl apply`'d so the leftover section from earlier installs is pruned. Trinity config already sets `NIC_CONFIG_ENABLE=false`.
+**Upstream fix needed**:
+- nic-configuration-operator: support reading VPD on non-zero PCIe domains (Grace/IGX), or skip VPD entirely if both tools fail and continue with discovery using mlxconfig.
+- NicClusterPolicy: if `nicConfigurationOperator` requires `NodeMaintenance` CRDs, the operator should refuse to deploy the daemon when the CRDs are absent, instead of letting it crash-loop.
+
 ### Network Operator chart does not propagate `imagePullSecrets` to NFD subchart
 **File**: upstream `network-operator` Helm chart (subchart wiring)
 **Symptom**: NFD pods (`network-operator-node-feature-discovery-*`) fail with `401 Unauthorized` when the NFD image is pulled from a private registry (e.g. `nvcr.io/nvstaging/mellanox`).
