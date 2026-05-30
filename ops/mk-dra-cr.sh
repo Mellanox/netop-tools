@@ -1,19 +1,19 @@
 #!/bin/bash
 #
 # Generate DRA (Dynamic Resource Allocation) CRs for the SR-IOV DRA driver
-# (26.4.0+). Emits a DeviceClass + ResourceClaimTemplate per device in
-# NETOP_NETLIST so pods can claim VFs via resourceClaims instead of via the
-# legacy SR-IOV device plugin.
+# (26.4.0+). Emits one ResourceClaimTemplate per device in NETOP_NETLIST.
+#
+# Modeled on the per-step examples in NVIDIA's "DRA SR-IOV Driver" doc:
+#   https://mellanox.github.io/network-operator-docs/dra-sriov-driver/dra-sriov-driver.html
+#
+# The DeviceClass `sriovnetwork.k8snetworkplumbingwg.io` is auto-created by
+# the dra-driver-sriov DaemonSet — netop-tools does not generate it. We just
+# reference it from each ResourceClaimTemplate and narrow to a per-device
+# resource pool via a CEL selector on resourceName.
 #
 # Required env (from global_ops.cfg / usecase/netop.cfg):
 #   NETOP_NETLIST, NETOP_SULIST, NETOP_NETWORK_NAME, NETOP_NAMESPACE,
-#   NETOP_RESOURCE, NETOP_TAG_VERSION, NETOP_VERSION
-#
-# DRA_DRIVER_NAME defaults to the upstream constant published by
-# k8snetworkplumbingwg/dra-driver-sriov (pkg/consts/consts.go). NVIDIA's
-# nvcr.io/nvstaging/mellanox/dra-driver-sriov is a rebuild of the same source,
-# so the driver name matches. Override via env / global_ops_user.cfg if a
-# downstream fork ever changes it.
+#   NETOP_RESOURCE_PATH, NETOP_RESOURCE, NETOP_TAG_VERSION, NETOP_VERSION
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
@@ -26,8 +26,11 @@ case ${NETOP_VERSION} in
     ;;
 esac
 
-DRA_API_VERSION="${DRA_API_VERSION:-resource.k8s.io/v1beta1}"
-DRA_DRIVER_NAME="${DRA_DRIVER_NAME:-sriovnetwork.k8snetworkplumbingwg.io}"
+DRA_API_VERSION="${DRA_API_VERSION:-resource.k8s.io/v1}"
+# Driver name from k8snetworkplumbingwg/dra-driver-sriov/pkg/consts/consts.go.
+# Used directly as deviceClassName (the DaemonSet creates the matching cluster-
+# wide DeviceClass automatically).
+DRA_DEVICE_CLASS="${DRA_DEVICE_CLASS:-sriovnetwork.k8snetworkplumbingwg.io}"
 
 function init_file()
 {
@@ -45,23 +48,14 @@ for NETOP_SU in ${NETOP_SULIST[@]};do
   for NIDXDEF in ${NETOP_NETLIST[@]};do
     NIDX=$(echo ${NIDXDEF}|cut -d',' -f1)
 
-    DEVICE_CLASS="${NETOP_NETWORK_NAME}-${NIDX}-${NETOP_SU}-class"
     CLAIM_TEMPLATE="${NETOP_NETWORK_NAME}-${NIDX}-${NETOP_SU}-claim"
+    RESOURCE_NAME="${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}"
     FILE="dra-${NIDX}-${NETOP_SU}.yaml"
     NETOP_DRA_FILES[${DRA_IDX}]="${FILE}"
     let DRA_IDX=DRA_IDX+1
     init_file "${FILE}"
 
 cat <<DRA_CRS >> ${FILE}
----
-apiVersion: ${DRA_API_VERSION}
-kind: DeviceClass
-metadata:
-  name: ${DEVICE_CLASS}
-spec:
-  selectors:
-    - cel:
-        expression: device.driver == "${DRA_DRIVER_NAME}"
 ---
 apiVersion: ${DRA_API_VERSION}
 kind: ResourceClaimTemplate
@@ -72,10 +66,14 @@ spec:
   spec:
     devices:
       requests:
-        - name: ${NETOP_RESOURCE}-${NIDX}
+        - name: vf
           exactly:
-            deviceClassName: ${DEVICE_CLASS}
+            deviceClassName: ${DRA_DEVICE_CLASS}
             count: 1
+            selectors:
+              - cel:
+                  expression: >
+                    device.attributes["k8s.cni.cncf.io"].resourceName == "${RESOURCE_NAME}"
 DRA_CRS
   done
 done

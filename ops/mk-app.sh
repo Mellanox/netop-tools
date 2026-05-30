@@ -95,6 +95,9 @@ sriovnet_dra)
     echo "         Either run with NETOP_APP_NAMESPACE=${NETOP_NAMESPACE}, or copy each" >&2
     echo "         ResourceClaimTemplate from ${NETOP_NAMESPACE} into ${NETOP_APP_NAMESPACE}." >&2
   fi
+  # DRA pods still attach to the SriovNetwork CR via the multus annotation;
+  # the DRA driver hands the VF to the pod and the NAD wires up IPAM/CNI.
+  get_networks
   ;;
 *)
   get_networks
@@ -109,17 +112,10 @@ kind: Pod
 metadata:
   name: ${NAME}-${i}
 HEREDOC1
-case ${USECASE} in
-sriovnet_dra)
-  # DRA: no multus annotation — VFs are claimed via resourceClaims instead.
-  ;;
-*)
 cat << ANNOTATIONS >> ./${NAME}.yaml
   annotations:
     k8s.v1.cni.cncf.io/networks: ${NETWORKS}
 ANNOTATIONS
-  ;;
-esac
 cat << HEREDOC2 >> ./${NAME}.yaml
   namespace: ${NETOP_APP_NAMESPACE}
 spec:
