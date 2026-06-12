@@ -70,6 +70,15 @@ cat << SRIOV_NETWORK_OPERATOR0
       parallelNicConfig: ${FG_PARALLEL_NIC_CONFIG}
       mellanoxFirmwareReset: ${FG_MLNX_FW_RESET}
 SRIOV_NETWORK_OPERATOR0
+if [ "${DRA_ENABLE}" = "true" ];then
+  case ${NETOP_VERSION} in
+    26.4.*)
+cat << SRIOV_DRA_FG
+      dynamicResourceAllocation: true
+SRIOV_DRA_FG
+      ;;
+  esac
+fi
 if [ "${NETOP_BCM_CONFIG}" == false ];then
 cat << SRIOV_NETWORK_OPERATOR1
       resourceInjectorMatchCondition: ${FG_RESOURCE_INJECTOR_MATCH}

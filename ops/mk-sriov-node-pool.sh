@@ -32,6 +32,7 @@ else
 cat << HEREDOC
         operator: Exists
 HEREDOC
+fi
 if [ "${RDMASHAREDMODE}" == "false" ];then
 cat << HEREDOC
   rdmaMode: exclusive

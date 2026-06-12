@@ -48,7 +48,7 @@ function IPPoolCRD()
           ${NETOP_ROOT_DIR}/ops/mk-nvipam-pool.sh "${IPPOOL_NAME}" "${RANGE}" "${GW}" "${NETOP_PERNODE_BLOCKSIZE}" >> ${FILE}
           ;;
         CIDRPool)
-          ${NETOP_ROOT_DIR}/ops/mk-nvipam-cidr.sh "${IPPOOL_NAME}" "${RANGE}" "${GW}" "${NETOP_PERNODE_BLOCKSIZE}" >> ${FILE}
+          ${NETOP_ROOT_DIR}/ops/mk-nvipam-cidr.sh "${IPPOOL_NAME}" "${RANGE}" "${NETOP_GW_INDEX}" "${NETOP_PER_NODE_PREFIX}" >> ${FILE}
           ;;
         esac
         let LINE_NUM=LINE_NUM+1
@@ -105,7 +105,7 @@ function NetworkCRD()
         FILE="${NETWORK_NAME}-cr.yaml"
         NETOP_NETWORK_FILES[${NETWORK_IDX}]="${FILE}"
         let NETWORK_IDX=NETWORK_IDX+1
-        init_file ${FILE} 
+        init_file ${FILE}
         IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}${POOL_SUFFIX}
         case ${NETOP_NETWORK_TYPE} in
         HostDeviceNetwork)

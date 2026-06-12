@@ -1,14 +1,5 @@
 ---
-apiVersion: resource.k8s.io/v1beta1
-kind: DeviceClass
-metadata:
-  name: sriovnet-dra-b-su-1-class
-spec:
-  selectors:
-    - cel:
-        expression: device.driver == "TODO_DRIVER_NAME"
----
-apiVersion: resource.k8s.io/v1beta1
+apiVersion: resource.k8s.io/v1
 kind: ResourceClaimTemplate
 metadata:
   name: sriovnet-dra-b-su-1-claim
@@ -17,7 +8,11 @@ spec:
   spec:
     devices:
       requests:
-        - name: sriov_resource-b
+        - name: vf
           exactly:
-            deviceClassName: sriovnet-dra-b-su-1-class
+            deviceClassName: sriovnetwork.k8snetworkplumbingwg.io
             count: 1
+            selectors:
+              - cel:
+                  expression: >
+                    device.attributes["k8s.cni.cncf.io"].resourceName == "nvidia.com/sriov_resource_b"

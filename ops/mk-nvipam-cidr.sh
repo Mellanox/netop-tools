@@ -22,6 +22,8 @@ spec:
   cidr: ${NETWORK_RANGE}
   gatewayIndex: ${GATEWAY_INDEX}
   perNodeNetworkPrefix: ${PER_NODE_PREFIX}
+  routes:
+    dst: {${NETWORK_RANGE}
   nodeSelector:
     nodeSelectorTerms:
     - matchExpressions:

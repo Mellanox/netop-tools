@@ -95,6 +95,9 @@ sriovnet_dra)
     echo "         Either run with NETOP_APP_NAMESPACE=${NETOP_NAMESPACE}, or copy each" >&2
     echo "         ResourceClaimTemplate from ${NETOP_NAMESPACE} into ${NETOP_APP_NAMESPACE}." >&2
   fi
+  # DRA pods still attach to the SriovNetwork CR via the multus annotation;
+  # the DRA driver hands the VF to the pod and the NAD wires up IPAM/CNI.
+  get_networks
   ;;
 *)
   get_networks
@@ -109,17 +112,10 @@ kind: Pod
 metadata:
   name: ${NAME}-${i}
 HEREDOC1
-case ${USECASE} in
-sriovnet_dra)
-  # DRA: no multus annotation — VFs are claimed via resourceClaims instead.
-  ;;
-*)
 cat << ANNOTATIONS >> ./${NAME}.yaml
   annotations:
     k8s.v1.cni.cncf.io/networks: ${NETWORKS}
 ANNOTATIONS
-  ;;
-esac
 cat << HEREDOC2 >> ./${NAME}.yaml
   namespace: ${NETOP_APP_NAMESPACE}
 spec:
@@ -137,21 +133,31 @@ spec:
       capabilities:
         add: ["IPC_LOCK"]
     resources:
-      requests:
 HEREDOC2
-set_gpus >> ./${NAME}.yaml
+# Only emit requests:/limits: when something will live under them.
+# - GPU lines are present iff NUM_GPUS > 0 (set_gpus already guards on that).
+# - Network device-plugin resources are present iff USECASE != sriovnet_dra.
+HAS_GPU=false
+HAS_NETRES=false
+if [ "${NUM_GPUS}" != "" ] && [ "${NUM_GPUS}" -gt 0 ]; then
+  HAS_GPU=true
+fi
 case ${USECASE} in
-sriovnet_dra) ;;                          # no device-plugin network resource
-*) set_network_resource >> ./${NAME}.yaml ;;
+sriovnet_dra) ;;
+*) HAS_NETRES=true ;;
 esac
-cat <<HEREDOC3 >> ./${NAME}.yaml
+if [ "${HAS_GPU}" = "true" ] || [ "${HAS_NETRES}" = "true" ]; then
+cat <<RESHDR >> ./${NAME}.yaml
+      requests:
+RESHDR
+  set_gpus >> ./${NAME}.yaml
+  [ "${HAS_NETRES}" = "true" ] && set_network_resource >> ./${NAME}.yaml
+cat <<RESHDR2 >> ./${NAME}.yaml
       limits:
-HEREDOC3
-set_gpus >> ./${NAME}.yaml
-case ${USECASE} in
-sriovnet_dra) ;;                          # no device-plugin network resource
-*) set_network_resource >> ./${NAME}.yaml ;;
-esac
+RESHDR2
+  set_gpus >> ./${NAME}.yaml
+  [ "${HAS_NETRES}" = "true" ] && set_network_resource >> ./${NAME}.yaml
+fi
 case ${USECASE} in
 sriovnet_dra)
   set_container_claims >> ./${NAME}.yaml

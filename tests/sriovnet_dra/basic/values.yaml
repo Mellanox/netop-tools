@@ -18,6 +18,7 @@ sriov-network-operator:
     featureGates:
       parallelNicConfig: true
       mellanoxFirmwareReset: false
+      dynamicResourceAllocation: true
       resourceInjectorMatchCondition: false
       metricsExporter: false
       manageSoftwareBridges: false

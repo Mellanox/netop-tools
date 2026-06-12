@@ -1396,7 +1396,7 @@ CI runs `tests/unitest.sh` on ubuntu-22.04 on every push (`.github/workflows/mai
 | `DRA_CDI_ROOT` | `/var/run/cdi` | CDI spec directory for the DRA driver. |
 | `DRA_IFACE_PREFIX` | `net` | Default interface prefix the DRA driver assigns inside pods. |
 | `DRA_API_VERSION` | `resource.k8s.io/v1beta1` | DRA API group/version for generated DeviceClass / ResourceClaimTemplate CRs (K8s 1.32+ default; use `v1alpha3` for older clusters). |
-| `DRA_DRIVER_NAME` | `TODO_DRIVER_NAME` | Driver name used in the DeviceClass CEL selector. Must match the value the `dra-driver-sriov` DaemonSet publishes in `ResourceSlice.spec.driver`. |
+| `DRA_DRIVER_NAME` | `sriovnetwork.k8snetworkplumbingwg.io` | Driver name used in the DeviceClass CEL selector. Matches the `DriverName` constant in upstream [`k8snetworkplumbingwg/dra-driver-sriov`](https://github.com/k8snetworkplumbingwg/dra-driver-sriov) (`pkg/consts/consts.go`); NVIDIA's `nvcr.io/nvstaging/mellanox/dra-driver-sriov` is a rebuild of the same source. Override only if a downstream fork changes it. |
 
 ### SR-IOV Node Pool
 
