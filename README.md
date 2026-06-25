@@ -11,7 +11,10 @@
   - [Step 1: Environment Setup](#step-1-environment-setup)
   - [Step 2: Use Case Selection](#step-2-use-case-selection)
   - [Step 3: Configuration](#step-3-configuration)
+<<<<<<< HEAD
   - [3.6 Multi-pool and fabric groups](#36-multi-pool-and-fabric-groups)
+=======
+>>>>>>> origin/master
   - [Step 4: K8s Cluster Bootstrap](#step-4-k8s-cluster-bootstrap)
   - [Step 5: Network Operator Installation](#step-5-network-operator-installation)
   - [Step 6: Network Configuration and Deployment](#step-6-network-configuration-and-deployment)
@@ -115,7 +118,10 @@ This sources `global_ops_user.cfg` first, then `usecase/${USECASE}/netop.cfg`, a
 | Use Case | Description | VFs | Device ID Format |
 |---|---|---|---|
 | `sriovnet_rdma` | SR-IOV Ethernet with RDMA (default) | 8 | PCI BDF: `0000:08:00.0` |
+<<<<<<< HEAD
 | `sriovnet_dra` | SR-IOV Ethernet via Dynamic Resource Allocation (26.4.0+; `DRA_ENABLE=true` by default; suppresses `sriovDevicePlugin` and emits `DeviceClass` + `ResourceClaimTemplate` instead) | 8 | PCI BDF: `0000:08:00.0` |
+=======
+>>>>>>> origin/master
 | `sriovibnet_rdma` | SR-IOV InfiniBand with RDMA | 8 | IB interface: `ibs0f1` |
 | `hostdev_rdma_sriov` | HostDevice passthrough with SR-IOV | 8 | Multi-PCI: `0000:07:00.0,0000:08:00.0` |
 | `ipoib_rdma_shared_device` | IPoIB with shared RDMA device | 0 | IB interface: `ibs0f0` |
@@ -242,6 +248,7 @@ NETOP_SULIST=( "su-runai" "su-ml" "su-inference" )
 
 Each SU generates its own IPPool and network CRDs per device. Resource naming pattern: `sriovnet-pool-{device}-{su}`.
 
+<<<<<<< HEAD
 #### 3.6 Multi-pool and fabric groups
 
 Clusters with mixed GPU types (e.g., H200 and GB300 nodes) can require different NIC configurations per node group. Multi-pool support (Network Operator 26.4.0+) generates a separate `NicNodePolicy` per node pool, each with its own device list and node selector.
@@ -328,6 +335,8 @@ IPPools for `gpu-fabric` are generated once (H100 iteration reuses H200's pools)
 
 > **Note on variable naming**: Fabric names may contain hyphens (e.g., `gpu-fabric`) for use in K8s object names. When constructing bash variable names for CIDR overrides, substitute hyphens with underscores: `NETOP_NETWORK_RANGE_gpu_fabric` corresponds to fabric label `gpu-fabric`.
 
+=======
+>>>>>>> origin/master
 ---
 
 ### Step 4: K8s Cluster Bootstrap
@@ -435,17 +444,26 @@ ins-network-operator.sh
   ├─ ops/mk-config.sh              → Generate all YAML config:
   │   ├─ ops/mk-values.sh          → Helm values.yaml
   │   ├─ ops/mk-nic-cluster-policy.sh → NicClusterPolicy CRD
+<<<<<<< HEAD
   │   ├─ ops/mk-nic-node-policy.sh → NicNodePolicy CRD per pool (26.4.0+)
+=======
+>>>>>>> origin/master
   │   ├─ ops/mk-network-cr.sh      → Network + IPAM CRDs
   │   ├─ ops/mk-sriov-node-pool.sh → SriovNetworkPoolConfig
   │   └─ ops/mk-nic-config.sh      → NIC config (if NIC_CONFIG_ENABLE=true)
   ├─ helm install network-operator → Deploy operator via Helm
   ├─ install/applycrds.sh          → Apply base CRDs
+<<<<<<< HEAD
   └─ ops/apply-network-cr.sh       → Apply network resources (incl. NicNodePolicy)
 ```
 
 `mksecret.sh` creates the `ngc-image-secret` docker-registry secret from `NGC_API_KEY` in the operator namespace. Pre-release pulls from `nvcr.io/nvstaging/mellanox` (when `PROD_VER=0`) additionally propagate this secret to the NFD subchart via `node-feature-discovery.imagePullSecrets` in `values.yaml`.
 
+=======
+  └─ ops/apply-network-cr.sh       → Apply network resources
+```
+
+>>>>>>> origin/master
 #### 5.2 Config-only mode (dry run)
 
 By default, `CREATE_CONFIG_ONLY=1` generates YAML without deploying. To actually deploy:
@@ -490,6 +508,7 @@ ${NETOP_ROOT_DIR}/ops/mk-config.sh
 |---|---|---|
 | `ops/mk-values.sh` | `values.yaml` | Helm values (feature flags, image versions, operator config) |
 | `ops/mk-nic-cluster-policy.sh` | `NicClusterPolicy.yaml` | NicClusterPolicy CRD (OFED, NFD, device plugins) |
+<<<<<<< HEAD
 | `ops/mk-nic-node-policy.sh` | `nic-node-policy[-<POOL>].yaml` | NicNodePolicy CRD per pool (26.4.0+, when `NETOP_NODEPOOLS` set or `NIC_NODE_POLICY_ENABLE=true`) |
 | `ops/mk-network-cr.sh` | `network.yaml` + `ippool-*.yaml` | Network + IPAM CRDs per device |
 | `ops/mk-sriov-node-pool.sh` | `sriov-node-pool-config[-<POOL>].yaml` | SR-IOV VF allocation policy |
@@ -497,6 +516,11 @@ ${NETOP_ROOT_DIR}/ops/mk-config.sh
 | `ops/mk-dra-cr.sh` | `dra-<idx>-<su>.yaml` | `DeviceClass` + `ResourceClaimTemplate` per device (26.4.0+, when `DRA_ENABLE=true`) |
 
 In multi-pool mode (`NETOP_NODEPOOLS` set), `mk-config.sh` iterates over each pool and writes generated NicNodePolicy filenames to `netop_nicnode_files` (consumed by `apply-network-cr.sh`).
+=======
+| `ops/mk-network-cr.sh` | `network.yaml` + `ippool-*.yaml` | Network + IPAM CRDs per device |
+| `ops/mk-sriov-node-pool.sh` | `sriov-node-pool-config.yaml` | SR-IOV VF allocation policy |
+| `ops/mk-nic-config.sh` | `nic-config-crd-{type}.yaml` | NIC firmware config (if enabled) |
+>>>>>>> origin/master
 
 #### 6.2 Apply network resources
 
@@ -505,11 +529,17 @@ ${NETOP_ROOT_DIR}/ops/apply-network-cr.sh
 ```
 
 This applies in order:
+<<<<<<< HEAD
 1. NicNodePolicy CRDs (26.4.0+, per pool — driven by `netop_nicnode_files`)
 2. SriovNetworkNodePolicy CRDs (SR-IOV use cases)
 3. Network CRDs (SriovNetwork, SriovIBNetwork, HostDeviceNetwork, etc.)
 4. IPAM CRDs (IPPool or CIDRPool)
 5. DRA CRs — `DeviceClass` + `ResourceClaimTemplate` (when `DRA_ENABLE=true`, driven by `netop_dra_files`)
+=======
+1. SriovNetworkNodePolicy CRDs (SR-IOV use cases)
+2. Network CRDs (SriovNetwork, SriovIBNetwork, HostDeviceNetwork, etc.)
+3. IPAM CRDs (IPPool or CIDRPool)
+>>>>>>> origin/master
 
 #### 6.3 Delete network resources
 
@@ -916,15 +946,25 @@ export NETOP_VERSION="26.1.0"
 The upgrade workflow:
 1. Cordons all worker nodes
 2. Scales Network Operator deployment to 0 replicas
+<<<<<<< HEAD
 3. Regenerates all config for the new version via `mk-config.sh` (handles multi-pool, NicNodePolicy, SriovNetworkPoolConfig, etc.)
 4. Applies updated NicClusterPolicy and CRDs
 5. Applies updated network resources (including per-pool NicNodePolicy)
+=======
+3. Regenerates config for the new version (`mk-values.sh`, `mk-nic-cluster-policy.sh`, `mk-network-cr.sh`)
+4. Applies updated NicClusterPolicy and CRDs
+5. Applies updated network resources
+>>>>>>> origin/master
 6. Runs `helm upgrade` with new version
 7. Uncordons worker nodes
 
 #### 13.2 Supported versions
 
+<<<<<<< HEAD
 Available Helm chart versions: `24.7.0`, `24.10.0`, `24.10.1`, `25.1.0`, `25.4.0`, `25.7.0`, `25.10.0`, `26.1.0` (default), `26.4.0-beta.*`
+=======
+Available Helm chart versions: `24.7.0`, `24.10.0`, `24.10.1`, `25.1.0`, `25.4.0`, `25.7.0`, `25.10.0`, `26.1.0` (default)
+>>>>>>> origin/master
 
 ---
 
@@ -1379,6 +1419,7 @@ CI runs `tests/unitest.sh` on ubuntu-22.04 on every push (`.github/workflows/mai
 | `NETOP_COMBINED` | `false` | Combined YAML mode |
 | `NETOP_TAG_VERSION` | `false` | Tag generated YAML with version |
 
+<<<<<<< HEAD
 ### Multi-pool and Fabric Groups (26.4.0+)
 
 | Variable | Default | Description |
@@ -1398,6 +1439,8 @@ CI runs `tests/unitest.sh` on ubuntu-22.04 on every push (`.github/workflows/mai
 | `DRA_API_VERSION` | `resource.k8s.io/v1beta1` | DRA API group/version for generated DeviceClass / ResourceClaimTemplate CRs (K8s 1.32+ default; use `v1alpha3` for older clusters). |
 | `DRA_DRIVER_NAME` | `sriovnetwork.k8snetworkplumbingwg.io` | Driver name used in the DeviceClass CEL selector. Matches the `DriverName` constant in upstream [`k8snetworkplumbingwg/dra-driver-sriov`](https://github.com/k8snetworkplumbingwg/dra-driver-sriov) (`pkg/consts/consts.go`); NVIDIA's `nvcr.io/nvstaging/mellanox/dra-driver-sriov` is a rebuild of the same source. Override only if a downstream fork changes it. |
 
+=======
+>>>>>>> origin/master
 ### SR-IOV Node Pool
 
 | Variable | Default | Description |
