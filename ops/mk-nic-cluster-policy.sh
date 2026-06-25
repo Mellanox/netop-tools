@@ -28,6 +28,7 @@ function get_repository()
     echo "required repository ${1} not found in container list ${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}"
     exit 1
   fi
+  REPOSITORY=$(netop_resolve_repository "${REPOSITORY}")
   echo ${REPOSITORY}
 }
 function get_release_tag()

@@ -20,6 +20,7 @@ function get_repository()
     echo "required repository ${1} not found in container list ${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}"
     exit 1
   fi
+  REPOSITORY=$(netop_resolve_repository "${REPOSITORY}")
   echo ${REPOSITORY}
 }
 function get_release_tag()
@@ -45,10 +46,18 @@ function docaImage()
 }
 function loadContainers()
 {
+  CONTAINER_LIST="${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}.nvstaging"
+  if [ ! -r "${CONTAINER_LIST}" ];then
+    CONTAINER_LIST="${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}"
+  fi
+  if [ ! -r "${CONTAINER_LIST}" ];then
+    echo "container list not found for ${NETOP_VERSION}"
+    exit 1
+  fi
   while read LINE;do
     REPOSITORY=$(echo "${LINE}" | cut -d, -f3)
-    REGISTRY=$(echo REPOSITORY|cut -d'/' -f1)
-    REPOPATH=$(echo REPOSITORY|cut -d'/' -f2-)
+    REGISTRY=$(echo "${REPOSITORY}"|cut -d'/' -f1)
+    REPOPATH=$(echo "${REPOSITORY}"|cut -d'/' -f2-)
     CONTAINER=$(echo ${LINE}|cut -d, -f4)
     #CONTAINER=$(docaImage ${CONTAINER})
     RELEASE_TAG=$(echo "${LINE}" | cut -d, -f5)
@@ -61,10 +70,10 @@ function loadContainers()
       echo "found tag:${CONTAINER_PATH}"
     fi
     NEWREPOSITORY=$(get_repository ${CONTAINER})
-    NEWREGISTRY=$(echo NEWREPOSITORY|cut -d'/' -f1)
-    NEWREPOPATH=$(echo NEWREPOSITORY|cut -d'/' -f2-)
-    #sudo ctr -n k8s.io images tag ${CONTAINER_PATH} "${NEWREPO}/${CONTAINER}:${RELEASE_TAG}${MOD_TAG}"
-    sudo docker tag "${CONTAINER_PATH}" "${NEWREPO}/${CONTAINER}:${RELEASE_TAG}${MOD_TAG}"
-  done < "${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}.nvstaging"
+    NEWREGISTRY=$(echo "${NEWREPOSITORY}"|cut -d'/' -f1)
+    NEWREPOPATH=$(echo "${NEWREPOSITORY}"|cut -d'/' -f2-)
+    #sudo ctr -n k8s.io images tag ${CONTAINER_PATH} "${NEWREPOSITORY}/${CONTAINER}:${RELEASE_TAG}${MOD_TAG}"
+    sudo docker tag "${CONTAINER_PATH}" "${NEWREPOSITORY}/${CONTAINER}:${RELEASE_TAG}${MOD_TAG}"
+  done < "${CONTAINER_LIST}"
 }
 loadContainers
