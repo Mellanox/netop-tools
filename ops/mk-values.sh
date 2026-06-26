@@ -321,30 +321,20 @@ DEPLOY_CR_YAML1
 }
 function ofedDriver()
 {
+if [ -z "${NETOP_REGISTRY}" ];then
+  return
+fi
+OPERATOR_INIT_REPOSITORY=$(get_repository network-operator-init-container)
+OPERATOR_INIT_TAG=$(get_release_tag network-operator-init-container)
+if [ -z "${OPERATOR_INIT_REPOSITORY}" ] || [ -z "${OPERATOR_INIT_TAG}" ];then
+  return
+fi
 cat << OFED_DRIVER
 ofedDriver:
-  deploy: true
-OFED_DRIVER
-if [ -n "${NETOP_REGISTRY}" ];then
-  OPERATOR_INIT_REPOSITORY=$(get_repository network-operator-init-container)
-  OPERATOR_INIT_TAG=$(get_release_tag network-operator-init-container)
-  if [ -n "${OPERATOR_INIT_REPOSITORY}" ] && [ -n "${OPERATOR_INIT_TAG}" ];then
-cat << OFED_INIT_CONTAINER
   initContainer:
     repository: ${OPERATOR_INIT_REPOSITORY}
     image: network-operator-init-container
     version: ${OPERATOR_INIT_TAG}
-OFED_INIT_CONTAINER
-  fi
-fi
-cat << OFED_DRIVER
-  env:
-  - name: RESTORE_DRIVER_ON_POD_TERMINATION
-    value: "true"
-  - name: UNLOAD_STORAGE_MODULES
-    value: "true"
-  - name: CREATE_IFNAMES_UDEV
-    value: "true"
 OFED_DRIVER
 }
 function rdmaSharedDevicePlugin()
@@ -454,7 +444,7 @@ function 24_7_0()
   ipamType
   values_yaml
   operatorImages
-  deployCR true
+  deployCR false
   sriovNetworkOperator
   pullSecrets
   ofedDriver
