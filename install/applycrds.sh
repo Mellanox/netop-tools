@@ -16,7 +16,12 @@ sriovnet_rdma|sriovibnet_rdma|sriovnet_dra)
   esac
 esac
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
-  ${docmd} ${K8CL} apply -f ${DIRCRD}/charts/nic-configuration-operator-chart/crds
+  NIC_CONFIG_CRDS="${DIRCRD}/charts/nic-configuration-operator-chart/crds"
+  if [ -d "${NIC_CONFIG_CRDS}" ];then
+    ${docmd} ${K8CL} apply -f "${NIC_CONFIG_CRDS}"
+  else
+    echo "INFO: NIC Configuration Operator CRDs not found, skipping: ${NIC_CONFIG_CRDS}"
+  fi
 fi
 if [ "${MAINTENANCE_OPERATOR_ENABLE}" = "true" ];then
   ${docmd} ${K8CL} apply -f ${DIRCRD}/charts/maintenance-operator-chart/crds

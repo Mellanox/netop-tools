@@ -41,22 +41,49 @@ function get_image_uri()
     echo "${REPOSITORY}/${CONTAINER}:${RELEASE_TAG}${MOD_TAG}"
   fi
 }
+function emit_image_uri()
+{
+  local KEY="${1}"
+  local CONTAINER="${2}"
+  local IMAGE_URI
+  IMAGE_URI=$(get_image_uri "${CONTAINER}")
+  if [ -n "${IMAGE_URI}" ];then
+    echo "    ${KEY}: ${IMAGE_URI}"
+  fi
+}
 function operatorImages()
 {
 if [ -z "${NETOP_REGISTRY}" ];then
   return
 fi
+OPERATOR_REPOSITORY=$(get_repository network-operator)
+OPERATOR_TAG=$(get_release_tag network-operator)
+if [ -z "${OPERATOR_REPOSITORY}" ] || [ -z "${OPERATOR_TAG}" ];then
+  return
+fi
+OPERATOR_INIT_REPOSITORY=$(get_repository network-operator-init-container)
+OPERATOR_INIT_TAG=$(get_release_tag network-operator-init-container)
 cat << OPERATOR_IMAGES
 operator:
-  repository: $(get_repository network-operator)
+  repository: ${OPERATOR_REPOSITORY}
   image: network-operator
-  tag: $(get_release_tag network-operator)
+  tag: ${OPERATOR_TAG}
+OPERATOR_IMAGES
+if [ -n "${OPERATOR_INIT_REPOSITORY}" ] && [ -n "${OPERATOR_INIT_TAG}" ];then
+case ${NETOP_VERSION} in
+  24.7.*)
+    ;;
+  *)
+cat << OPERATOR_INIT_IMAGE
   ofedDriver:
     initContainer:
-      repository: $(get_repository network-operator-init-container)
+      repository: ${OPERATOR_INIT_REPOSITORY}
       image: network-operator-init-container
-      version: $(get_release_tag network-operator-init-container)
-OPERATOR_IMAGES
+      version: ${OPERATOR_INIT_TAG}
+OPERATOR_INIT_IMAGE
+    ;;
+esac
+fi
 }
 
 function sriovNetworkOperator()
@@ -122,19 +149,29 @@ fi
 if [ -n "${NETOP_REGISTRY}" ];then
 cat << SRIOV_IMAGES
   images:
-    operator: $(get_image_uri sriov-network-operator)
-    sriovConfigDaemon: $(get_image_uri sriov-network-operator-config-daemon)
-    sriovCni: $(get_image_uri sriov-cni)
-    ibSriovCni: $(get_image_uri ib-sriov-cni)
-    ovsCni: $(get_image_uri ovs-cni-plugin)
-    rdmaCni: $(get_image_uri rdma-cni)
-    sriovDevicePlugin: $(get_image_uri sriov-network-device-plugin)
-    sriovDraDriver: $(get_image_uri dra-driver-sriov)
-    resourcesInjector: $(netop_resolve_image_uri ghcr.io/k8snetworkplumbingwg/network-resources-injector)
-    webhook: $(get_image_uri sriov-network-operator-webhook)
+SRIOV_IMAGES
+  emit_image_uri operator sriov-network-operator
+  emit_image_uri sriovConfigDaemon sriov-network-operator-config-daemon
+  emit_image_uri sriovCni sriov-cni
+  emit_image_uri ibSriovCni ib-sriov-cni
+  emit_image_uri ovsCni ovs-cni-plugin
+  emit_image_uri rdmaCni rdma-cni
+  emit_image_uri sriovDevicePlugin sriov-network-device-plugin
+  emit_image_uri sriovDraDriver dra-driver-sriov
+  RESOURCES_INJECTOR_IMAGE=$(get_image_uri network-resources-injector)
+  if [ -z "${RESOURCES_INJECTOR_IMAGE}" ];then
+    RESOURCES_INJECTOR_IMAGE=$(netop_resolve_image_uri ghcr.io/k8snetworkplumbingwg/network-resources-injector)
+  fi
+  echo "    resourcesInjector: ${RESOURCES_INJECTOR_IMAGE}"
+  emit_image_uri webhook sriov-network-operator-webhook
+  case ${NETOP_VERSION} in
+    26.4.*)
+cat << SRIOV_IMAGES_METRICS
     metricsExporter: $(netop_resolve_image_uri ghcr.io/k8snetworkplumbingwg/sriov-network-metrics-exporter)
     metricsExporterKubeRbacProxy: $(netop_resolve_image_uri quay.io/brancz/kube-rbac-proxy:v0.21.2)
-SRIOV_IMAGES
+SRIOV_IMAGES_METRICS
+      ;;
+  esac
 fi
 if [ "${DRA_ENABLE}" = "true" ];then
   case ${NETOP_VERSION} in
@@ -248,17 +285,23 @@ if [ "${MAINTENANCE_OPERATOR_ENABLE}" = "true" ] && [ "${PROD_VER}" = "0" ]; the
     ;;
   esac
 fi
-if [ -n "${NETOP_REGISTRY}" ] || [ "${MAINT_PULL_SECRET}" = "true" ];then
+MAINT_REPOSITORY=""
+MAINT_TAG=""
+if [ -n "${NETOP_REGISTRY}" ];then
+  MAINT_REPOSITORY=$(get_repository maintenance-operator)
+  MAINT_TAG=$(get_release_tag maintenance-operator)
+fi
+if [ -n "${MAINT_REPOSITORY}" ] || [ "${MAINT_PULL_SECRET}" = "true" ];then
 cat << VALUES_MAINT_PULL
 maintenance-operator-chart:
 VALUES_MAINT_PULL
-  if [ -n "${NETOP_REGISTRY}" ];then
+  if [ -n "${MAINT_REPOSITORY}" ];then
 cat << VALUES_MAINT_IMAGE
   operator:
     image:
-      repository: $(get_repository maintenance-operator)
+      repository: ${MAINT_REPOSITORY}
       name: maintenance-operator
-      tag: $(get_release_tag maintenance-operator)
+      tag: ${MAINT_TAG}
 VALUES_MAINT_IMAGE
   fi
   if [ "${MAINT_PULL_SECRET}" = "true" ];then
@@ -281,6 +324,20 @@ function ofedDriver()
 cat << OFED_DRIVER
 ofedDriver:
   deploy: true
+OFED_DRIVER
+if [ -n "${NETOP_REGISTRY}" ];then
+  OPERATOR_INIT_REPOSITORY=$(get_repository network-operator-init-container)
+  OPERATOR_INIT_TAG=$(get_release_tag network-operator-init-container)
+  if [ -n "${OPERATOR_INIT_REPOSITORY}" ] && [ -n "${OPERATOR_INIT_TAG}" ];then
+cat << OFED_INIT_CONTAINER
+  initContainer:
+    repository: ${OPERATOR_INIT_REPOSITORY}
+    image: network-operator-init-container
+    version: ${OPERATOR_INIT_TAG}
+OFED_INIT_CONTAINER
+  fi
+fi
+cat << OFED_DRIVER
   env:
   - name: RESTORE_DRIVER_ON_POD_TERMINATION
     value: "true"
@@ -396,6 +453,7 @@ function 24_7_0()
   version
   ipamType
   values_yaml
+  operatorImages
   deployCR true
   sriovNetworkOperator
   pullSecrets
@@ -421,6 +479,7 @@ function 24_10_0()
   version
   ipamType
   values_yaml
+  operatorImages
   deployCR true
   sriovNetworkOperator
   pullSecrets
@@ -431,6 +490,7 @@ function 24_10_1()
   version
   ipamType
   values_yaml
+  operatorImages
   deployCR true
   sriovNetworkOperator
   pullSecrets
@@ -440,6 +500,7 @@ function 25_1_0()
   version
   ipamType
   values_yaml
+  operatorImages
   deployCR false
   sriovNetworkOperator
   pullSecrets
@@ -450,6 +511,7 @@ function 25_4_0()
   version
   ipamType
   values_yaml
+  operatorImages
   sriovNetworkOperator
   pullSecrets
 }
@@ -458,6 +520,7 @@ function 25_7_0()
   version
   ipamType
   values_yaml
+  operatorImages
   sriovNetworkOperator
   pullSecrets
 }
@@ -466,6 +529,7 @@ function 25_10_0()
   version
   ipamType
   values_yaml
+  operatorImages
   sriovNetworkOperator
   pullSecrets
 }
@@ -474,6 +538,7 @@ function 26_1_0()
   version
   ipamType
   values_yaml
+  operatorImages
   sriovNetworkOperator
   pullSecrets
 }

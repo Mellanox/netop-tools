@@ -25,8 +25,8 @@ function get_repository()
   LINE=$(get_container ${1})
   REPOSITORY=$(echo "${LINE}" | cut -d, -f3)
   if [ "${2}" = "required" ] &&  [ "${REPOSITORY}" = "" ];then
-    echo "required repository ${1} not found in container list ${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}"
-    exit 1
+    echo "ERROR: required repository ${1} not found in container list ${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}" >&2
+    return 1
   fi
   REPOSITORY=$(netop_resolve_repository "${REPOSITORY}")
   echo ${REPOSITORY}
@@ -35,6 +35,67 @@ function get_release_tag()
 {
   LINE=$(get_container ${1})
   echo "${LINE}" | cut -d, -f5
+}
+function require_container()
+{
+  local CONTAINER="${1}"
+  local LINE
+  local REPOSITORY
+  local RELEASE_TAG
+
+  LINE=$(get_container "${CONTAINER}")
+  REPOSITORY=$(echo "${LINE}" | cut -d, -f3)
+  RELEASE_TAG=$(echo "${LINE}" | cut -d, -f5)
+  if [ -z "${REPOSITORY}" ] || [ -z "${RELEASE_TAG}" ];then
+    echo "ERROR: required container ${CONTAINER} missing repository or version in ${NETOP_ROOT_DIR}/containers/${NETOP_VERSION}" >&2
+    return 1
+  fi
+}
+function validate_required_containers()
+{
+  local REQUIRED_CONTAINERS=(plugins multus-cni)
+  local CONTAINER
+  local MISSING=0
+
+  if [ "${IPAM_TYPE}" = "nv-ipam" ];then
+    REQUIRED_CONTAINERS+=(nvidia-k8s-ipam)
+  fi
+  if [ "${IPAM_TYPE}" = "whereabouts" ];then
+    REQUIRED_CONTAINERS+=(whereabouts)
+  fi
+  if [ "${NETOP_NETWORK_TYPE}" = "IPoIBNetwork" ];then
+    REQUIRED_CONTAINERS+=(ipoib-cni)
+  fi
+  if [ ${#NETOP_NODEPOOLS[@]} -eq 0 ] && [ "${NIC_NODE_POLICY_ENABLE}" != "true" ]; then
+    if [ "${OFED_ENABLE}" = true ];then
+      REQUIRED_CONTAINERS+=(doca-driver)
+    fi
+    case ${USECASE} in
+    ipoib_rdma_shared_device|macvlan_rdma_shared_device)
+      REQUIRED_CONTAINERS+=(k8s-rdma-shared-dev-plugin)
+      ;;
+    hostdev_rdma_sriov)
+      REQUIRED_CONTAINERS+=(sriov-network-device-plugin)
+      ;;
+    esac
+  fi
+  case ${NETOP_VERSION} in
+    26.4.*)
+      if [ "${NCP_GLOBAL_CONFIG}" = "true" ];then
+        REQUIRED_CONTAINERS+=(network-operator-init-container)
+      fi
+      ;;
+  esac
+  if [ "${NIC_CONFIG_ENABLE}" = true ] && [ -n "$(get_container nic-configuration-operator)" ];then
+    REQUIRED_CONTAINERS+=(nic-configuration-operator nic-configuration-operator-daemon)
+  fi
+
+  for CONTAINER in "${REQUIRED_CONTAINERS[@]}";do
+    require_container "${CONTAINER}" || MISSING=1
+  done
+  if [ "${MISSING}" = "1" ];then
+    exit 1
+  fi
 }
 function globalConfig()
 {
@@ -511,6 +572,7 @@ maintenanceOperator >> ${FILE}
 }
 NETOP_JINGA_CONFIG=false
 FILE="${NETOP_NICCLUSTER_FILE}"
+validate_required_containers
 mk_file
 if [ "${NETOP_BCM_CONFIG}" == true ];then
    NETOP_JINGA_CONFIG=true
