@@ -1374,6 +1374,7 @@ CI runs `tests/unitest.sh` on ubuntu-22.04 on every push (`.github/workflows/mai
 |---|---|---|
 | `NETOP_VERSION` | `26.1.0` | Network Operator Helm chart version |
 | `PROD_VER` | `1` | `1`=production (NGC), `0`=staging |
+| `NETOP_REGISTRY` | (empty) | Optional registry host override for generated image references; preserves each repository path after the original host |
 | `CALICO_ROOT` | `3.28.2` | Calico CNI version |
 | `CNI_PLUGINS_VERSION` | `v1.5.1` | CNI plugins version |
 | `HELM_VERSION` | `3.15.4` | Helm version |

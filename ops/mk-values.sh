@@ -18,12 +18,72 @@ function get_repository()
 {
   LINE=$(get_container ${1})
   REPOSITORY=$(echo "${LINE}" | cut -d, -f3)
+  REPOSITORY=$(netop_resolve_repository "${REPOSITORY}")
   echo ${REPOSITORY}
 }
 function get_release_tag()
 {
   LINE=$(get_container ${1})
   echo "${LINE}" | cut -d, -f5
+}
+function get_mod_tag()
+{
+  LINE=$(get_container ${1})
+  echo "${LINE}" | cut -d, -f6
+}
+function get_image_uri()
+{
+  CONTAINER="${1}"
+  REPOSITORY=$(get_repository "${CONTAINER}")
+  RELEASE_TAG=$(get_release_tag "${CONTAINER}")
+  MOD_TAG=$(get_mod_tag "${CONTAINER}")
+  if [ -n "${REPOSITORY}" ] && [ -n "${RELEASE_TAG}" ];then
+    echo "${REPOSITORY}/${CONTAINER}:${RELEASE_TAG}${MOD_TAG}"
+  fi
+}
+function emit_image_uri()
+{
+  local KEY="${1}"
+  local CONTAINER="${2}"
+  local IMAGE_URI
+  IMAGE_URI=$(get_image_uri "${CONTAINER}")
+  if [ -n "${IMAGE_URI}" ];then
+    echo "    ${KEY}: ${IMAGE_URI}"
+  fi
+}
+function operatorImages()
+{
+if [ -z "${NETOP_REGISTRY}" ];then
+  return
+fi
+OPERATOR_REPOSITORY=$(get_repository network-operator)
+OPERATOR_TAG=$(get_release_tag network-operator)
+if [ -z "${OPERATOR_REPOSITORY}" ] || [ -z "${OPERATOR_TAG}" ];then
+  return
+fi
+OPERATOR_INIT_REPOSITORY=$(get_repository network-operator-init-container)
+OPERATOR_INIT_TAG=$(get_release_tag network-operator-init-container)
+cat << OPERATOR_IMAGES
+operator:
+  repository: ${OPERATOR_REPOSITORY}
+  image: network-operator
+  tag: ${OPERATOR_TAG}
+OPERATOR_IMAGES
+if [ -n "${OPERATOR_INIT_REPOSITORY}" ] && [ -n "${OPERATOR_INIT_TAG}" ];then
+case ${NETOP_VERSION} in
+  24.7.*)
+    ;;
+  *)
+cat << OPERATOR_INIT_IMAGE
+  ofedDriver:
+    initContainer:
+      repository: ${OPERATOR_INIT_REPOSITORY}
+      image: network-operator-init-container
+      version: ${OPERATOR_INIT_TAG}
+OPERATOR_INIT_IMAGE
+    ;;
+esac
+fi
 }
 
 function sriovNetworkOperator()
@@ -86,9 +146,37 @@ cat << SRIOV_NETWORK_OPERATOR1
       manageSoftwareBridges: ${MANAGE_SW_BRIDGE}
 SRIOV_NETWORK_OPERATOR1
 fi
+if [ -n "${NETOP_REGISTRY}" ];then
+cat << SRIOV_IMAGES
+  images:
+SRIOV_IMAGES
+  emit_image_uri operator sriov-network-operator
+  emit_image_uri sriovConfigDaemon sriov-network-operator-config-daemon
+  emit_image_uri sriovCni sriov-cni
+  emit_image_uri ibSriovCni ib-sriov-cni
+  emit_image_uri ovsCni ovs-cni-plugin
+  emit_image_uri rdmaCni rdma-cni
+  emit_image_uri sriovDevicePlugin sriov-network-device-plugin
+  emit_image_uri sriovDraDriver dra-driver-sriov
+  RESOURCES_INJECTOR_IMAGE=$(get_image_uri network-resources-injector)
+  if [ -z "${RESOURCES_INJECTOR_IMAGE}" ];then
+    RESOURCES_INJECTOR_IMAGE=$(netop_resolve_image_uri ghcr.io/k8snetworkplumbingwg/network-resources-injector)
+  fi
+  echo "    resourcesInjector: ${RESOURCES_INJECTOR_IMAGE}"
+  emit_image_uri webhook sriov-network-operator-webhook
+  case ${NETOP_VERSION} in
+    26.4.*)
+cat << SRIOV_IMAGES_METRICS
+    metricsExporter: $(netop_resolve_image_uri ghcr.io/k8snetworkplumbingwg/sriov-network-metrics-exporter)
+    metricsExporterKubeRbacProxy: $(netop_resolve_image_uri quay.io/brancz/kube-rbac-proxy:v0.21.2)
+SRIOV_IMAGES_METRICS
+      ;;
+  esac
+fi
 if [ "${DRA_ENABLE}" = "true" ];then
   case ${NETOP_VERSION} in
     26.4.*)
+      if [ -z "${NETOP_REGISTRY}" ];then
 cat << SRIOV_DRA
   images:
     sriovDraDriver: $(get_repository dra-driver-sriov)/dra-driver-sriov:$(get_release_tag dra-driver-sriov)
@@ -96,6 +184,13 @@ draDriver:
   cdiRoot: "${DRA_CDI_ROOT}"
   defaultInterfacePrefix: "${DRA_IFACE_PREFIX}"
 SRIOV_DRA
+      else
+cat << SRIOV_DRA
+draDriver:
+  cdiRoot: "${DRA_CDI_ROOT}"
+  defaultInterfacePrefix: "${DRA_IFACE_PREFIX}"
+SRIOV_DRA
+      fi
       ;;
   esac
 fi
@@ -124,6 +219,8 @@ fi
 
 function values_yaml()
 {
+NFD_PULL_SECRET="false"
+MAINT_PULL_SECRET="false"
 #NodeFeatureRule: ${NFD_ENABLE}
 cat <<VALUES_YAML0
 nfd:
@@ -141,13 +238,27 @@ esac
 if [ "${NFD_ENABLE}" = "true" ] && [ "${PROD_VER}" = "0" ]; then
   case "${NETOP_VERSION}" in
   26.4.*)
-cat << VALUES_NFD_PULL
-node-feature-discovery:
-  imagePullSecrets:
-    - name: ${NGC_SECRET:-ngc-image-secret}
-VALUES_NFD_PULL
+    NFD_PULL_SECRET="true"
     ;;
   esac
+fi
+if [ -n "${NETOP_REGISTRY}" ] || [ "${NFD_PULL_SECRET}" = "true" ];then
+cat << VALUES_NFD_PULL
+node-feature-discovery:
+VALUES_NFD_PULL
+  if [ -n "${NETOP_REGISTRY}" ];then
+cat << VALUES_NFD_IMAGE
+  image:
+    repository: $(get_repository node-feature-discovery)/node-feature-discovery
+    tag: $(get_release_tag node-feature-discovery)
+VALUES_NFD_IMAGE
+  fi
+  if [ "${NFD_PULL_SECRET}" = "true" ];then
+cat << VALUES_NFD_PULL_SECRET
+  imagePullSecrets:
+    - name: ${NGC_SECRET:-ngc-image-secret}
+VALUES_NFD_PULL_SECRET
+  fi
 fi
 
 case "${NETOP_VERSION}" in
@@ -170,13 +281,35 @@ VALUES_YAML2
 if [ "${MAINTENANCE_OPERATOR_ENABLE}" = "true" ] && [ "${PROD_VER}" = "0" ]; then
   case "${NETOP_VERSION}" in
   26.4.*)
-cat << VALUES_MAINT_PULL
-maintenance-operator-chart:
-  imagePullSecrets:
-    - name: ${NGC_SECRET:-ngc-image-secret}
-VALUES_MAINT_PULL
+    MAINT_PULL_SECRET="true"
     ;;
   esac
+fi
+MAINT_REPOSITORY=""
+MAINT_TAG=""
+if [ -n "${NETOP_REGISTRY}" ];then
+  MAINT_REPOSITORY=$(get_repository maintenance-operator)
+  MAINT_TAG=$(get_release_tag maintenance-operator)
+fi
+if [ -n "${MAINT_REPOSITORY}" ] || [ "${MAINT_PULL_SECRET}" = "true" ];then
+cat << VALUES_MAINT_PULL
+maintenance-operator-chart:
+VALUES_MAINT_PULL
+  if [ -n "${MAINT_REPOSITORY}" ];then
+cat << VALUES_MAINT_IMAGE
+  operator:
+    image:
+      repository: ${MAINT_REPOSITORY}
+      name: maintenance-operator
+      tag: ${MAINT_TAG}
+VALUES_MAINT_IMAGE
+  fi
+  if [ "${MAINT_PULL_SECRET}" = "true" ];then
+cat << VALUES_MAINT_PULL_SECRET
+  imagePullSecrets:
+    - name: ${NGC_SECRET:-ngc-image-secret}
+VALUES_MAINT_PULL_SECRET
+  fi
 fi
 }
 function deployCR()
@@ -191,6 +324,20 @@ function ofedDriver()
 cat << OFED_DRIVER
 ofedDriver:
   deploy: true
+OFED_DRIVER
+if [ -n "${NETOP_REGISTRY}" ];then
+  OPERATOR_INIT_REPOSITORY=$(get_repository network-operator-init-container)
+  OPERATOR_INIT_TAG=$(get_release_tag network-operator-init-container)
+  if [ -n "${OPERATOR_INIT_REPOSITORY}" ] && [ -n "${OPERATOR_INIT_TAG}" ];then
+cat << OFED_INIT_CONTAINER
+  initContainer:
+    repository: ${OPERATOR_INIT_REPOSITORY}
+    image: network-operator-init-container
+    version: ${OPERATOR_INIT_TAG}
+OFED_INIT_CONTAINER
+  fi
+fi
+cat << OFED_DRIVER
   env:
   - name: RESTORE_DRIVER_ON_POD_TERMINATION
     value: "true"
@@ -306,6 +453,7 @@ function 24_7_0()
   version
   ipamType
   values_yaml
+  operatorImages
   deployCR true
   sriovNetworkOperator
   pullSecrets
@@ -331,6 +479,7 @@ function 24_10_0()
   version
   ipamType
   values_yaml
+  operatorImages
   deployCR true
   sriovNetworkOperator
   pullSecrets
@@ -341,6 +490,7 @@ function 24_10_1()
   version
   ipamType
   values_yaml
+  operatorImages
   deployCR true
   sriovNetworkOperator
   pullSecrets
@@ -350,6 +500,7 @@ function 25_1_0()
   version
   ipamType
   values_yaml
+  operatorImages
   deployCR false
   sriovNetworkOperator
   pullSecrets
@@ -360,6 +511,7 @@ function 25_4_0()
   version
   ipamType
   values_yaml
+  operatorImages
   sriovNetworkOperator
   pullSecrets
 }
@@ -368,6 +520,7 @@ function 25_7_0()
   version
   ipamType
   values_yaml
+  operatorImages
   sriovNetworkOperator
   pullSecrets
 }
@@ -376,6 +529,7 @@ function 25_10_0()
   version
   ipamType
   values_yaml
+  operatorImages
   sriovNetworkOperator
   pullSecrets
 }
@@ -384,6 +538,7 @@ function 26_1_0()
   version
   ipamType
   values_yaml
+  operatorImages
   sriovNetworkOperator
   pullSecrets
 }
@@ -392,6 +547,7 @@ function 26_4_0()
   version
   ipamType
   values_yaml
+  operatorImages
   sriovNetworkOperator
   pullSecrets
 }

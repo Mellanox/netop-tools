@@ -9,6 +9,8 @@
 # needed in worker node grub default config: iommu=pt intel_iommu=on
 #
 NETOP_VERSION="26.4.0"
+PROD_VER=1
+#NGC_API_KEY=$(cat /home/thuff/keys/ngc/ngc_staging_personal_key)
 NIC_CONFIG_ENABLE=false
 #K8SVER="1.32"
 NFD_ENABLE=true
@@ -25,11 +27,10 @@ NETOP_COMBINED=true
 NETOP_SRIOV_NODE_POOL="100%"
 NETOP_NICCLUSTER_FILE="nic-cluster-policy-rtx6000ada.yaml"
 NETOP_NODEPOOLS=( "NETOP_NETLIST_IGX" "NETOP_NETLIST_OVX" )
-NETOP_NETLIST_IGX=( a,,,0005:03:00.0 b,,,0005:03:00.1 )
+NETOP_NETLIST_IGX=( a,,,0004:03:00.0 b,,,0004:03:00.1 )
 NETOP_NODESELECTOR_IGX="kubernetes.io/arch"
 NETOP_NODESELECTOR_VAL_IGX="arm64"
-#NETOP_NETLIST_OVX=( a,,,0000:b8:00.0 b,,,0000:b8:00.1 )
-NETOP_NETLIST_OVX=( a,,,0000:b8:00.0 b,,,0000:b8:00.1 c,,,0000:16:00.0 d,,,0000:16:00.1 )
+NETOP_NETLIST_OVX=( a,,,0000:16:00.0 b,,,0000:16:00.1 c,,,0000:b8:00.0 d,,,0000:b8:00.1 )
 NETOP_NODESELECTOR_OVX="kubernetes.io/arch"
 NETOP_NODESELECTOR_VAL_OVX="amd64"
 # IGX and OVX are on the same L2 fabric — shared IPPool, single CIDR

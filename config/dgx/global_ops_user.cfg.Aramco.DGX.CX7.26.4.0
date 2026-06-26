@@ -1,0 +1,62 @@
+# Customer: Aramco DGX ConnectX-7
+# Source artifacts: /home/thuff/nvidia/POC/Aramco
+# Use the eight dedicated InfiniBand E/W ports for the secondary RDMA networks.
+
+NETOP_VERSION="26.4.0"
+PROD_VER=1
+NETOP_REGISTRY="registry.cm.cluster:5000"
+
+ENABLE_NFSRDMA=false
+K8SVER="1.34"
+NFD_ENABLE=true
+NIC_FD_ENABLE=false
+NIC_CONFIG_ENABLE=false
+MAINTENANCE_OPERATOR_ENABLE=false
+
+# Host OFED is present in dgx-output; keep the Network Operator OFED driver off.
+OFED_ENABLE=false
+
+CREATE_CONFIG_ONLY=0
+USECASE="sriovibnet_rdma"
+IPAM_TYPE="nv-ipam"
+NVIPAM_POOL_TYPE="IPPool"
+
+#NETOP_MTU="9000"
+DEVICE_TYPES=( "connectx-7" )
+NUM_VFS=8
+NUM_GPUS=8
+
+NETOP_NAMESPACE="network-operator"
+NETOP_BCM_CONFIG=true
+NETOP_COMBINED=true
+NETOP_SRIOV_NODE_POOL="100%"
+NETOP_NICCLUSTER_FILE="nic-cluster-policy-aramco-dgx.yaml"
+
+# Verify this CIDR with the customer; the provided artifacts did not include
+# existing SriovNetwork or IPPool CRs with the live E/W secondary network range.
+NETOP_NETWORK_RANGE="192.168.0.0/16"
+NETOP_PERNODE_BLOCKSIZE="32"
+
+# E/W InfiniBand ports from dgx-45. Ethernet/bond ports are intentionally
+# excluded. The two IB functions paired with bond0 cards are left out to match
+# the repo's DGX H100/H200 E/W fabric pattern.
+NETOP_NETLIST=( a,,,ibp24s0 b,,,ibp64s0 c,,,ibp79s0 d,,,ibp94s0 e,,,ibp154s0 f,,,ibp192s0 g,,,ibp206s0 h,,,ibp220s0 )
+
+# BDF map from dgx-output:
+# 18:00.0 -> ibp24s0
+# 40:00.0 -> ibp64s0
+# 4f:00.0 -> ibp79s0
+# 5e:00.0 -> ibp94s0
+# 9a:00.0 -> ibp154s0
+# c0:00.0 -> ibp192s0
+# ce:00.0 -> ibp206s0
+# dc:00.0 -> ibp220s0
+#
+# Observed but not included in the E/W list:
+# 29:00.0 -> ibp41s0f0
+# aa:00.0 -> ibp170s0f0
+# 29:00.1 -> bond0 Ethernet function
+# aa:00.1 -> bond0 Ethernet function
+#
+# Existing Aramco deployment uses registry.cm.cluster:5000. NETOP_REGISTRY
+# rewrites image repositories from containers/26.4.0 at manifest generation time.
