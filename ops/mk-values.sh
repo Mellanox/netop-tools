@@ -448,21 +448,6 @@ function 24_7_0()
   sriovNetworkOperator
   pullSecrets
   ofedDriver
-  case ${USECASE} in
-  ipoib_rdma_shared_device)
-    #LINK_TYPES='"IB"' # breaks plugin
-    LINK_TYPES=""
-    rdmaSharedDevicePlugin
-    ;;
-  macvlan_rdma_shared_device)
-    LINK_TYPES='"ether"'
-    rdmaSharedDevicePlugin
-    ;;
-  hostdev_rdma_sriov)
-    sriovDevicePlugin
-    ;;
-  esac
-  secondaryNetwork
 }
 function 24_10_0()
 {
