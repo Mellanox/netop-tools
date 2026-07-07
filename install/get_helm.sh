@@ -105,7 +105,7 @@ verifySupported() {
   fi
 
   if [ "${HAS_TAR}" != "true" ]; then
-    echo "[ERROR] Could not find tar. It is required to extract the helm binary archive."
+    echo "[ERROR] Could not find tar. It is required to extract the ${HELMCL} binary archive."
     exit 1
   fi
 }
@@ -131,7 +131,7 @@ checkDesiredVersion() {
   fi
 }
 
-# checkHelmInstalledVersion checks which version of helm is installed and
+# checkHelmInstalledVersion checks which version of ${HELMCL} is installed and
 # if it needs to be changed.
 checkHelmInstalledVersion() {
   if [[ -f "${HELM_INSTALL_DIR}/${BINARY_NAME}" ]]; then

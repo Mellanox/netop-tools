@@ -1,9 +1,9 @@
 #!/bin/bash
 #
 #
-helm uninstall -n network-operator network-operator --no-hooks
-helm uninstall -n network-operator network-operator
-helm repo list -n network-operator
+${HELMCL} uninstall -n network-operator network-operator --no-hooks
+${HELMCL} uninstall -n network-operator network-operator
+${HELMCL} repo list -n network-operator
 k get job.batch
 kn delete job.batch network-operator-sriov-network-operator-pre-delete-hook
 kn delete ns -n network-operator

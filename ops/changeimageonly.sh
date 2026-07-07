@@ -4,15 +4,15 @@
 #
 Jeff,
 
-A new image is needed, but not a new helm chart.
+A new image is needed, but not a new ${HELMCL} chart.
 Some existing config yaml files will need to be modified.
 
-# I copied my 23.05 network operator helm config to a new dir
-# on the master node go to the top level that includes the netop-chart/network-operator helm charts.
+# I copied my 23.05 network operator ${HELMCL} config to a new dir
+# on the master node go to the top level that includes the netop-chart/network-operator ${HELMCL} charts.
 # in my case.
 cd ./netop
 
-# copy the exiting helm chart configuration to a chart dir for sriov-dp-volume
+# copy the exiting ${HELMCL} chart configuration to a chart dir for sriov-dp-volume
 cp -Rp ~/netop/netop-chart-23.5.0 ~/netop/netop-chart-23.5.0-sriov-dp-volume
 
 # backup your overrides values.yaml file
@@ -71,5 +71,5 @@ cordon
 cd netop-chart
 ${K8CL} scale deployment --replicas=0 -n ${NETOP_NAMESPACE} network-operator
 ../applycrds.sh
-helm upgrade -n ${NETOP_NAMESPACE}  network-operator network-operator  -f ../network-operator-values-${NETOP_VERSION}.yaml
+${HELMCL} upgrade -n ${NETOP_NAMESPACE}  network-operator network-operator  -f ../network-operator-values-${NETOP_VERSION}.yaml
 uncordon
