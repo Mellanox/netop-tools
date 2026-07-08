@@ -1,10 +1,12 @@
 # Vendor: NVIDIA
 #
-#System Information
-#       Manufacturer: NVIDIA
-#       Product Name: NVIDIA IGX Orin Development Kit
-#       Version: Not Specified
-#       Serial Number: 1411523000174
+# System Information
+#         Manufacturer: NVIDIA
+#         Product Name: NVIDIA IGX Thor Developer Kit
+#         Version: Not Specified
+#         Serial Number: 1585025605003
+#         UUID: cf71d372-8abd-5337-bdbb-c2173a878ab7
+#         Wake-up Type: Power Switch
 #
 # needed in worker node grub default config: iommu=pt intel_iommu=on
 #
@@ -18,6 +20,7 @@ OFED_ENABLE=false
 CREATE_CONFIG_ONLY=0
 USECASE="sriovnet_rdma"
 DEVICE_TYPES=( "connectx-7" )
+NETOP_APP_NAMESPACES=( "osmo-workflows" )
 NUM_VFS=8
 #NUM_GPUS=1
 NUM_GPUS=0
