@@ -2,7 +2,7 @@
 apiVersion: mellanox.com/v1alpha1
 kind: MacvlanNetwork
 metadata:
-  name: macvlan-rdma-shared-device-default-a-su-1
+  name: macvlan-rdma-shared-device-default-a
   namespace: nvidia-network-operator
 spec:
   networkNamespace: "default"
@@ -18,14 +18,14 @@ spec:
       },
       "log_file": "/var/log/MacvlanNetwork_nv-ipam.log",
       "log_level": "debug",
-      "poolName": "macvlan-pool-a-su-1",
+      "poolName": "macvlan-pool-a",
       "poolType": "IPPool"
     }
 ---
 apiVersion: mellanox.com/v1alpha1
 kind: MacvlanNetwork
 metadata:
-  name: macvlan-rdma-shared-device-default-b-su-1
+  name: macvlan-rdma-shared-device-default-b
   namespace: nvidia-network-operator
 spec:
   networkNamespace: "default"
@@ -41,6 +41,6 @@ spec:
       },
       "log_file": "/var/log/MacvlanNetwork_nv-ipam.log",
       "log_level": "debug",
-      "poolName": "macvlan-pool-b-su-1",
+      "poolName": "macvlan-pool-b",
       "poolType": "IPPool"
     }

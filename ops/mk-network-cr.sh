@@ -17,13 +17,22 @@ function init_file()
     rm -f "${1}"
   fi
 }
+function set_su_values()
+{
+  NETOP_SU_VALUES=( "${NETOP_SULIST[@]}" )
+  if [ ${#NETOP_SU_VALUES[@]} -eq 0 ];then
+    NETOP_SU_VALUES=( "" )
+  fi
+}
 function IPPoolCRD()
 {
   SUBNET_FILE="/tmp/subnets.$$"
   NETOP_IPPOOL_FILES=()
   IPPOOL_IDX=0
   if [ "${IPAM_TYPE}" = "nv-ipam" ];then
-    for NETOP_SU in ${NETOP_SULIST[@]};do
+    set_su_values
+    for NETOP_SU in "${NETOP_SU_VALUES[@]}";do
+      SUTAG="${NETOP_SU:+-${NETOP_SU}}"
       NUM_SUBNETS="${#NETOP_NETLIST[@]}"
       ${NETOP_ROOT_DIR}/ops/generate_subnets.sh "${NETOP_NETWORK_RANGE}" "${NUM_SUBNETS}" ${NETOP_NETWORK_GW} > ${SUBNET_FILE}
       LINE_NUM=1
@@ -38,8 +47,8 @@ function IPPoolCRD()
         LINE=$(sed -n ${LINE_NUM}p ${SUBNET_FILE})
         RANGE=$(echo ${LINE}|cut -d' ' -f1)
         GW=$(echo ${LINE}|cut -d' ' -f3)
-        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}${POOL_SUFFIX}
-        FILE="ippool-${NIDX}-${NETOP_SU}${POOL_SUFFIX}.yaml"
+        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}${SUTAG}${POOL_SUFFIX}
+        FILE="ippool-${NIDX}${SUTAG}${POOL_SUFFIX}.yaml"
         NETOP_IPPOOL_FILES[${IPPOOL_IDX}]="${FILE}"
         let IPPOOL_IDX=IPPOOL_IDX+1
         init_file ${FILE}
@@ -79,12 +88,14 @@ function NetworkCRD()
   NETWORK_IDX=0
   NETOP_NODEPOLICY_FILES=()
   POLICY_IDX=0
-  for NETOP_SU in ${NETOP_SULIST[@]};do
+  set_su_values
+  for NETOP_SU in "${NETOP_SU_VALUES[@]}";do
+    SUTAG="${NETOP_SU:+-${NETOP_SU}}"
     for NIDXDEF in ${NETOP_NETLIST[@]};do
       NIDX=`echo ${NIDXDEF}|cut -d',' -f1`
       # Extract all device fields (field 4 onwards) and format as comma-separated list
       NDEV=`echo ${NIDXDEF} | cut -d',' -f4- | sed 's/,$//'`
-      POLICY_NAME="${NETOP_NETWORK_NAME}-node-policy-${NIDX}-${NETOP_SU}"
+      POLICY_NAME="${NETOP_NETWORK_NAME}-node-policy-${NIDX}${SUTAG}"
       FILE="${POLICY_NAME}.yaml"
       case ${NETOP_NETWORK_TYPE} in
       SriovIBNetwork)
@@ -101,12 +112,12 @@ function NetworkCRD()
         ;;
       esac
       for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
-        NETWORK_NAME="${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}"
+        NETWORK_NAME="${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}${SUTAG}"
         FILE="${NETWORK_NAME}-cr.yaml"
         NETOP_NETWORK_FILES[${NETWORK_IDX}]="${FILE}"
         let NETWORK_IDX=NETWORK_IDX+1
         init_file ${FILE}
-        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}${POOL_SUFFIX}
+        IPPOOL_NAME=${NETOP_NETWORK_POOL}-${NIDX}${SUTAG}${POOL_SUFFIX}
         case ${NETOP_NETWORK_TYPE} in
         HostDeviceNetwork)
           ${NETOP_ROOT_DIR}/ops/mk-hostdev-sriov-ipam-cr.sh ${NETWORK_NAME} ${IPPOOL_NAME} ${NIDX} ${NETOP_APP_NAMESPACE} >> ${FILE}

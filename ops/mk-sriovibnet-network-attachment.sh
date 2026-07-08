@@ -3,19 +3,25 @@
 #
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
-if [ "$#" -ne 3 ];then
-  echo "usage:$0 {NETWORK NIDX} {NETOP SU} {NETOP_APP_NAMESPACE}"
-  echo "example:$0 a default"
+if [ "$#" -lt 1 ] || [ "$#" -gt 3 ];then
+  echo "usage:$0 {NETWORK NIDX} [NETOP_SU] [NETOP_APP_NAMESPACE]"
+  echo "example:$0 a su-1 default"
   exit 1
 fi
 NIDX=${1}
 shift
-NETOP_SU=${1}
-shift
-NETOP_APP_NAMESPACE=${1}
-shift
+NETOP_SU=${1:-}
+if [ "$#" -gt 0 ];then
+  shift
+fi
+SUTAG="${NETOP_SU:+-${NETOP_SU}}"
+if [ "$#" -gt 0 ];then
+  NETOP_APP_NAMESPACE_VALUES=( "${1}" )
+else
+  NETOP_APP_NAMESPACE_VALUES=( "${NETOP_APP_NAMESPACES[@]}" )
+fi
+for NETOP_APP_NAMESPACE in "${NETOP_APP_NAMESPACE_VALUES[@]}";do
 FILE="./Network-Attachment-Definitions-${NIDX}-${NETOP_APP_NAMESPACE}.yaml"
-for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
 cat << HEREDOC > ${FILE}
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
@@ -37,7 +43,7 @@ spec:
           "ibKubernetesEnabled":true,
           "ipam": {
             "type": "${IPAM_TYPE}",
-            "poolName": "${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}"
+            "poolName": "${NETOP_NETWORK_POOL}-${NIDX}${SUTAG}"
           }
         }
       ]
