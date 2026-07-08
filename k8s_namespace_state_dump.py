@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import logging
 import os
 import re
 import shutil
@@ -198,6 +199,8 @@ _NETWORK_CRD_KEYWORDS = [
     "operator.openshift.io",
 ]
 
+LOG = logging.getLogger("k8s_namespace_state_dump")
+
 
 @dataclass
 class CmdResult:
@@ -346,6 +349,9 @@ class Collector:
             "files": [],
         }
 
+    def log_component(self, component: str) -> None:
+        LOG.info("capturing %s", component)
+
     def run_argv(self, argv: list[str], *, timeout: int | None = None) -> CmdResult:
         try:
             proc = subprocess.run(
@@ -389,6 +395,7 @@ class Collector:
         return path
 
     def capture(self, relpath: str, args: Iterable[str], *, timeout: int | None = None) -> CmdResult:
+        self.log_component(relpath)
         result = self.run(args, timeout=timeout)
         body = result.stdout
         if result.rc != 0:
@@ -405,7 +412,7 @@ class Collector:
         return result
 
     def warn(self, message: str) -> None:
-        print(f"warning: {message}", file=sys.stderr)
+        LOG.warning(message)
         self.summary["warnings"].append(message)
 
 
@@ -418,6 +425,7 @@ def capture_optional(
     save_failure: bool = True,
     warn_on_failure: bool = False,
 ) -> CmdResult:
+    c.log_component(relpath)
     result = c.run(args, timeout=timeout)
     if result.rc == 0:
         c.save_text(relpath, result.stdout)
@@ -444,6 +452,7 @@ def capture_helm_optional(
     timeout: int | None = None,
     save_failure: bool = True,
 ) -> CmdResult:
+    c.log_component(relpath)
     result = c.run_helm(args, timeout=timeout)
     if result.rc == 0:
         c.save_text(relpath, result.stdout)
@@ -468,6 +477,7 @@ def capture_first_success(
     timeout: int | None = None,
     warn_on_failure: bool = False,
 ) -> CmdResult | None:
+    c.log_component(relpath)
     failures: list[CmdResult] = []
     seen: set[tuple[str, ...]] = set()
     for args_iter in attempts:
@@ -806,6 +816,7 @@ def dump_network_must_gather(c: Collector, *, log_tail: int) -> set[str]:
         if ns_result.rc != 0:
             continue
         ns_dir = f"network-must-gather/namespaces/{safe_name(namespace)}"
+        c.log_component(f"{ns_dir}/namespace.json")
         c.save_text(f"{ns_dir}/namespace.json", ns_result.stdout)
         c.capture(f"{ns_dir}/namespace.yaml", ["get", "namespace", namespace, "-o", "yaml"])
         c.capture(f"{ns_dir}/describe.txt", ["describe", "namespace", namespace])
@@ -889,6 +900,14 @@ def make_archive(out_dir: Path) -> Path:
     return archive
 
 
+def configure_logging() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Save a namespace-focused Kubernetes state bundle.",
@@ -925,10 +944,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    configure_logging()
     global_ops_path = Path(args.global_ops).resolve() if args.global_ops else find_default_global_ops()
     global_ops_commands = load_global_ops_commands(global_ops_path)
     if global_ops_commands.warning:
-        print(f"warning: {global_ops_commands.warning}", file=sys.stderr)
+        LOG.warning(global_ops_commands.warning)
 
     kubectl_command = args.cmd or global_ops_commands.k8cl or "kubectl"
     helm_command = args.helm_cmd or global_ops_commands.helmcl or "helm"
@@ -946,6 +966,9 @@ def main(argv: list[str]) -> int:
             file=sys.stderr,
         )
         return 127
+
+    LOG.info("using Kubernetes command from %s: %s", global_ops_commands.source, shlex.join(kubectl))
+    LOG.info("using Helm command from %s: %s", global_ops_commands.source, shlex.join(helm))
 
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     out_dir = Path(args.out_dir or f"k8s-state-{safe_name(args.namespace)}-{stamp}").resolve()
