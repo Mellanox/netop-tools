@@ -2,8 +2,9 @@
 """Save a namespace-focused Kubernetes state bundle.
 
 Examples:
-  tools/k8s_namespace_state_dump.py -n default --cmd kubectl
-  tools/k8s_namespace_state_dump.py -n dpf-operator-system --cmd "microk8s kubectl"
+  tools/k8s_namespace_state_dump.py -n default
+  tools/k8s_namespace_state_dump.py -n dpf-operator-system --global-ops /path/to/global_ops.cfg
+  tools/k8s_namespace_state_dump.py -n dpf-operator-system --cmd "microk8s kubectl" --helm-cmd "microk8s helm"
   tools/k8s_namespace_state_dump.py -n default --cmd "kubectl --context my-cluster" --include-logs
 """
 from __future__ import annotations
@@ -11,7 +12,9 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import re
+import shutil
 import shlex
 import subprocess
 import sys
@@ -204,6 +207,14 @@ class CmdResult:
     stderr: str
 
 
+@dataclass
+class GlobalOpsCommands:
+    k8cl: str | None
+    helmcl: str | None
+    source: str
+    warning: str | None = None
+
+
 def text_or_empty(value: object) -> str:
     if value is None:
         return ""
@@ -212,9 +223,115 @@ def text_or_empty(value: object) -> str:
     return str(value)
 
 
+def find_default_global_ops() -> Path | None:
+    script_dir = Path(__file__).resolve().parent
+    candidates = [
+        script_dir / "global_ops.cfg",
+        script_dir.parent / "global_ops.cfg",
+        Path.cwd() / "global_ops.cfg",
+    ]
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved = candidate.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if resolved.is_file():
+            return resolved
+    return None
+
+
+def load_global_ops_commands(global_ops_path: Path | None) -> GlobalOpsCommands:
+    env_k8cl = os.environ.get("K8CL")
+    env_helmcl = os.environ.get("HELMCL")
+    if global_ops_path is None:
+        return GlobalOpsCommands(
+            env_k8cl,
+            env_helmcl,
+            "environment",
+            "global_ops.cfg not found; using environment/default commands",
+        )
+
+    script = r'''
+global_ops=$1
+netop_root=$2
+if [ -z "${NETOP_ROOT_DIR:-}" ]; then
+    export NETOP_ROOT_DIR="$netop_root"
+fi
+source "$global_ops" >/dev/null || exit $?
+printf '%s\0%s\0' "${K8CL:-}" "${HELMCL:-}"
+'''
+    try:
+        proc = subprocess.run(
+            ["bash", "-c", script, "bash", str(global_ops_path), str(global_ops_path.parent)],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=15,
+            check=False,
+        )
+    except FileNotFoundError:
+        return GlobalOpsCommands(env_k8cl, env_helmcl, "environment", "bash not found; using environment/default commands")
+    except subprocess.TimeoutExpired:
+        return GlobalOpsCommands(
+            env_k8cl,
+            env_helmcl,
+            "environment",
+            f"timed out sourcing {global_ops_path}; using environment/default commands",
+        )
+
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout).strip().splitlines()
+        message = detail[-1] if detail else f"exit code {proc.returncode}"
+        return GlobalOpsCommands(
+            env_k8cl,
+            env_helmcl,
+            "environment",
+            f"could not source {global_ops_path}: {message}; using environment/default commands",
+        )
+
+    values = proc.stdout.split("\0")
+    if len(values) < 2:
+        return GlobalOpsCommands(
+            env_k8cl,
+            env_helmcl,
+            "environment",
+            f"could not read K8CL/HELMCL from {global_ops_path}; using environment/default commands",
+        )
+    return GlobalOpsCommands(values[0] or env_k8cl, values[1] or env_helmcl, str(global_ops_path))
+
+
+def split_command(command: str, label: str) -> list[str] | None:
+    try:
+        argv = shlex.split(command)
+    except ValueError as exc:
+        print(f"error: {label} is not valid shell syntax: {exc}", file=sys.stderr)
+        return None
+    if not argv:
+        print(f"error: {label} must not be empty", file=sys.stderr)
+        return None
+    return argv
+
+
+def missing_executable(command: list[str]) -> str | None:
+    executable = command[0]
+    if Path(executable).is_absolute() or "/" in executable:
+        return None if Path(executable).exists() else executable
+    return None if shutil.which(executable) else executable
+
+
 class Collector:
-    def __init__(self, kubectl: list[str], namespace: str, out_dir: Path, timeout: int) -> None:
+    def __init__(
+        self,
+        kubectl: list[str],
+        helm: list[str],
+        namespace: str,
+        out_dir: Path,
+        timeout: int,
+        command_source: str,
+    ) -> None:
         self.kubectl = kubectl
+        self.helm = helm
         self.namespace = namespace
         self.out_dir = out_dir
         self.timeout = timeout
@@ -222,13 +339,14 @@ class Collector:
         self.summary: dict[str, object] = {
             "namespace": namespace,
             "kubectl": kubectl,
+            "helm": helm,
+            "command_source": command_source,
             "started_at": dt.datetime.now(dt.timezone.utc).isoformat(),
             "warnings": [],
             "files": [],
         }
 
-    def run(self, args: Iterable[str], *, timeout: int | None = None) -> CmdResult:
-        argv = [*self.kubectl, *args]
+    def run_argv(self, argv: list[str], *, timeout: int | None = None) -> CmdResult:
         try:
             proc = subprocess.run(
                 argv,
@@ -239,6 +357,9 @@ class Collector:
                 check=False,
             )
             result = CmdResult(argv=argv, rc=proc.returncode, stdout=proc.stdout, stderr=proc.stderr)
+        except FileNotFoundError as exc:
+            missing = exc.filename or argv[0]
+            result = CmdResult(argv=argv, rc=127, stdout="", stderr=f"{missing}: command not found")
         except subprocess.TimeoutExpired as exc:
             result = CmdResult(
                 argv=argv,
@@ -253,6 +374,12 @@ class Collector:
                 "stderr": result.stderr[-2000:],
             }) + "\n")
         return result
+
+    def run(self, args: Iterable[str], *, timeout: int | None = None) -> CmdResult:
+        return self.run_argv([*self.kubectl, *args], timeout=timeout)
+
+    def run_helm(self, args: Iterable[str], *, timeout: int | None = None) -> CmdResult:
+        return self.run_argv([*self.helm, *args], timeout=timeout)
 
     def save_text(self, relpath: str, text: str) -> Path:
         path = self.out_dir / relpath
@@ -306,6 +433,30 @@ def capture_optional(
         )
         if warn_on_failure:
             c.warn(f"{relpath}: rc={result.rc}")
+    return result
+
+
+def capture_helm_optional(
+    c: Collector,
+    relpath: str,
+    args: Iterable[str],
+    *,
+    timeout: int | None = None,
+    save_failure: bool = True,
+) -> CmdResult:
+    result = c.run_helm(args, timeout=timeout)
+    if result.rc == 0:
+        c.save_text(relpath, result.stdout)
+        if result.stderr.strip():
+            c.save_text(relpath + ".stderr", result.stderr)
+    elif save_failure:
+        c.save_text(
+            relpath + ".failed.txt",
+            f"# command failed rc={result.rc}\n"
+            f"# argv: {shlex.join(result.argv)}\n"
+            f"# stderr:\n{result.stderr}\n"
+            f"# stdout:\n{result.stdout}",
+        )
     return result
 
 
@@ -497,6 +648,12 @@ def dump_cluster_baseline(c: Collector) -> None:
     c.capture("cluster/nodes.yaml", ["get", "nodes", "-o", "yaml"])
     c.capture("cluster/storageclasses.yaml", ["get", "storageclasses", "-o", "yaml"])
     c.capture("cluster/crds.yaml", ["get", "crds", "-o", "yaml"])
+
+
+def dump_helm_state(c: Collector) -> None:
+    capture_helm_optional(c, "helm/version.txt", ["version"])
+    capture_helm_optional(c, "helm/releases.namespace.yaml", ["list", "-n", c.namespace, "-o", "yaml"])
+    capture_helm_optional(c, "helm/releases.all-namespaces.yaml", ["list", "-A", "-o", "yaml"])
 
 
 def dump_namespace_resources(c: Collector) -> tuple[list[dict], list[dict], set[str]]:
@@ -740,8 +897,18 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("-n", "--namespace", required=True, help="Namespace to collect")
     parser.add_argument(
         "--cmd",
-        default="kubectl",
-        help='Command used to talk to the cluster, e.g. "kubectl" or "microk8s kubectl"',
+        default=None,
+        help='Kubernetes command override, e.g. "kubectl" or "microk8s kubectl". Default: K8CL from global_ops.cfg, then kubectl.',
+    )
+    parser.add_argument(
+        "--helm-cmd",
+        default=None,
+        help='Helm command override, e.g. "helm" or "microk8s helm". Default: HELMCL from global_ops.cfg, then helm.',
+    )
+    parser.add_argument(
+        "--global-ops",
+        default="",
+        help="Path to global_ops.cfg. Default: discover beside this script or in the current directory.",
     )
     parser.add_argument(
         "-o", "--out-dir",
@@ -758,19 +925,37 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
-    kubectl = shlex.split(args.cmd)
-    if not kubectl:
-        print("--cmd must not be empty", file=sys.stderr)
+    global_ops_path = Path(args.global_ops).resolve() if args.global_ops else find_default_global_ops()
+    global_ops_commands = load_global_ops_commands(global_ops_path)
+    if global_ops_commands.warning:
+        print(f"warning: {global_ops_commands.warning}", file=sys.stderr)
+
+    kubectl_command = args.cmd or global_ops_commands.k8cl or "kubectl"
+    helm_command = args.helm_cmd or global_ops_commands.helmcl or "helm"
+    kubectl = split_command(kubectl_command, "K8CL/--cmd")
+    helm = split_command(helm_command, "HELMCL/--helm-cmd")
+    if kubectl is None or helm is None:
         return 2
+    missing_kubectl = missing_executable(kubectl)
+    if missing_kubectl:
+        print(
+            f"error: Kubernetes command executable not found: {missing_kubectl}\n"
+            f"resolved command: {shlex.join(kubectl)}\n"
+            f"command source: {global_ops_commands.source}\n"
+            "Set K8CL in global_ops_user.cfg/global_ops.cfg or pass --cmd.",
+            file=sys.stderr,
+        )
+        return 127
 
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     out_dir = Path(args.out_dir or f"k8s-state-{safe_name(args.namespace)}-{stamp}").resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    collector = Collector(kubectl, args.namespace, out_dir, args.timeout)
+    collector = Collector(kubectl, helm, args.namespace, out_dir, args.timeout, global_ops_commands.source)
     print(f"writing namespace state to {out_dir}")
 
     dump_cluster_baseline(collector)
+    dump_helm_state(collector)
     pods, pvcs, crd_resources = dump_namespace_resources(collector)
     network_crd_resources = dump_network_must_gather(collector, log_tail=args.log_tail)
     crd_resources.update(network_crd_resources)
