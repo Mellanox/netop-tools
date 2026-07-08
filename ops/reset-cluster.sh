@@ -41,8 +41,8 @@ chown $(id -u):$(id -g) $HOME/.kube/config
 # Use version from global configuration
 source "${NETOP_ROOT_DIR:-/opt/netop-tools}/global_ops.cfg" 2>/dev/null || true
 CALICO_VERSION="${CALICO_VERSION:-v3.28.2}"
-kubectl apply -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml"
+${K8CL} apply -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml"
 
 # Verify
-kubectl get nodes
-kubectl version
+${K8CL} get nodes
+${K8CL} version

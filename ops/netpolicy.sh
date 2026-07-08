@@ -2,7 +2,8 @@
 #
 # enable egress/ingress RDMA traffic
 #
-kubectl apply -f - <<EOF
+source ${NETOP_ROOT_DIR}/global_ops.cfg
+${K8CL} apply -f - <<EOF
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
