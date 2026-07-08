@@ -2,13 +2,15 @@
 #
 #
 #
-if [ "$#" -lt 1 ];then
-  echo "usage:$0 {NETWORK_DEV}"
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ];then
+  echo "usage:$0 {NETWORK_DEV} [NETOP_SU]"
   echo "example:$0 a"
   exit 1
 fi
 DEV=${1}
 shift
+NETOP_SU=${1:-}
+SUTAG="${NETOP_SU:+-${NETOP_SU}}"
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
 FILE="./Network-Attachment-Definitions-${DEV}-${NETOP_APP_NAMESPACE}.yaml"
@@ -31,7 +33,7 @@ spec:
           "type": "sriov",
           "ipam": {
             "type": "${IPAM_TYPE}",
-            "poolName": "${NETOP_NETWORK_POOL}-${NIDX}-${NETOP_SU}"
+            "poolName": "${NETOP_NETWORK_POOL}-${DEV}${SUTAG}"
           }
         }
       ]

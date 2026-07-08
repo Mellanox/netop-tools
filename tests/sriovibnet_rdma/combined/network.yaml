@@ -2,7 +2,7 @@
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovIBNetwork
 metadata:
-  name: "sriovibnet-rdma-default-a-su-1"
+  name: "sriovibnet-rdma-default-a"
   namespace: nvidia-network-operator
 spec:
   linkState: enable
@@ -17,14 +17,14 @@ spec:
       },
       "log_file": "/var/log/SriovIBNetwork_nv-ipam.log",
       "log_level": "debug",
-      "poolName": "sriovibnet-pool-a-su-1",
+      "poolName": "sriovibnet-pool-a",
       "poolType": "IPPool"
     }
 ---
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovIBNetwork
 metadata:
-  name: "sriovibnet-rdma-default-b-su-1"
+  name: "sriovibnet-rdma-default-b"
   namespace: nvidia-network-operator
 spec:
   linkState: enable
@@ -39,6 +39,6 @@ spec:
       },
       "log_file": "/var/log/SriovIBNetwork_nv-ipam.log",
       "log_level": "debug",
-      "poolName": "sriovibnet-pool-b-su-1",
+      "poolName": "sriovibnet-pool-b",
       "poolType": "IPPool"
     }

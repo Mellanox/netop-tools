@@ -17,12 +17,21 @@ cat << HEREDOC0
 HEREDOC0
 fi
 }
+function set_su_values()
+{
+  NETOP_SU_VALUES=( "${NETOP_SULIST[@]}" )
+  if [ ${#NETOP_SU_VALUES[@]} -eq 0 ];then
+    NETOP_SU_VALUES=( "" )
+  fi
+}
 function get_networks()
 {
-for NETOP_SU in ${NETOP_SULIST[@]};do
+set_su_values
+for NETOP_SU in "${NETOP_SU_VALUES[@]}";do
+  SUTAG="${NETOP_SU:+-${NETOP_SU}}"
   for DEVDEF in ${NETOP_NETLIST[@]};do
     NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-    NETWORKS=${NETWORKS},${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}-${NETOP_SU}
+    NETWORKS=${NETWORKS},${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}${SUTAG}
   done
 done
 # trim leading ,
@@ -47,10 +56,12 @@ function set_container_claims()
 {
 # Emit container-level `resources.claims:` block referencing pod-level claim names.
 echo "      claims:"
-for NETOP_SU in ${NETOP_SULIST[@]};do
+set_su_values
+for NETOP_SU in "${NETOP_SU_VALUES[@]}";do
+  SUTAG="${NETOP_SU:+-${NETOP_SU}}"
   for DEVDEF in ${NETOP_NETLIST[@]};do
     NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-    echo "      - name: ${NIDX}-${NETOP_SU}"
+    echo "      - name: ${NIDX}${SUTAG}"
   done
 done
 }
@@ -59,12 +70,14 @@ function set_pod_resource_claims()
 # Emit pod-level `resourceClaims:` block linking each local name to the
 # ResourceClaimTemplate that mk-dra-cr.sh created.
 echo "  resourceClaims:"
-for NETOP_SU in ${NETOP_SULIST[@]};do
+set_su_values
+for NETOP_SU in "${NETOP_SU_VALUES[@]}";do
+  SUTAG="${NETOP_SU:+-${NETOP_SU}}"
   for DEVDEF in ${NETOP_NETLIST[@]};do
     NIDX=`echo ${DEVDEF}|cut -d',' -f1`
     cat <<DRA_POD_CLAIM
-  - name: ${NIDX}-${NETOP_SU}
-    resourceClaimTemplateName: ${NETOP_NETWORK_NAME}-${NIDX}-${NETOP_SU}-claim
+  - name: ${NIDX}${SUTAG}
+    resourceClaimTemplateName: ${NETOP_NETWORK_NAME}-${NIDX}${SUTAG}-claim
 DRA_POD_CLAIM
   done
 done

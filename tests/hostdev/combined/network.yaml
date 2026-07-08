@@ -2,7 +2,7 @@
 apiVersion: mellanox.com/v1alpha1
 kind: HostDeviceNetwork
 metadata:
-  name: hostdev-rdma-device-default-a-su-1
+  name: hostdev-rdma-device-default-a
   namespace: nvidia-network-operator
 spec:
   networkNamespace: "default"
@@ -16,14 +16,14 @@ spec:
       },
       "log_file": "/var/log/HostDeviceNetwork_nv-ipam.log",
       "log_level": "debug",
-      "poolName": "hostdev-pool-a-su-1",
+      "poolName": "hostdev-pool-a",
       "poolType": "IPPool"
     }
 ---
 apiVersion: mellanox.com/v1alpha1
 kind: HostDeviceNetwork
 metadata:
-  name: hostdev-rdma-device-default-b-su-1
+  name: hostdev-rdma-device-default-b
   namespace: nvidia-network-operator
 spec:
   networkNamespace: "default"
@@ -37,6 +37,6 @@ spec:
       },
       "log_file": "/var/log/HostDeviceNetwork_nv-ipam.log",
       "log_level": "debug",
-      "poolName": "hostdev-pool-b-su-1",
+      "poolName": "hostdev-pool-b",
       "poolType": "IPPool"
     }

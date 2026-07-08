@@ -40,17 +40,26 @@ function init_file()
     rm -f "${1}"
   fi
 }
+function set_su_values()
+{
+  NETOP_SU_VALUES=( "${NETOP_SULIST[@]}" )
+  if [ ${#NETOP_SU_VALUES[@]} -eq 0 ];then
+    NETOP_SU_VALUES=( "" )
+  fi
+}
 
 NETOP_DRA_FILES=()
 DRA_IDX=0
 
-for NETOP_SU in ${NETOP_SULIST[@]};do
+set_su_values
+for NETOP_SU in "${NETOP_SU_VALUES[@]}";do
+  SUTAG="${NETOP_SU:+-${NETOP_SU}}"
   for NIDXDEF in ${NETOP_NETLIST[@]};do
     NIDX=$(echo ${NIDXDEF}|cut -d',' -f1)
 
-    CLAIM_TEMPLATE="${NETOP_NETWORK_NAME}-${NIDX}-${NETOP_SU}-claim"
+    CLAIM_TEMPLATE="${NETOP_NETWORK_NAME}-${NIDX}${SUTAG}-claim"
     RESOURCE_NAME="${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}"
-    FILE="dra-${NIDX}-${NETOP_SU}.yaml"
+    FILE="dra-${NIDX}${SUTAG}.yaml"
     NETOP_DRA_FILES[${DRA_IDX}]="${FILE}"
     let DRA_IDX=DRA_IDX+1
     init_file "${FILE}"

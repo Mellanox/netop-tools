@@ -2,7 +2,7 @@
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkNodePolicy
 metadata:
-  name: sriovnet-rdma-node-policy-a-su-1
+  name: sriovnet-rdma-node-policy-a
   namespace: nvidia-network-operator
 spec:
   deviceType: netdevice
@@ -22,7 +22,7 @@ spec:
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkNodePolicy
 metadata:
-  name: sriovnet-rdma-node-policy-b-su-1
+  name: sriovnet-rdma-node-policy-b
   namespace: nvidia-network-operator
 spec:
   deviceType: netdevice
