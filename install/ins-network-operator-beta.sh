@@ -27,8 +27,8 @@ function release()
   
   pushd .
   cd "${RELEASE_DIR}"
-  helm uninstall -n ${NETOP_NAMESPACE} network-operator 
-  helm install --debug -n ${NETOP_NAMESPACE} network-operator ./network-operator ${RELEASE_VALUES} \
+  ${HELMCL} uninstall -n ${NETOP_NAMESPACE} network-operator 
+  ${HELMCL} install --debug -n ${NETOP_NAMESPACE} network-operator ./network-operator ${RELEASE_VALUES} \
    -f ${USECASE_DIR}/${NETOP_VALUES_FILE} --wait
   popd
 }

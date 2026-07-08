@@ -9,7 +9,7 @@ function config()
 {
   ${NETOP_ROOT_DIR}/setuc.sh
   #${docmd} systemctl restart kubelet
-  #helm install -n ${NETOP_NAMESPACE} --create-namespace network-operator ./network-operator
+  #${HELMCL} install -n ${NETOP_NAMESPACE} --create-namespace network-operator ./network-operator
   X=`${docmd} ${K8CL} get ns | grep -c "^${NETOP_NAMESPACE} "`
   if [ "${X}" = "0" ];then 
     ${docmd} ${K8CL} create ns ${NETOP_NAMESPACE}
@@ -25,7 +25,7 @@ function release()
   # and install network-operator according to documentation
   [[ -r ${RELEASE_VALUES} ]] && RELEASE_VALUES="-f ${RELEASE_VALUES}" || RELEASE_VALUES=""
   
-  ${docmd} helm install -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator --version ${NETOP_VERSION} \
+  ${docmd} ${HELMCL} install -n ${NETOP_NAMESPACE} network-operator nvidia/network-operator --version ${NETOP_VERSION} \
     ${RELEASE_VALUES} \
     -f ${USECASE_DIR}/${NETOP_VALUES_FILE}
 }

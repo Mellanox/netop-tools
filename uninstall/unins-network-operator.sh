@@ -51,5 +51,5 @@ del_single_crd nicfirmwaretemplates.configuration.net.nvidia.com
 ${K8CL} delete --force NicClusterPolicy nic-cluster-policy
 ${K8CL} delete --force ns "${NETOP_NAMESPACE}"
 ${NETOP_ROOT_DIR}/uninstall/delstucknamespace.sh "${NETOP_NAMESPACE}"
-helm uninstall network-operator -n ${NETOP_NAMESPACE} --no-hooks
-helm repo list -n ${NETOP_NAMESPACE}
+${HELMCL} uninstall network-operator -n ${NETOP_NAMESPACE} --no-hooks
+${HELMCL} repo list -n ${NETOP_NAMESPACE}
