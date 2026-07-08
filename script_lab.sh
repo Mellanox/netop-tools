@@ -19,10 +19,10 @@ function wait_for_sriov_dp() {
     # Wait for network-operator SRIOV to be ready on worker nodes
     
     # Get worker nodes
-    WORKER_NODES=$(kubectl get nodes --no-headers -l node-role.kubernetes.io/worker 2>/dev/null | awk '{print $1}')
+    WORKER_NODES=$(${K8CL} get nodes --no-headers -l node-role.kubernetes.io/worker 2>/dev/null | awk '{print $1}')
     if [[ -z "$WORKER_NODES" ]]; then
         # Try without label filter
-        WORKER_NODES=$(kubectl get nodes --no-headers 2>/dev/null | grep -v control-plane | awk '{print $1}')
+        WORKER_NODES=$(${K8CL} get nodes --no-headers 2>/dev/null | grep -v control-plane | awk '{print $1}')
     fi
     
     echo "Worker nodes: $WORKER_NODES"
@@ -36,7 +36,7 @@ function wait_for_sriov_dp() {
         echo "Waiting for SriovNetworkNodeState on $node..."
         elapsed=0
         while [[ $elapsed -lt $max_wait ]]; do
-            STATE=$(kubectl get sriovnetworknodestates.sriovnetwork.openshift.io "$node" -n nvidia-network-operator -o jsonpath='{.status.syncStatus}' 2>/dev/null || echo "NotFound")
+            STATE=$(${K8CL} get sriovnetworknodestates.sriovnetwork.openshift.io "$node" -n nvidia-network-operator -o jsonpath='{.status.syncStatus}' 2>/dev/null || echo "NotFound")
             if [[ "$STATE" == "Succeeded" ]]; then
                 echo "  $node: SRIOV ready (syncStatus=Succeeded)"
                 break
@@ -82,8 +82,8 @@ function check_test_image() {
     ELAPSED=0
     while [[ $ELAPSED -lt $MAX_WAIT ]]; do
         local test1_status test2_status
-        test1_status=$(kubectl get pod test1-1 -o jsonpath='{.status.phase}' 2>/dev/null || echo "NotFound")
-        test2_status=$(kubectl get pod test2-1 -o jsonpath='{.status.phase}' 2>/dev/null || echo "NotFound")
+        test1_status=$(${K8CL} get pod test1-1 -o jsonpath='{.status.phase}' 2>/dev/null || echo "NotFound")
+        test2_status=$(${K8CL} get pod test2-1 -o jsonpath='{.status.phase}' 2>/dev/null || echo "NotFound")
         
         echo "  test1-1: $test1_status, test2-1: $test2_status ($ELAPSED/$MAX_WAIT sec)"
         
@@ -150,8 +150,8 @@ configure_controlplane() {
     
     # Apply the app yamls
     cd apps
-    kubectl apply -f test1*.yaml
-    kubectl apply -f test2*.yaml
+    ${K8CL} apply -f test1*.yaml
+    ${K8CL} apply -f test2*.yaml
     
     # Wait for test pods to reach Running state
     echo ""
@@ -159,7 +159,7 @@ configure_controlplane() {
     
     if ! check_test_image; then
         echo "WARNING: Timeout waiting for test pods"
-        kubectl get pods
+        ${K8CL} get pods
         echo "Skipping RDMA tests due to pods not ready"
         echo ""
         echo "Control plane configuration complete (with warnings)"
