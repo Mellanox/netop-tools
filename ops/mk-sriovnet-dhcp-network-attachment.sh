@@ -31,7 +31,7 @@ spec:
       "plugins": [
         {
           "type": "sriov",
-          "vlan": ${NETOP_VLAN},
+          "vlan": ${NETOP_NETWORK_VLAN},
           "spoofchk": "off",
           "vlanQoS": 0,
           "link_state": "enable",
