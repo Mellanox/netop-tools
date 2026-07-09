@@ -4,7 +4,7 @@
 #
 function removek8()
 {
-  kubeadm reset --force&
+  ${KADMCL} reset --force&
   PODS=$(crictl ps | egrep "calico|network-operator|kube" | cut -d' ' -f1)
   for POD in ${PODS[@]};do
     crictl stop ${POD}

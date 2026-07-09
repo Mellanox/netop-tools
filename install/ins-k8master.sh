@@ -56,7 +56,7 @@ init)
   source ${NETOP_ROOT_DIR}/install/detect_runtime.sh
   detect_container_runtime
   
-  # Build kubeadm init command based on runtime and configuration
+  # Build ${KADMCL} init command based on runtime and configuration
   KUBEADM_ARGS="--pod-network-cidr=${K8CIDR} --v=5"
   
   # Add CRI socket if needed (Docker with K8s 1.24+ or non-default runtime)
@@ -70,11 +70,11 @@ init)
   fi
   
   echo "Initializing Kubernetes with runtime: ${CONTAINER_RUNTIME}"
-  echo "kubeadm init ${KUBEADM_ARGS}"
+  echo "${KADMCL} init ${KUBEADM_ARGS}"
   
-  # Run kubeadm init
-  if ! kubeadm init ${KUBEADM_ARGS}; then
-    echo "ERROR: kubeadm init failed"
+  # Run ${KADMCL} init
+  if ! ${KADMCL} init ${KUBEADM_ARGS}; then
+    echo "ERROR: ${KADMCL} init failed"
     exit 1
   fi
   

@@ -19,7 +19,7 @@ function containerd()
   fi
 }
 # Reset current cluster
-kubeadm reset -f
+${KADMCL} reset -f
 
 # Clean up
 rm -rf /etc/cni/net.d /var/lib/etcd /var/lib/kubelet /etc/kubernetes
@@ -30,7 +30,7 @@ containerd
 swapoff -a
 
 # Initialize fresh with v1.34
-kubeadm init --pod-network-cidr=10.244.0.0/16 --v=5
+${KADMCL} init --pod-network-cidr=10.244.0.0/16 --v=5
 
 # Setup kubeconfig
 mkdir -p $HOME/.kube

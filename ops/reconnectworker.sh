@@ -3,7 +3,7 @@
 #
 #
 swapoff -a
-sudo kubeadm reset
+sudo ${KADMCL} reset
 sudo systemctl enable docker
 sudo systemctl enable kubelet
 sudo systemctl daemon-reload

@@ -22,10 +22,10 @@ master)
   ${NETOP_ROOT_DIR}/install/installdocker.sh
   ;;
 init)
-  kubeadm init --pod-network-cidr=${K8CIDR}
+  ${KADMCL} init --pod-network-cidr=${K8CIDR}
   SRVIP="192.168.122.128"
-  #kubeadm init --apiserver-advertise-address="${SRVIP} --apiserver-cert-extra-sans="${SRVIP} --node-name ub2204-master --pod-network-cidr=${K8CIDR}
-  #kubeadm init --apiserver-advertise-address="${SRVIP}" --apiserver-cert-extra-sans="${SRVIP}" --pod-network-cidr=${K8CIDR}
+  #${KADMCL} init --apiserver-advertise-address="${SRVIP} --apiserver-cert-extra-sans="${SRVIP} --node-name ub2204-master --pod-network-cidr=${K8CIDR}
+  #${KADMCL} init --apiserver-advertise-address="${SRVIP}" --apiserver-cert-extra-sans="${SRVIP}" --pod-network-cidr=${K8CIDR}
   # fix config issues
   ${NETOP_ROOT_DIR}/install/fixcrtauth.sh
   ${NETOP_ROOT_DIR}/install/fixcontainerd.sh 
