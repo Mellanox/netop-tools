@@ -2,6 +2,7 @@
 #
 #
 #
+source ${NETOP_ROOT_DIR}/global_ops.cfg
 git clone https://github.com/Mellanox/nic-configuration-operator.git /tmp/nic-configuration-operator
 cd /tmp/nic-configuration-operator
 
