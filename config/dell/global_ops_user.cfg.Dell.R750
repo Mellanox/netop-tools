@@ -3,6 +3,7 @@
 # Version: Not Specified
 # Serial Number: 9NPV0R3
 K8CL="microk8s kubectl"
+KADMCL="microk8s kubeadm"
 HELMCL="microk8s helm"
 NETOP_VERSION="26.4.0"
 ENABLE_NFSRDMA=false
