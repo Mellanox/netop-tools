@@ -3,14 +3,14 @@
 set -o nounset
 set -x
 
-K=kubectl
-if ! $K version > /dev/null; then
-    K=oc
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+export NETOP_ROOT_DIR=${NETOP_ROOT_DIR:-"${SCRIPT_DIR}"}
+source "${NETOP_ROOT_DIR}/global_ops.cfg"
 
-    if ! $K version > /dev/null; then
-        echo "FATAL: neither 'kubectl' nor 'oc' appear to be working properly. Exiting ..."
-        exit 1
-    fi
+K="${K8CL}"
+if ! $K version > /dev/null; then
+    echo "FATAL: configured K8CL command '${K8CL}' is not working properly. Exiting ..."
+    exit 1
 fi
 
 if [[ "$0" == "/usr/bin/gather" ]]; then
@@ -28,7 +28,7 @@ mkdir -p "$ARTIFACT_DIR"
 echo
 
 exec 1> >(tee "$ARTIFACT_DIR/must-gather.log")
-exec 2> $ARTIFACT_DIR/must-gather.stderr.log
+exec 2> "$ARTIFACT_DIR/must-gather.stderr.log"
 
 if [[ "$0" == "/usr/bin/gather" ]]; then
     echo "Network Operator" > $ARTIFACT_DIR/version
@@ -44,17 +44,32 @@ if [[ "$ocp_cluster" ]]; then
 fi
 
 echo "Get the operator namespaces"
-OPERATOR_POD_NAME=$($K get pods -l app.kubernetes.io/name=network-operator  -oname -A)
+OPERATOR_NAMESPACE="${NETOP_NAMESPACE}"
 
-if [ -z "$OPERATOR_POD_NAME" ]; then
-    echo "FATAL: could not find the Network Operator Pod ..."
+if [ -z "${OPERATOR_NAMESPACE}" ]; then
+    echo "FATAL: NETOP_NAMESPACE is not set ..."
     exit 1
 fi
 
-OPERATOR_NAMESPACE=$($K get pods -lapp=network-operator -A -ojsonpath={.items[].metadata.namespace} --ignore-not-found)
+OPERATOR_POD_NAME=$($K get pods -l app.kubernetes.io/name=network-operator -n "$OPERATOR_NAMESPACE" -ojsonpath='{.items[0].metadata.name}' --ignore-not-found)
+if [ -z "${OPERATOR_POD_NAME}" ]; then
+    echo "FATAL: could not find the Network Operator Pod in namespace ${OPERATOR_NAMESPACE} ..."
+    exit 1
+fi
+OPERATOR_POD_NAME="pod/${OPERATOR_POD_NAME}"
 
 echo "Using '$OPERATOR_NAMESPACE' as operator namespace"
 echo ""
+
+function get_resource()
+{
+    local resource=$1
+    local output=$2
+
+    $K get "$resource" -A -oyaml > "$ARTIFACT_DIR/${output}.yaml" 2>/dev/null ||
+        $K get "$resource" -oyaml > "$ARTIFACT_DIR/${output}.yaml" 2>/dev/null ||
+        true
+}
 
 echo "#"
 echo "# Operator Pod"
@@ -156,6 +171,35 @@ do
         -n $OPERATOR_NAMESPACE \
         > $ARTIFACT_DIR/network_operand_ds_$(echo "$ds" | cut -d/ -f2).descr
 done
+
+echo "#"
+echo "# SR-IOV Diagnostics"
+echo "#"
+echo ""
+
+echo "Get recent events in $OPERATOR_NAMESPACE"
+$K get events \
+    -n $OPERATOR_NAMESPACE \
+    --sort-by=.lastTimestamp \
+    > "$ARTIFACT_DIR/network_operator_events.txt"
+
+echo "Get recent cluster events"
+$K get events \
+    -A \
+    --sort-by=.lastTimestamp \
+    > "$ARTIFACT_DIR/cluster_events.txt"
+
+echo "Get SR-IOV and Network Operator custom resources"
+get_resource nicclusterpolicies.mellanox.com custom_resource_nicclusterpolicies
+get_resource nicnodepolicies.mellanox.com custom_resource_nicnodepolicies
+get_resource sriovoperatorconfigs.sriovnetwork.openshift.io custom_resource_sriovoperatorconfigs
+get_resource sriovnetworknodepolicies.sriovnetwork.openshift.io custom_resource_sriovnetworknodepolicies
+get_resource sriovnetworknodestates.sriovnetwork.openshift.io custom_resource_sriovnetworknodestates
+get_resource sriovnetworkpoolconfigs.sriovnetwork.openshift.io custom_resource_sriovnetworkpoolconfigs
+get_resource sriovnetworks.sriovnetwork.openshift.io custom_resource_sriovnetworks
+get_resource network-attachment-definitions.k8s.cni.cncf.io custom_resource_networkattachmentdefinitions
+get_resource ippools.nv-ipam.nvidia.com custom_resource_ippools
+get_resource cidrpools.nv-ipam.nvidia.com custom_resource_cidrpools
 
 echo "#"
 echo "# All done!"
