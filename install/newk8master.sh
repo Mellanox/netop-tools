@@ -4,9 +4,9 @@
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
-./insk8master.sh master
-./insk8master.sh init
-#./insk8master.sh calico
-#./insk8master.sh netop
-#./insk8master.sh debug
+./ins-k8master.sh master
+./ins-k8master.sh init
+./ins-k8master.sh calico
+./ins-k8master.sh netop
+#./ins-k8master.sh debug
 ${K8CL} get nodes
