@@ -2,7 +2,7 @@
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetwork
 metadata:
-  name: "sriovnet-rdma-h200-default-a"
+  name: "sriovnet-rdma-default-a"
   namespace: nvidia-network-operator
 spec:
   vlan: 0

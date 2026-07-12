@@ -6,9 +6,15 @@
 # echo 0 > /sys/devices/pci0000:20/0000:20:01.5/0000:23:00.0/sriov_numvfs
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
-# IPPool suffix: derived from fabric group label so pools on the same fabric share IPPools.
-# Empty when no fabric is assigned (all pools share a single unsuffixed set).
-POOL_SUFFIX="${NETOP_ACTIVE_FABRIC:+-${NETOP_ACTIVE_FABRIC}}"
+# IPPools are shared by resource/network name across node pools.
+POOL_SUFFIX=""
+# Network CRs are shared by resource name. In multi-pool mode, keep
+# SriovNetworkNodePolicy names pool-scoped, but do not put the pool id in the
+# SriovNetwork metadata name.
+NETWORK_CR_BASE_NAME="${NETOP_NETWORK_NAME}"
+if [ -n "${NETOP_ACTIVE_POOL:-}" ]; then
+  NETWORK_CR_BASE_NAME="${NETWORK_CR_BASE_NAME%-${NETOP_ACTIVE_POOL,,}}"
+fi
 function init_file()
 {
   if [ "${NETOP_TAG_VERSION}" == true ];then
@@ -112,7 +118,7 @@ function NetworkCRD()
         ;;
       esac
       for NETOP_APP_NAMESPACE in ${NETOP_APP_NAMESPACES[@]};do
-        NETWORK_NAME="${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}${SUTAG}"
+        NETWORK_NAME="${NETWORK_CR_BASE_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}${SUTAG}"
         FILE="${NETWORK_NAME}-cr.yaml"
         NETOP_NETWORK_FILES[${NETWORK_IDX}]="${FILE}"
         let NETWORK_IDX=NETWORK_IDX+1
