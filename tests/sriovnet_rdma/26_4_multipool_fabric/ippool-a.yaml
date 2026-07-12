@@ -2,12 +2,12 @@
 apiVersion: nv-ipam.nvidia.com/v1alpha1
 kind: IPPool
 metadata:
-  name: sriovnet-pool-b-west
+  name: sriovnet-pool-a
   namespace: nvidia-network-operator
 spec:
-  subnet: 192.173.0.0/16
+  subnet: 192.168.0.0/16
   perNodeBlockSize: 32
-  gateway: 192.173.0.1
+  gateway: 192.168.0.1
   nodeSelector:
     nodeSelectorTerms:
     - matchExpressions:

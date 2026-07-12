@@ -14,7 +14,7 @@ else
 fi
 NETOP_NICNODE_FILES=()
 if [ ${#NETOP_NODEPOOLS[@]} -gt 0 ]; then
-  declare -A _FABRICS_DONE
+  _IPPOOLS_DONE=false
   for NETLIST_VAR in "${NETOP_NODEPOOLS[@]}"; do
     _SUFFIX="${NETLIST_VAR#NETOP_NETLIST}"
     POOL_ID="${_SUFFIX#_}"
@@ -27,16 +27,13 @@ if [ ${#NETOP_NODEPOOLS[@]} -gt 0 ]; then
         NETOP_NICNODE_FILES+=("${NIC_NODE_POLICY_FILE}")
         ;;
     esac
-    # Determine this pool's fabric label (same variable name as in global_ops.cfg lookup).
-    # Pools sharing a fabric label share IPPools; generate them only on the first encounter.
-    _FABRIC_VAR="NETOP_FABRIC_${POOL_ID}"
-    _POOL_FABRIC="${!_FABRIC_VAR:-}"
-    _FABRIC_KEY="${_POOL_FABRIC:-__unset__}"
-    if [ "${_FABRICS_DONE[${_FABRIC_KEY}]+x}" = "x" ]; then
+    # Network CRs and IPPools are shared by resource/network name across
+    # node pools. Only the per-pool node policies vary by device list.
+    if [ "${_IPPOOLS_DONE}" = "true" ]; then
       export NETOP_SKIP_IPPOOL=true
     else
       unset NETOP_SKIP_IPPOOL
-      _FABRICS_DONE["${_FABRIC_KEY}"]=1
+      _IPPOOLS_DONE=true
     fi
     ${NETOP_ROOT_DIR}/ops/mk-network-cr.sh
     ${NETOP_ROOT_DIR}/ops/mk-sriov-node-pool.sh
