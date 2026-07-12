@@ -1,5 +1,5 @@
 #!/bin/bash
-source ${NETOP_ROOT_DIR}/global_ops_cfg.sh
+source ${NETOP_ROOT_DIR}/global_ops.cfg
 cd ..
 git clone https://github.com/Mellanox/nvidia-k8s-ipam.git
 cd nvidia-k8s-ipam
