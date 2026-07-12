@@ -24,14 +24,56 @@ function set_su_values()
     NETOP_SU_VALUES=( "" )
   fi
 }
+function get_node_pool_vars()
+{
+  APP_NODEPOOLS=()
+
+  if declare -p NETOP_NODE_POOLS >/dev/null 2>&1; then
+    case "$(declare -p NETOP_NODE_POOLS)" in
+    declare\ -a*|declare\ -A*)
+      eval 'APP_NODEPOOLS=( "${NETOP_NODE_POOLS[@]}" )'
+      ;;
+    *)
+      APP_NODEPOOLS=( ${NETOP_NODE_POOLS} )
+      ;;
+    esac
+  fi
+
+  if [ ${#APP_NODEPOOLS[@]} -eq 0 ] && declare -p NETOP_NODEPOOLS >/dev/null 2>&1; then
+    case "$(declare -p NETOP_NODEPOOLS)" in
+    declare\ -a*|declare\ -A*)
+      eval 'APP_NODEPOOLS=( "${NETOP_NODEPOOLS[@]}" )'
+      ;;
+    *)
+      APP_NODEPOOLS=( ${NETOP_NODEPOOLS} )
+      ;;
+    esac
+  fi
+}
+function get_pool_id()
+{
+  local NETLIST_VAR="${1}"
+  local SUFFIX="${NETLIST_VAR#NETOP_NETLIST}"
+  echo "${SUFFIX#_}"
+}
+function set_app_context()
+{
+  local NETLIST_VAR="${1:-NETOP_NETLIST}"
+
+  APP_NETLIST=()
+  eval "APP_NETLIST=( \"\${${NETLIST_VAR}[@]}\" )"
+
+  APP_NETWORK_NAME="${NETOP_NETWORK_NAME}"
+}
 function get_networks()
 {
 set_su_values
+NETWORKS=
 for NETOP_SU in "${NETOP_SU_VALUES[@]}";do
   SUTAG="${NETOP_SU:+-${NETOP_SU}}"
-  for DEVDEF in ${NETOP_NETLIST[@]};do
+  for DEVDEF in ${APP_NETLIST[@]};do
     NIDX=`echo ${DEVDEF}|cut -d',' -f1`
-    NETWORKS=${NETWORKS},${NETOP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}${SUTAG}
+    NETWORKS=${NETWORKS},${APP_NETWORK_NAME}-${NETOP_APP_NAMESPACE}-${NIDX}${SUTAG}
   done
 done
 # trim leading ,
@@ -39,7 +81,7 @@ NETWORKS=`echo "${NETWORKS}" | sed 's/,//'`
 }
 function set_network_resource()
 {
-for DEVDEF in ${NETOP_NETLIST[@]};do
+for DEVDEF in ${APP_NETLIST[@]};do
   NIDX=`echo ${DEVDEF}|cut -d',' -f1`
 cat << HEREDOC2
         ${NETOP_RESOURCE_PATH}/${NETOP_RESOURCE}_${NIDX}: '1'
@@ -59,7 +101,7 @@ echo "      claims:"
 set_su_values
 for NETOP_SU in "${NETOP_SU_VALUES[@]}";do
   SUTAG="${NETOP_SU:+-${NETOP_SU}}"
-  for DEVDEF in ${NETOP_NETLIST[@]};do
+  for DEVDEF in ${APP_NETLIST[@]};do
     NIDX=`echo ${DEVDEF}|cut -d',' -f1`
     echo "      - name: ${NIDX}${SUTAG}"
   done
@@ -73,57 +115,54 @@ echo "  resourceClaims:"
 set_su_values
 for NETOP_SU in "${NETOP_SU_VALUES[@]}";do
   SUTAG="${NETOP_SU:+-${NETOP_SU}}"
-  for DEVDEF in ${NETOP_NETLIST[@]};do
+  for DEVDEF in ${APP_NETLIST[@]};do
     NIDX=`echo ${DEVDEF}|cut -d',' -f1`
     cat <<DRA_POD_CLAIM
   - name: ${NIDX}${SUTAG}
-    resourceClaimTemplateName: ${NETOP_NETWORK_NAME}-${NIDX}${SUTAG}-claim
+    resourceClaimTemplateName: ${APP_NETWORK_NAME}-${NIDX}${SUTAG}-claim
 DRA_POD_CLAIM
   done
 done
 }
-NAME=${1}
-shift
-NUM_OF_PODS=${1}
-shift
-NETOP_APP_NAMESPACE=${1:-'default'}
-shift
-NODE=${1}
-shift
-if [ "${NAME}" = "" ];then
-  usage
-fi
-if [ "${NUM_OF_PODS}" = "" ];then
-  NUM_OF_PODS=1
-fi
-mkdir -p apps
-cd apps
-case ${USECASE} in
-sriovnet_dra)
-  # ResourceClaimTemplate lives in ${NETOP_NAMESPACE}; the pod must reference
-  # it from the same namespace (ResourceClaimTemplate is namespaced).
-  if [ "${NETOP_APP_NAMESPACE}" != "${NETOP_NAMESPACE}" ]; then
-    echo "WARNING: USECASE=sriovnet_dra: pod namespace '${NETOP_APP_NAMESPACE}' differs from" >&2
-    echo "         the ResourceClaimTemplate namespace '${NETOP_NAMESPACE}'." >&2
-    echo "         Either run with NETOP_APP_NAMESPACE=${NETOP_NAMESPACE}, or copy each" >&2
-    echo "         ResourceClaimTemplate from ${NETOP_NAMESPACE} into ${NETOP_APP_NAMESPACE}." >&2
+function set_node_selector()
+{
+  local POOL_ID="${1:-}"
+  local SELECTOR_KEY=""
+  local SELECTOR_VAL=""
+
+  if [ -n "${POOL_ID}" ]; then
+    eval "SELECTOR_KEY=\${NETOP_NODESELECTOR_${POOL_ID}:-}"
+    eval "SELECTOR_VAL=\${NETOP_NODESELECTOR_VAL_${POOL_ID}:-}"
   fi
-  # DRA pods still attach to the SriovNetwork CR via the multus annotation;
-  # the DRA driver hands the VF to the pod and the NAD wires up IPAM/CNI.
-  get_networks
-  ;;
-*)
-  get_networks
-  ;;
-esac
-rm -f ./${NAME}.yaml
-for i in $(seq 1 ${NUM_OF_PODS});do
+
+  if [ -n "${SELECTOR_KEY}" ] || [ -n "${NODE}" ]; then
+cat << NODESEL
+  nodeSelector:
+NODESEL
+    if [ -n "${SELECTOR_KEY}" ]; then
+cat << POOLSEL
+    ${SELECTOR_KEY}: "${SELECTOR_VAL}"
+POOLSEL
+    fi
+    if [ -n "${NODE}" ]; then
+cat << HOSTSEL
+    # Note: Replace hostname or remove selector altogether
+    kubernetes.io/hostname: "${NODE}"
+HOSTSEL
+    fi
+  fi
+}
+function emit_pod()
+{
+  local POD_NAME="${1}"
+  local POOL_ID="${2:-}"
+
 cat << HEREDOC1 >> ./${NAME}.yaml
 ---
 apiVersion: v1
 kind: Pod
 metadata:
-  name: ${NAME}-${i}
+  name: ${POD_NAME}
 HEREDOC1
 cat << ANNOTATIONS >> ./${NAME}.yaml
   annotations:
@@ -187,11 +226,62 @@ sriovnet_dra)
   set_pod_resource_claims >> ./${NAME}.yaml
   ;;
 esac
-if [ "${NODE}" != "" ];then
-cat << NODEDOC >> ./${NAME}.yaml
-  nodeSelector:
-    # Note: Replace hostname or remove selector altogether
-    kubernetes.io/hostname: ${NODE}
-NODEDOC
+set_node_selector "${POOL_ID}" >> ./${NAME}.yaml
+}
+NAME=${1}
+shift
+NUM_OF_PODS=${1}
+shift
+NETOP_APP_NAMESPACE=${1:-'default'}
+shift
+NODE=${1}
+shift
+if [ "${NAME}" = "" ];then
+  usage
 fi
-done
+if [ "${NUM_OF_PODS}" = "" ];then
+  NUM_OF_PODS=1
+fi
+mkdir -p apps
+cd apps
+case ${USECASE} in
+sriovnet_dra)
+  # ResourceClaimTemplate lives in ${NETOP_NAMESPACE}; the pod must reference
+  # it from the same namespace (ResourceClaimTemplate is namespaced).
+  if [ "${NETOP_APP_NAMESPACE}" != "${NETOP_NAMESPACE}" ]; then
+    echo "WARNING: USECASE=sriovnet_dra: pod namespace '${NETOP_APP_NAMESPACE}' differs from" >&2
+    echo "         the ResourceClaimTemplate namespace '${NETOP_NAMESPACE}'." >&2
+    echo "         Either run with NETOP_APP_NAMESPACE=${NETOP_NAMESPACE}, or copy each" >&2
+    echo "         ResourceClaimTemplate from ${NETOP_NAMESPACE} into ${NETOP_APP_NAMESPACE}." >&2
+  fi
+  # DRA pods still attach to the SriovNetwork CR via the multus annotation;
+  # the DRA driver hands the VF to the pod and the NAD wires up IPAM/CNI.
+  ;;
+esac
+rm -f ./${NAME}.yaml
+get_node_pool_vars
+
+if [ ${#APP_NODEPOOLS[@]} -gt 0 ]; then
+  for NETLIST_VAR in "${APP_NODEPOOLS[@]}"; do
+    POOL_ID="$(get_pool_id "${NETLIST_VAR}")"
+    POOL_NAME_SUFFIX="${POOL_ID,,}"
+    POOL_NAME_SUFFIX="${POOL_NAME_SUFFIX//_/-}"
+    set_app_context "${NETLIST_VAR}" "${POOL_ID}"
+    get_networks
+
+    for i in $(seq 1 ${NUM_OF_PODS});do
+      if [ -n "${POOL_NAME_SUFFIX}" ]; then
+        emit_pod "${NAME}-${POOL_NAME_SUFFIX}-${i}" "${POOL_ID}"
+      else
+        emit_pod "${NAME}-${i}" "${POOL_ID}"
+      fi
+    done
+  done
+else
+  set_app_context "NETOP_NETLIST" ""
+  get_networks
+
+  for i in $(seq 1 ${NUM_OF_PODS});do
+    emit_pod "${NAME}-${i}" ""
+  done
+fi

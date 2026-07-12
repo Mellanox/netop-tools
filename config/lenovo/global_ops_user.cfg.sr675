@@ -1,0 +1,34 @@
+# Manufacturer: Dell Inc.
+# Product Name: PowerEdge R750
+# Version: Not Specified
+# Serial Number: 9NPV0R3
+NETOP_VERSION="26.4.0"
+#K8CL="microk8s kubectl"
+#KADMCL="microk8s kubeadm"
+#HELMCL="microk8s helm"
+ENABLE_NFSRDMA=false
+NFD_ENABLE=true
+OFED_ENABLE=true
+CREATE_CONFIG_ONLY=0
+USECASE="sriovnet_rdma"
+#USECASE="hostdev_rdma_sriov"
+#USECASE="macvlan_rdma_shared_device"
+NETOP_MTU="9000"
+DEVICE_TYPES=( "connectx-8" )
+NUM_VFS=4
+NUM_GPUS=4
+NIC_CONFIG_ENABLE=false
+#NIC_NODE_POLICY_ENABLE=true
+NETOP_NETWORK_RANGE="192.168.121.0/24"
+NETOP_PERNODE_BLOCKSIZE="32"
+NETOP_COMBINED="true"
+NETOP_SRIOV_NODE_POOL="100%"
+#SBRMODE="true"
+NETOP_NODEPOOLS=( "NETOP_NETLIST_05" "NETOP_NETLIST_16" )
+NETOP_NETLIST_05=( a,,,0000:05:00.0 b,,,0000:05:00.1 c,,,0000:65:00.0 d,,,0000:65:00.1 e,,,0000:85:00.0 f,,,0000:85:00.1 g,,,0000:e5:00.0 h,,,0000:e5:00.1 )
+NETOP_NETLIST_16=( a,,,0000:16:00.0 b,,,0000:16:00.1 c,,,0000:65:00.0 d,,,0000:65:00.1 e,,,0000:85:00.0 f,,,0000:85:00.1 g,,,0000:e5:00.0 h,,,0000:e5:00.1 )
+MAINTENANCE_OPERATOR_ENABLE=true
+ENTRYPOINT_DEBUG=true
+NETOP_NETWORK_NAME="cx8-vf"         # secondary network base name
+NETOP_RESOURCE="cx8_vf"		    # resource base name
+NETOP_NETWORK_POOL="cx8-vf-pool"    # nvidia ipam pool name
