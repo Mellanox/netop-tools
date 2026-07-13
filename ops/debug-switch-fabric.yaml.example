@@ -1,0 +1,33 @@
+# Copy this file to ops/debug-switch-fabric.yaml and fill in local switch details.
+# ops/debug-switch-fabric.yaml is ignored by Git.
+#
+# Prefer SSH keys. If password auth is required, set password_env to the name of
+# an environment variable and export that variable before running the script.
+
+# Cluster-specific worker SSH settings. Worker node IPs are discovered from
+# Kubernetes node InternalIP, but the login user/key/port/options belong here.
+worker_ssh:
+  user: root
+  port: 22
+  identity_file: ~/.ssh/id_ed25519
+  options: "-o BatchMode=yes -o ConnectTimeout=10"
+
+switches:
+  - name: leaf1
+    host: 10.0.0.11
+    user: cumulus
+    port: 22
+    identity_file: ~/.ssh/id_ed25519
+
+  - name: leaf2
+    host: 10.0.0.12
+    user: cumulus
+    port: 22
+    identity_file: ~/.ssh/id_ed25519
+
+  # Password auth example:
+  # - name: leaf3
+  #   host: 10.0.0.13
+  #   user: cumulus
+  #   port: 22
+  #   password_env: SWITCH_PASSWORD

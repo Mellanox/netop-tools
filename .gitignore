@@ -28,6 +28,7 @@ internal/
 *.pem
 ngc-image-secret*
 GPG-KEY-*
+ops/debug-switch-fabric.yaml
 
 # Debug/log artifacts
 *.log
