@@ -67,6 +67,69 @@ function run_log()
   } >> "${file}" 2>&1 || true
 }
 
+function pod_exec_log()
+{
+  local pod=${1}
+  local name=${2}
+  local file=${3}
+  local cmd=${4}
+  {
+    echo
+    echo "### ${pod}: ${name}"
+    echo "# $(date -Is)"
+    echo "$ ${K8CL} -n ${NS} exec ${pod} -- sh -c ${cmd}"
+    ${K8CL} -n "${NS}" exec "${pod}" -- sh -c "${cmd}"
+  } >> "${file}" 2>&1 || true
+}
+
+function pod_rdma_cmd()
+{
+  local iface=${1}
+  local rdma_dev=${2:-}
+
+  cat <<EOF
+echo "rdma link:";
+if command -v rdma >/dev/null 2>&1; then
+  rdma link || true;
+  if [ -n "${iface}" ] && [ "${iface}" != "all" ]; then
+    echo;
+    echo "rdma link show netdev ${iface}:";
+    rdma link show netdev ${iface} 2>/dev/null || true;
+  fi;
+  echo;
+  echo "rdma dev show:";
+  rdma dev show 2>/dev/null || true;
+else
+  echo "rdma not found";
+fi;
+echo;
+echo "ibv_devices:";
+if command -v ibv_devices >/dev/null 2>&1; then
+  ibv_devices || true;
+else
+  echo "ibv_devices not found";
+fi;
+echo;
+echo "ibv_devinfo:";
+if command -v ibv_devinfo >/dev/null 2>&1; then
+  if [ -n "${rdma_dev}" ]; then
+    ibv_devinfo -d "${rdma_dev}" 2>/dev/null || ibv_devinfo || true;
+  else
+    ibv_devinfo || true;
+  fi;
+else
+  echo "ibv_devinfo not found";
+fi;
+echo;
+echo "ibv_info:";
+if command -v ibv_info >/dev/null 2>&1; then
+  ibv_info || true;
+else
+  echo "ibv_info not found";
+fi
+EOF
+}
+
 function pod_jsonpath()
 {
   local pod=${1}
@@ -144,6 +207,50 @@ echo "vf-driver:"
 basename "$(readlink -f "/sys/bus/pci/devices/${PCI}/driver" 2>/dev/null)"
 echo "pf-driver:"
 basename "$(readlink -f "/sys/bus/pci/devices/${PF}/driver" 2>/dev/null)"
+echo
+
+PF_RDMA_DEVS=()
+echo "pf-rdma-devices:"
+for RDMA_PATH in /sys/bus/pci/devices/${PF}/infiniband/*; do
+  [ -e "${RDMA_PATH}" ] || continue
+  RDMA_DEV=$(basename "${RDMA_PATH}")
+  PF_RDMA_DEVS+=( "${RDMA_DEV}" )
+  echo "${RDMA_DEV}"
+done
+echo
+
+run_mlxlink_probe() {
+  local dev="$1"
+  local ran=0
+
+  echo "mlxlink probe for ${dev}:"
+  echo "$ mlxlink -d ${dev}"
+  if mlxlink -d "${dev}" 2>&1; then
+    ran=1
+  else
+    echo "$ mlxlink -d ${dev} -p 1"
+    mlxlink -d "${dev}" -p 1 2>&1 || true
+    ran=1
+  fi
+
+  if [ "${ran}" -eq 0 ]; then
+    echo "mlxlink probe did not run for ${dev}"
+  fi
+}
+
+echo "mlxlink PF link state:"
+if command -v mlxlink >/dev/null 2>&1; then
+  if [ ${#PF_RDMA_DEVS[@]} -gt 0 ]; then
+    for MLXDEV in "${PF_RDMA_DEVS[@]}"; do
+      run_mlxlink_probe "${MLXDEV}"
+      echo
+    done
+  else
+    run_mlxlink_probe "${PF}"
+  fi
+else
+  echo "mlxlink not found"
+fi
 echo
 
 echo "virtfn-map:"
@@ -240,6 +347,7 @@ function run_switch_checks()
 {
   local mac_expr=${1}
   local file=${2}
+  local ip_expr="${SRC_IP}|${DST_IP}"
 
   if [ -z "${SWITCH_HOSTS:-}" ]; then
     return
@@ -250,7 +358,7 @@ function run_switch_checks()
       echo
       echo "### switch ${sw}"
       echo "# $(date -Is)"
-      ssh "${sw}" "MAC_EXPR='${mac_expr}' bash -s" <<'REMOTE'
+      ssh "${sw}" "MAC_EXPR='${mac_expr}' IP_EXPR='${ip_expr}' bash -s" <<'REMOTE'
 set +e
 echo "hostname: $(hostname)"
 echo "bridge fdb:"
@@ -267,6 +375,34 @@ lldpcli show neighbors 2>/dev/null || true
 echo
 echo "lldpctl fallback:"
 lldpctl 2>/dev/null || true
+echo
+echo "FRR/BGP state:"
+if command -v vtysh >/dev/null 2>&1; then
+  echo "show bgp summary:"
+  vtysh -c 'show bgp summary' 2>/dev/null || true
+  echo
+  echo "show bgp l2vpn evpn summary:"
+  vtysh -c 'show bgp l2vpn evpn summary' 2>/dev/null || true
+  echo
+  echo "show evpn vni:"
+  vtysh -c 'show evpn vni' 2>/dev/null || true
+  echo
+  echo "show evpn mac vni all matching pod MACs:"
+  vtysh -c 'show evpn mac vni all' 2>/dev/null | egrep -i "${MAC_EXPR}" || true
+  echo
+  echo "show bgp l2vpn evpn route matching pod MACs/IPs:"
+  vtysh -c 'show bgp l2vpn evpn route' 2>/dev/null | egrep -i "${MAC_EXPR}|${IP_EXPR}" || true
+  echo
+  echo "show ip route matching pod IPs:"
+  vtysh -c 'show ip route' 2>/dev/null | egrep -i "${IP_EXPR}" || true
+else
+  echo "vtysh not found"
+fi
+echo
+echo "Cumulus/NVIDIA BGP helpers:"
+net show bgp summary 2>/dev/null || true
+echo
+nv show vrf default router bgp 2>/dev/null || true
 REMOTE
     } >> "${file}" 2>&1 || true
   done
@@ -315,13 +451,17 @@ fi
   echo "SriovNetwork guess: ${NETOP_NAMESPACE}/${NAD_NAME}"
   echo
   echo "Switch checks:"
+  echo "- Pod RDMA and verbs state is collected in pod-rdma.txt with rdma link, ibv_devices, ibv_devinfo, and ibv_info when present."
   echo "- LLDP neighbor data is collected from each mapped host PF with lldpcli."
   echo "- Check source-host.txt and dest-host.txt for 'lldpcli neighbor for <PF>'."
+  echo "- mlxlink PF link state is collected from the PF RDMA device in source-host.txt and dest-host.txt."
   echo "- Confirm both ports are in the same L2 domain for VLAN used by the SriovNetwork."
   echo "- Current NAD/SriovNetwork YAML below shows whether CNI sends untagged vlan 0 or a VLAN tag."
   echo "- Check switch MAC table for:"
   echo "  source MAC ${SRC_MAC}"
   echo "  dest MAC   ${DST_MAC}"
+  echo "- If the switch uses EVPN/VXLAN, FRR/BGP EVPN output should show healthy peers and MAC/IP routes."
+  echo "- If this is a simple bridged VLAN, FRR is secondary; bridge FDB and VLAN membership are authoritative."
   echo "- If source MAC is absent, egress from ${SRC_NODE}/${SRC_PCI} is not reaching the switch."
   echo "- If source and dest MACs are learned on different VLANs, fix VLAN/SriovNetwork config."
 } > "${SUMMARY}"
@@ -330,6 +470,10 @@ run_log "source pod wide" "${REPORT_DIR}/pods.txt" \
   "${K8CL}" -n "${NS}" get pod "${SRC_POD}" -o wide
 run_log "dest pod wide" "${REPORT_DIR}/pods.txt" \
   "${K8CL}" -n "${NS}" get pod "${DST_POD}" -o wide
+pod_exec_log "${SRC_POD}" "${SRC_IFACE} rdma state" "${REPORT_DIR}/pod-rdma.txt" \
+  "$(pod_rdma_cmd "${SRC_IFACE}" "${SRC_RDMA}")"
+pod_exec_log "${DST_POD}" "${DST_IFACE} rdma state" "${REPORT_DIR}/pod-rdma.txt" \
+  "$(pod_rdma_cmd "${DST_IFACE}" "${DST_RDMA}")"
 run_log "NAD yaml" "${REPORT_DIR}/network.yaml" \
   "${K8CL}" -n "${NAD_NS}" get network-attachment-definitions "${NAD_NAME}" -o yaml
 run_log "SriovNetwork yaml" "${REPORT_DIR}/network.yaml" \
@@ -374,20 +518,30 @@ MAC table:
   ${DST_MAC}
 
 Questions:
+  0. In pod-rdma.txt, does rdma link show the pod netdev mapped to the expected RDMA device?
   1. In source-host.txt, what switch chassis/port does lldpcli show for the source PF?
   2. In dest-host.txt, what switch chassis/port does lldpcli show for the destination PF?
-  3. Are both server ports connected to the expected switch ports?
-  4. Are both switch ports in the same L2 domain?
-  5. If the ports are trunks, does the SriovNetwork VLAN match the allowed/native VLAN?
-  6. If SriovNetwork has vlan: 0, are both ports using the same untagged/native VLAN?
-  7. Does the switch learn source MAC ${SRC_MAC} when the ping runs?
-  8. Does it learn destination MAC ${DST_MAC} on the peer port?
+  3. In source-host.txt and dest-host.txt, does mlxlink report link up, expected speed, and healthy FEC?
+  4. Are both server ports connected to the expected switch ports?
+  5. Are both switch ports in the same L2 domain?
+  6. If the ports are trunks, does the SriovNetwork VLAN match the allowed/native VLAN?
+  7. If SriovNetwork has vlan: 0, are both ports using the same untagged/native VLAN?
+  8. Does the switch learn source MAC ${SRC_MAC} when the ping runs?
+  9. Does it learn destination MAC ${DST_MAC} on the peer port?
+  10. If this VLAN is stretched with EVPN, are FRR EVPN BGP peers established?
+  11. If this VLAN is stretched with EVPN, does FRR show EVPN MAC/IP routes for ${SRC_MAC} and ${DST_MAC}?
 
 Common Cumulus/NVIDIA switch probes:
   bridge fdb show | egrep -i '${SRC_MAC}|${DST_MAC}'
   nv show bridge domain br_default mac-table | egrep -i '${SRC_MAC}|${DST_MAC}'
   net show bridge macs | egrep -i '${SRC_MAC}|${DST_MAC}'
   lldpcli show neighbors
+  mlxlink -d <pf-rdma-device>
+  vtysh -c 'show bgp summary'
+  vtysh -c 'show bgp l2vpn evpn summary'
+  vtysh -c 'show evpn vni'
+  vtysh -c 'show evpn mac vni all' | egrep -i '${SRC_MAC}|${DST_MAC}'
+  vtysh -c 'show bgp l2vpn evpn route' | egrep -i '${SRC_MAC}|${DST_MAC}|${SRC_IP}|${DST_IP}'
 EOF
 
 echo "Wrote report: ${REPORT_DIR}"

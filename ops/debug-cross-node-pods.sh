@@ -94,6 +94,54 @@ function pod_exec_log()
   } >> "${file}" 2>&1 || true
 }
 
+function pod_rdma_cmd()
+{
+  local iface=${1}
+  local rdma_dev=${2:-}
+
+  cat <<EOF
+echo "rdma link:";
+if command -v rdma >/dev/null 2>&1; then
+  rdma link || true;
+  if [ -n "${iface}" ] && [ "${iface}" != "all" ]; then
+    echo;
+    echo "rdma link show netdev ${iface}:";
+    rdma link show netdev ${iface} 2>/dev/null || true;
+  fi;
+  echo;
+  echo "rdma dev show:";
+  rdma dev show 2>/dev/null || true;
+else
+  echo "rdma not found";
+fi;
+echo;
+echo "ibv_devices:";
+if command -v ibv_devices >/dev/null 2>&1; then
+  ibv_devices || true;
+else
+  echo "ibv_devices not found";
+fi;
+echo;
+echo "ibv_devinfo:";
+if command -v ibv_devinfo >/dev/null 2>&1; then
+  if [ -n "${rdma_dev}" ]; then
+    ibv_devinfo -d "${rdma_dev}" 2>/dev/null || ibv_devinfo || true;
+  else
+    ibv_devinfo || true;
+  fi;
+else
+  echo "ibv_devinfo not found";
+fi;
+echo;
+echo "ibv_info:";
+if command -v ibv_info >/dev/null 2>&1; then
+  ibv_info || true;
+else
+  echo "ibv_info not found";
+fi
+EOF
+}
+
 function get_network_status()
 {
   local pod=${1}
@@ -143,6 +191,8 @@ function collect_pod_basics()
     "ip -d link show"
   pod_exec_log "${pod}" "neighbors" "${REPORT_DIR}/${prefix}-neigh.txt" \
     "ip neigh show"
+  pod_exec_log "${pod}" "rdma summary" "${REPORT_DIR}/${prefix}-rdma.txt" \
+    "$(pod_rdma_cmd all "")"
 }
 
 function build_interface_pairs()
@@ -168,6 +218,9 @@ def ip(entry):
 def pci(entry):
     return entry.get("device-info", {}).get("pci", {}).get("pci-address", "")
 
+def rdma(entry):
+    return entry.get("device-info", {}).get("pci", {}).get("rdma-device", "")
+
 src = load(src_path)
 dst = load(dst_path)
 dst_by_iface = {e.get("interface", ""): e for e in dst}
@@ -190,6 +243,8 @@ for entry in src:
         peer.get("mac", ""),
         pci(entry),
         pci(peer),
+        rdma(entry),
+        rdma(peer),
     ]
     print("\t".join(fields))
 PY
@@ -205,6 +260,8 @@ function run_pair_test()
   local dst_mac=${6}
   local src_pci=${7}
   local dst_pci=${8}
+  local src_rdma=${9:-}
+  local dst_rdma=${10:-}
 
   local file="${REPORT_DIR}/${iface}-test.txt"
   local src_cap="${REPORT_DIR}/${iface}-src-tcpdump.txt"
@@ -213,8 +270,8 @@ function run_pair_test()
   {
     echo "interface: ${iface}"
     echo "network: ${network}"
-    echo "source: ${SRC_POD} ${src_ip} ${src_mac} ${src_pci}"
-    echo "dest: ${DST_POD} ${dst_ip} ${dst_mac} ${dst_pci}"
+    echo "source: ${SRC_POD} ${src_ip} ${src_mac} ${src_pci} ${src_rdma}"
+    echo "dest: ${DST_POD} ${dst_ip} ${dst_mac} ${dst_pci} ${dst_rdma}"
   } > "${file}"
 
   pod_exec_log "${SRC_POD}" "${iface} link before" "${file}" \
@@ -222,6 +279,12 @@ function run_pair_test()
 
   pod_exec_log "${DST_POD}" "${iface} dest link before" "${file}" \
     "ip -d link show ${iface}; ip -s link show ${iface}; ip neigh show dev ${iface}"
+
+  pod_exec_log "${SRC_POD}" "${iface} source rdma" "${file}" \
+    "$(pod_rdma_cmd "${iface}" "${src_rdma}")"
+
+  pod_exec_log "${DST_POD}" "${iface} dest rdma" "${file}" \
+    "$(pod_rdma_cmd "${iface}" "${dst_rdma}")"
 
   pod_exec_log "${SRC_POD}" "${iface} delete stale neighbor" "${file}" \
     "ip neigh del ${dst_ip} dev ${iface} 2>/dev/null || true; ip neigh show dev ${iface}"
@@ -279,9 +342,9 @@ if [ ! -s "${PAIRS_FILE}" ]; then
   exit 2
 fi
 
-while IFS=$'\t' read -r iface network src_ip dst_ip src_mac dst_mac src_pci dst_pci; do
+while IFS=$'\t' read -r iface network src_ip dst_ip src_mac dst_mac src_pci dst_pci src_rdma dst_rdma; do
   [ -n "${iface}" ] || continue
-  run_pair_test "${iface}" "${network}" "${src_ip}" "${dst_ip}" "${src_mac}" "${dst_mac}" "${src_pci}" "${dst_pci}"
+  run_pair_test "${iface}" "${network}" "${src_ip}" "${dst_ip}" "${src_mac}" "${dst_mac}" "${src_pci}" "${dst_pci}" "${src_rdma}" "${dst_rdma}"
 done < "${PAIRS_FILE}"
 
 echo "Wrote report: ${REPORT_DIR}"
