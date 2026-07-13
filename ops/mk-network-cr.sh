@@ -15,6 +15,43 @@ NETWORK_CR_BASE_NAME="${NETOP_NETWORK_NAME}"
 if [ -n "${NETOP_ACTIVE_POOL:-}" ]; then
   NETWORK_CR_BASE_NAME="${NETWORK_CR_BASE_NAME%-${NETOP_ACTIVE_POOL,,}}"
 fi
+function validate_fabric_ipam_mode()
+{
+  local mode="${NETOP_SWITCH_PORT_MODE,,}"
+
+  case "${mode}" in
+  l2|bridge|bridged|"")
+    export NETOP_SWITCH_PORT_MODE="l2"
+    ;;
+  l3|routed)
+    export NETOP_SWITCH_PORT_MODE="l3"
+    if [ "${IPAM_TYPE}" != "nv-ipam" ];then
+      echo "ERROR: NETOP_SWITCH_PORT_MODE=l3 requires IPAM_TYPE=nv-ipam"
+      exit 1
+    fi
+    if [ "${NVIPAM_POOL_TYPE}" != "CIDRPool" ];then
+      echo "INFO: NETOP_SWITCH_PORT_MODE=l3 requires NVIPAM_POOL_TYPE=CIDRPool; overriding ${NVIPAM_POOL_TYPE}"
+      export NVIPAM_POOL_TYPE="CIDRPool"
+    fi
+    if [ -z "${NETOP_GATEWAY_INDEX:-}" ];then
+      echo "ERROR: NETOP_SWITCH_PORT_MODE=l3 requires NETOP_GATEWAY_INDEX"
+      exit 1
+    fi
+    if [ -z "${NETOP_PER_NODE_PREFIX:-}" ];then
+      echo "ERROR: NETOP_SWITCH_PORT_MODE=l3 requires NETOP_PER_NODE_PREFIX"
+      exit 1
+    fi
+    if [ "${#NETOP_NETLIST[@]}" -gt 1 ] && [ "${SBRMODE}" != "true" ];then
+      echo "WARNING: NETOP_SWITCH_PORT_MODE=l3 with multiple secondary interfaces usually requires SBRMODE=true"
+    fi
+    ;;
+  *)
+    echo "ERROR: Unsupported NETOP_SWITCH_PORT_MODE=${NETOP_SWITCH_PORT_MODE}; use l2 or l3"
+    exit 1
+    ;;
+  esac
+}
+
 function init_file()
 {
   if [ "${NETOP_TAG_VERSION}" == true ];then
@@ -63,7 +100,7 @@ function IPPoolCRD()
           ${NETOP_ROOT_DIR}/ops/mk-nvipam-pool.sh "${IPPOOL_NAME}" "${RANGE}" "${GW}" "${NETOP_PERNODE_BLOCKSIZE}" >> ${FILE}
           ;;
         CIDRPool)
-          ${NETOP_ROOT_DIR}/ops/mk-nvipam-cidr.sh "${IPPOOL_NAME}" "${RANGE}" "${NETOP_GW_INDEX}" "${NETOP_PER_NODE_PREFIX}" >> ${FILE}
+          ${NETOP_ROOT_DIR}/ops/mk-nvipam-cidr.sh "${IPPOOL_NAME}" "${RANGE}" "${NETOP_GATEWAY_INDEX}" "${NETOP_PER_NODE_PREFIX}" >> ${FILE}
           ;;
         esac
         let LINE_NUM=LINE_NUM+1
@@ -212,6 +249,7 @@ function combinedNetworkCRD()
   fi
 }
 
+validate_fabric_ipam_mode
 if [ "${NETOP_SKIP_IPPOOL:-false}" != "true" ]; then
   IPPoolCRD
 fi

@@ -12,15 +12,25 @@ worker_ssh:
   password: "<worker-password>"
   options: "-o BatchMode=yes -o ConnectTimeout=10"
 
+# Used only for generated switch-<switch>-<port>-vlan0-L2.yaml fix proposals.
+# SriovNetwork vlan: 0 sends untagged frames, so this is the switch-side
+# access/native VLAN that should carry that L2 service.
+switch_defaults:
+  bridge_domain: br_default
+  native_vlan: 1
+
 switches:
   - name: leaf1
     host: 10.0.0.11
     user: cumulus
     port: 22
     password: "<switch-password>"
+    # Optional. If omitted, debug-switch-fabric.sh tries to match ports from LLDP.
+    server_ports: [swp13s0]
 
   - name: leaf2
     host: 10.0.0.12
     user: cumulus
     port: 22
     password: "<switch-password>"
+    server_ports: [swp16s0]

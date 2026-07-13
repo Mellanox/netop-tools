@@ -68,7 +68,8 @@ function meta_plugins()
 if [ "${RDMASHAREDMODE}" = "false" ] && [ "${SBRMODE}" = "true" ];then
 cat <<HEREDOC4
   metaPlugins: |
-    { "type" : "rdma", "type": "sbr" }
+    { "type": "rdma" },
+    { "type": "sbr" }
 HEREDOC4
 elif [ "${RDMASHAREDMODE}" = "false" ];then
 cat <<HEREDOC5
