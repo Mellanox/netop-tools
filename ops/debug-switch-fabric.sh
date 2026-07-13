@@ -13,6 +13,9 @@ K8CL=${K8CL:-kubectl}
 NETOP_NAMESPACE=${NETOP_NAMESPACE:-nvidia-network-operator}
 PING_COUNT=${PING_COUNT:-2}
 PING_TIMEOUT=${PING_TIMEOUT:-1}
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+DEFAULT_SWITCH_CONFIG="${SCRIPT_DIR}/debug-switch-fabric.yaml"
+SWITCH_CONFIG=${SWITCH_CONFIG:-${DEFAULT_SWITCH_CONFIG}}
 
 function usage()
 {
@@ -25,8 +28,11 @@ Examples:
 Environment:
   K8CL             kubectl command to use. Default: kubectl
   NETOP_NAMESPACE  Network Operator namespace. Default: nvidia-network-operator
-  SWITCH_HOSTS     Optional space-separated switch hostnames to query over ssh
+  SWITCH_CONFIG    Optional switch YAML. Default: ops/debug-switch-fabric.yaml
+                   Supports worker_ssh and switches sections.
+  SWITCH_HOSTS     Optional space-separated switch ssh targets. Appended to YAML switches
   REPORT_DIR       Existing or new output directory. Default: /tmp/netop-switch-fabric-<timestamp>
+  SSH_OPTS         Optional ssh options used for worker and switch logins
 EOF
   exit 1
 }
@@ -230,21 +236,258 @@ for entry in entries:
 PY
 }
 
+function load_switch_config()
+{
+  SWITCH_CFG_NAMES=()
+  SWITCH_CFG_HOSTS=()
+  SWITCH_CFG_USERS=()
+  SWITCH_CFG_PORTS=()
+  SWITCH_CFG_IDENTITIES=()
+  SWITCH_CFG_PASSWORD_ENVS=()
+  DEBUG_CFG_WORKER_SSH_USER=""
+  DEBUG_CFG_WORKER_SSH_PORT=""
+  DEBUG_CFG_WORKER_SSH_IDENTITY_FILE=""
+  DEBUG_CFG_WORKER_SSH_OPTS=""
+
+  if [ -r "${SWITCH_CONFIG}" ]; then
+    local parsed="${REPORT_DIR}/switch-config.env"
+    python3 - "${SWITCH_CONFIG}" > "${parsed}" <<'PY'
+import re
+import shlex
+import sys
+
+path = sys.argv[1]
+
+def clean_value(value):
+    value = value.strip()
+    if " #" in value:
+        value = value.split(" #", 1)[0].rstrip()
+    if (value.startswith('"') and value.endswith('"')) or (
+        value.startswith("'") and value.endswith("'")
+    ):
+        value = value[1:-1]
+    return value
+
+def simple_yaml(path):
+    switches = []
+    current = None
+    section = None
+    worker_ssh = {}
+    key_value = re.compile(r"^([A-Za-z0-9_-]+)\s*:\s*(.*)$")
+
+    with open(path, encoding="utf-8") as stream:
+        for raw in stream:
+            line = raw.rstrip()
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if re.match(r"^switches\s*:\s*$", stripped):
+                section = "switches"
+                continue
+            if re.match(r"^worker_ssh\s*:\s*$", stripped):
+                section = "worker_ssh"
+                continue
+
+            if section == "worker_ssh":
+                if re.match(r"^\S", line):
+                    section = None
+                    continue
+                match = key_value.match(stripped)
+                if match:
+                    worker_ssh[match.group(1)] = clean_value(match.group(2))
+                continue
+
+            if section == "switches":
+                item = re.match(r"^\s*-\s*(.*)$", line)
+                if item:
+                    if current:
+                        switches.append(current)
+                    current = {}
+                    rest = item.group(1).strip()
+                    if rest:
+                        match = key_value.match(rest)
+                        if match:
+                            current[match.group(1)] = clean_value(match.group(2))
+                    continue
+
+                if current is not None:
+                    match = key_value.match(stripped)
+                    if match:
+                        current[match.group(1)] = clean_value(match.group(2))
+
+    if current:
+        switches.append(current)
+    return {"worker_ssh": worker_ssh, "switches": switches}
+
+try:
+    import yaml  # type: ignore
+
+    with open(path, encoding="utf-8") as stream:
+        data = yaml.safe_load(stream) or {}
+except Exception:
+    data = simple_yaml(path)
+
+worker_ssh = {}
+if isinstance(data, dict):
+    worker_ssh = data.get("worker_ssh") or {}
+    cluster = data.get("cluster") or {}
+    if isinstance(cluster, dict) and not worker_ssh:
+        worker_ssh = cluster.get("worker_ssh") or {}
+if not isinstance(worker_ssh, dict):
+    worker_ssh = {}
+
+print(f"DEBUG_CFG_WORKER_SSH_USER={shlex.quote(str(worker_ssh.get('user') or worker_ssh.get('username') or '').strip())}")
+print(f"DEBUG_CFG_WORKER_SSH_PORT={shlex.quote(str(worker_ssh.get('port') or '').strip())}")
+print(f"DEBUG_CFG_WORKER_SSH_IDENTITY_FILE={shlex.quote(str(worker_ssh.get('identity_file') or worker_ssh.get('identity') or worker_ssh.get('key_file') or '').strip())}")
+print(f"DEBUG_CFG_WORKER_SSH_OPTS={shlex.quote(str(worker_ssh.get('options') or worker_ssh.get('ssh_opts') or '').strip())}")
+
+if isinstance(data, list):
+    switches = data
+elif isinstance(data, dict):
+    switches = data.get("switches", [])
+else:
+    switches = []
+
+for index, switch in enumerate(switches):
+    if not isinstance(switch, dict):
+        continue
+
+    host = str(
+        switch.get("host")
+        or switch.get("ip")
+        or switch.get("hostname")
+        or ""
+    ).strip()
+    if not host:
+        print(f"# skipping switch entry {index}: missing host/ip", file=sys.stderr)
+        continue
+
+    name = str(switch.get("name") or host).strip()
+    user = str(switch.get("user") or switch.get("username") or "").strip()
+    port = str(switch.get("port") or "").strip()
+    identity = str(
+        switch.get("identity_file")
+        or switch.get("identity")
+        or switch.get("key_file")
+        or ""
+    ).strip()
+    password_env = str(switch.get("password_env") or "").strip()
+
+    if switch.get("password") and not password_env:
+        print(
+            f"# warning: switch {name} has a password field; "
+            "use password_env instead so secrets stay out of Git",
+            file=sys.stderr,
+        )
+
+    print(f"SWITCH_CFG_NAMES+=({shlex.quote(name)})")
+    print(f"SWITCH_CFG_HOSTS+=({shlex.quote(host)})")
+    print(f"SWITCH_CFG_USERS+=({shlex.quote(user)})")
+    print(f"SWITCH_CFG_PORTS+=({shlex.quote(port)})")
+    print(f"SWITCH_CFG_IDENTITIES+=({shlex.quote(identity)})")
+    print(f"SWITCH_CFG_PASSWORD_ENVS+=({shlex.quote(password_env)})")
+PY
+    # shellcheck disable=SC1090
+    source "${parsed}"
+  fi
+
+  WORKER_SSH_USER=${WORKER_SSH_USER:-${DEBUG_CFG_WORKER_SSH_USER:-}}
+  WORKER_SSH_PORT=${WORKER_SSH_PORT:-${DEBUG_CFG_WORKER_SSH_PORT:-}}
+  WORKER_SSH_IDENTITY_FILE=${WORKER_SSH_IDENTITY_FILE:-${DEBUG_CFG_WORKER_SSH_IDENTITY_FILE:-}}
+  WORKER_SSH_OPTS=${WORKER_SSH_OPTS:-${DEBUG_CFG_WORKER_SSH_OPTS:-}}
+
+  if [ -n "${SWITCH_HOSTS:-}" ]; then
+    local sw
+    for sw in ${SWITCH_HOSTS}; do
+      SWITCH_CFG_NAMES+=( "${sw}" )
+      SWITCH_CFG_HOSTS+=( "${sw}" )
+      SWITCH_CFG_USERS+=( "" )
+      SWITCH_CFG_PORTS+=( "" )
+      SWITCH_CFG_IDENTITIES+=( "" )
+      SWITCH_CFG_PASSWORD_ENVS+=( "" )
+    done
+  fi
+}
+
+function expand_local_path()
+{
+  local path=${1}
+  case "${path}" in
+    "~/"*) printf '%s\n' "${HOME}/${path#~/}" ;;
+    *) printf '%s\n' "${path}" ;;
+  esac
+}
+
+function resolve_node_ssh_target()
+{
+  local node=${1}
+  local target
+
+  target=$(${K8CL} get node "${node}" \
+    -o jsonpath='{range .status.addresses[?(@.type=="InternalIP")]}{.address}{"\n"}{end}' \
+    2>/dev/null | awk 'NF { print; exit }')
+
+  if [ -z "${target}" ]; then
+    target=$(${K8CL} get nodes -o wide --no-headers 2>/dev/null | \
+      awk -v node="${node}" '$1 == node { print $6; exit }')
+  fi
+
+  if [ -n "${target}" ] && [ "${target}" != "<none>" ]; then
+    if [ -n "${WORKER_SSH_USER:-}" ] && [[ "${target}" != *@* ]]; then
+      printf '%s@%s\n' "${WORKER_SSH_USER}" "${target}"
+    else
+      printf '%s\n' "${target}"
+    fi
+  else
+    if [ -n "${WORKER_SSH_USER:-}" ] && [[ "${node}" != *@* ]]; then
+      printf '%s@%s\n' "${WORKER_SSH_USER}" "${node}"
+    else
+      printf '%s\n' "${node}"
+    fi
+  fi
+}
+
+function ssh_worker()
+{
+  local target=${1}
+  shift
+  local ssh_cmd=(ssh)
+
+  if [ -n "${SSH_OPTS:-}" ]; then
+    # shellcheck disable=SC2206
+    ssh_cmd+=( ${SSH_OPTS} )
+  fi
+  if [ -n "${WORKER_SSH_OPTS:-}" ]; then
+    # shellcheck disable=SC2206
+    ssh_cmd+=( ${WORKER_SSH_OPTS} )
+  fi
+  if [ -n "${WORKER_SSH_PORT:-}" ]; then
+    ssh_cmd+=( -p "${WORKER_SSH_PORT}" )
+  fi
+  if [ -n "${WORKER_SSH_IDENTITY_FILE:-}" ]; then
+    ssh_cmd+=( -i "$(expand_local_path "${WORKER_SSH_IDENTITY_FILE}")" )
+  fi
+
+  "${ssh_cmd[@]}" "${target}" "$@"
+}
+
 function remote_collect_host()
 {
   local label=${1}
   local node=${2}
-  local pci=${3}
-  local mac=${4}
-  local file=${5}
+  local ssh_target=${3}
+  local pci=${4}
+  local mac=${5}
+  local file=${6}
 
   {
     echo "### ${label} host collection"
     echo "node: ${node}"
+    echo "ssh target: ${ssh_target}"
     echo "pod pci: ${pci}"
     echo "pod mac: ${mac}"
     echo "# $(date -Is)"
-    ssh "${node}" "PCI='${pci}' MAC='${mac}' bash -s" <<'REMOTE'
+    ssh_worker "${ssh_target}" "PCI='${pci}' MAC='${mac}' bash -s" <<'REMOTE'
 set +e
 echo "hostname: $(hostname)"
 echo "pci: ${PCI}"
@@ -380,12 +623,15 @@ function remote_ethtool_stats()
 {
   local label=${1}
   local node=${2}
-  local pci=${3}
-  local file=${4}
+  local ssh_target=${3}
+  local pci=${4}
+  local file=${5}
 
   {
     echo "### ${label} counters $(date -Is)"
-    ssh "${node}" "PCI='${pci}' bash -s" <<'REMOTE'
+    echo "node: ${node}"
+    echo "ssh target: ${ssh_target}"
+    ssh_worker "${ssh_target}" "PCI='${pci}' bash -s" <<'REMOTE'
 set +e
 PF=$(basename "$(readlink -f "/sys/bus/pci/devices/${PCI}/physfn" 2>/dev/null)")
 for NETPATH in /sys/bus/pci/devices/${PF}/net/*; do
@@ -468,17 +714,54 @@ function run_switch_checks()
   local mac_expr=${1}
   local file=${2}
   local ip_expr="${SRC_IP}|${DST_IP}"
+  local idx
 
-  if [ -z "${SWITCH_HOSTS:-}" ]; then
+  load_switch_config
+
+  if [ ${#SWITCH_CFG_HOSTS[@]} -eq 0 ]; then
     return
   fi
 
-  for sw in ${SWITCH_HOSTS}; do
+  for idx in "${!SWITCH_CFG_HOSTS[@]}"; do
+    local name="${SWITCH_CFG_NAMES[${idx}]}"
+    local host="${SWITCH_CFG_HOSTS[${idx}]}"
+    local user="${SWITCH_CFG_USERS[${idx}]}"
+    local port="${SWITCH_CFG_PORTS[${idx}]}"
+    local identity="${SWITCH_CFG_IDENTITIES[${idx}]}"
+    local password_env="${SWITCH_CFG_PASSWORD_ENVS[${idx}]}"
+    local target="${host}"
+    local ssh_cmd=(ssh)
+
+    if [ -n "${SSH_OPTS:-}" ]; then
+      # shellcheck disable=SC2206
+      ssh_cmd+=( ${SSH_OPTS} )
+    fi
+    if [ -n "${user}" ] && [[ "${host}" != *@* ]]; then
+      target="${user}@${host}"
+    fi
+    if [ -n "${port}" ]; then
+      ssh_cmd+=( -p "${port}" )
+    fi
+    if [ -n "${identity}" ]; then
+      ssh_cmd+=( -i "$(expand_local_path "${identity}")" )
+    fi
+
     {
       echo
-      echo "### switch ${sw}"
+      echo "### switch ${name} (${target})"
       echo "# $(date -Is)"
-      ssh "${sw}" "MAC_EXPR='${mac_expr}' IP_EXPR='${ip_expr}' bash -s" <<'REMOTE'
+      if [ -n "${password_env}" ]; then
+        if ! command -v sshpass >/dev/null 2>&1; then
+          echo "ERROR: password_env=${password_env} is configured, but sshpass is not installed"
+          continue
+        fi
+        local password_value="${!password_env-}"
+        if [ -z "${password_value}" ]; then
+          echo "ERROR: password_env=${password_env} is configured, but the environment variable is empty"
+          continue
+        fi
+        echo "$ SSHPASS=<redacted> sshpass -e ${ssh_cmd[*]} ${target} ..."
+        SSHPASS="${password_value}" sshpass -e "${ssh_cmd[@]}" "${target}" "MAC_EXPR='${mac_expr}' IP_EXPR='${ip_expr}' bash -s" <<'REMOTE'
 set +e
 echo "hostname: $(hostname)"
 echo "bridge fdb:"
@@ -524,12 +807,65 @@ net show bgp summary 2>/dev/null || true
 echo
 nv show vrf default router bgp 2>/dev/null || true
 REMOTE
+      else
+        echo "$ ${ssh_cmd[*]} ${target} ..."
+        "${ssh_cmd[@]}" "${target}" "MAC_EXPR='${mac_expr}' IP_EXPR='${ip_expr}' bash -s" <<'REMOTE'
+set +e
+echo "hostname: $(hostname)"
+echo "bridge fdb:"
+bridge fdb show 2>/dev/null | egrep -i "${MAC_EXPR}" || true
+echo
+echo "nv mac table:"
+nv show bridge domain br_default mac-table 2>/dev/null | egrep -i "${MAC_EXPR}" || true
+echo
+echo "net show bridge macs:"
+net show bridge macs 2>/dev/null | egrep -i "${MAC_EXPR}" || true
+echo
+echo "lldpcli neighbors:"
+lldpcli show neighbors 2>/dev/null || true
+echo
+echo "lldpctl fallback:"
+lldpctl 2>/dev/null || true
+echo
+echo "FRR/BGP state:"
+if command -v vtysh >/dev/null 2>&1; then
+  echo "show bgp summary:"
+  vtysh -c 'show bgp summary' 2>/dev/null || true
+  echo
+  echo "show bgp l2vpn evpn summary:"
+  vtysh -c 'show bgp l2vpn evpn summary' 2>/dev/null || true
+  echo
+  echo "show evpn vni:"
+  vtysh -c 'show evpn vni' 2>/dev/null || true
+  echo
+  echo "show evpn mac vni all matching pod MACs:"
+  vtysh -c 'show evpn mac vni all' 2>/dev/null | egrep -i "${MAC_EXPR}" || true
+  echo
+  echo "show bgp l2vpn evpn route matching pod MACs/IPs:"
+  vtysh -c 'show bgp l2vpn evpn route' 2>/dev/null | egrep -i "${MAC_EXPR}|${IP_EXPR}" || true
+  echo
+  echo "show ip route matching pod IPs:"
+  vtysh -c 'show ip route' 2>/dev/null | egrep -i "${IP_EXPR}" || true
+else
+  echo "vtysh not found"
+fi
+echo
+echo "Cumulus/NVIDIA BGP helpers:"
+net show bgp summary 2>/dev/null || true
+echo
+nv show vrf default router bgp 2>/dev/null || true
+REMOTE
+      fi
     } >> "${file}" 2>&1 || true
   done
 }
 
+load_switch_config
+
 SRC_NODE=$(pod_jsonpath "${SRC_POD}" '{.spec.nodeName}')
 DST_NODE=$(pod_jsonpath "${DST_POD}" '{.spec.nodeName}')
+SRC_SSH_TARGET=$(resolve_node_ssh_target "${SRC_NODE}")
+DST_SSH_TARGET=$(resolve_node_ssh_target "${DST_NODE}")
 
 get_network_status "${SRC_POD}" "${REPORT_DIR}/src-network-status.json"
 get_network_status "${DST_POD}" "${REPORT_DIR}/dst-network-status.json"
@@ -559,11 +895,13 @@ fi
   echo
   echo "source pod: ${SRC_POD}"
   echo "source node: ${SRC_NODE}"
+  echo "source ssh target: ${SRC_SSH_TARGET}"
   echo "source iface/ip/mac/pci/rdma: ${SRC_IFACE} ${SRC_IP} ${SRC_MAC} ${SRC_PCI} ${SRC_RDMA}"
   echo "source network: ${SRC_NETWORK}"
   echo
   echo "dest pod: ${DST_POD}"
   echo "dest node: ${DST_NODE}"
+  echo "dest ssh target: ${DST_SSH_TARGET}"
   echo "dest iface/ip/mac/pci/rdma: ${DST_IFACE} ${DST_IP} ${DST_MAC} ${DST_PCI} ${DST_RDMA}"
   echo "dest network: ${DST_NETWORK}"
   echo
@@ -576,6 +914,7 @@ fi
   echo "- LLDP neighbor data is collected from each mapped host PF with lldpcli."
   echo "- Check source-host.txt and dest-host.txt for 'lldpcli neighbor for <PF>'."
   echo "- mlxlink PF link state is collected from the PF RDMA device in source-host.txt and dest-host.txt."
+  echo "- Optional switch logins come from ${SWITCH_CONFIG} and/or SWITCH_HOSTS."
   echo "- Confirm both ports are in the same L2 domain for VLAN used by the SriovNetwork."
   echo "- Current NAD/SriovNetwork YAML below shows whether CNI sends untagged vlan 0 or a VLAN tag."
   echo "- Check switch MAC table for:"
@@ -599,6 +938,8 @@ run_log "NAD yaml" "${REPORT_DIR}/network.yaml" \
   "${K8CL}" -n "${NAD_NS}" get network-attachment-definitions "${NAD_NAME}" -o yaml
 run_log "SriovNetwork yaml" "${REPORT_DIR}/network.yaml" \
   "${K8CL}" -n "${NETOP_NAMESPACE}" get sriovnetwork "${NAD_NAME}" -o yaml
+run_log "nodes wide" "${REPORT_DIR}/nodes.txt" \
+  "${K8CL}" get nodes -o wide
 run_log "source node describe resources" "${REPORT_DIR}/nodes.txt" \
   "${K8CL}" describe node "${SRC_NODE}"
 run_log "dest node describe resources" "${REPORT_DIR}/nodes.txt" \
@@ -607,12 +948,12 @@ collect_sriov_operator_state "${REPORT_DIR}/sriov-operator-state.txt"
 collect_node_operand_logs "source" "${SRC_NODE}" "${REPORT_DIR}/sriov-operator-state.txt"
 collect_node_operand_logs "dest" "${DST_NODE}" "${REPORT_DIR}/sriov-operator-state.txt"
 
-remote_collect_host "source" "${SRC_NODE}" "${SRC_PCI}" "${SRC_MAC}" "${REPORT_DIR}/source-host.txt"
-remote_collect_host "dest" "${DST_NODE}" "${DST_PCI}" "${DST_MAC}" "${REPORT_DIR}/dest-host.txt"
+remote_collect_host "source" "${SRC_NODE}" "${SRC_SSH_TARGET}" "${SRC_PCI}" "${SRC_MAC}" "${REPORT_DIR}/source-host.txt"
+remote_collect_host "dest" "${DST_NODE}" "${DST_SSH_TARGET}" "${DST_PCI}" "${DST_MAC}" "${REPORT_DIR}/dest-host.txt"
 
 COUNTERS="${REPORT_DIR}/host-counters-around-ping.txt"
-remote_ethtool_stats "source before" "${SRC_NODE}" "${SRC_PCI}" "${COUNTERS}"
-remote_ethtool_stats "dest before" "${DST_NODE}" "${DST_PCI}" "${COUNTERS}"
+remote_ethtool_stats "source before" "${SRC_NODE}" "${SRC_SSH_TARGET}" "${SRC_PCI}" "${COUNTERS}"
+remote_ethtool_stats "dest before" "${DST_NODE}" "${DST_SSH_TARGET}" "${DST_PCI}" "${COUNTERS}"
 
 {
   echo
@@ -621,8 +962,8 @@ remote_ethtool_stats "dest before" "${DST_NODE}" "${DST_PCI}" "${COUNTERS}"
   ${K8CL} -n "${NS}" exec "${SRC_POD}" -- sh -c "ip neigh del ${DST_IP} dev ${SRC_IFACE} 2>/dev/null || true; ip route get ${DST_IP}; ip route get ${DST_IP} from ${SRC_IP} 2>/dev/null || true; echo ping via interface ${SRC_IFACE}; ping -c ${PING_COUNT} -W ${PING_TIMEOUT} -I ${SRC_IFACE} ${DST_IP} || true; echo; echo ping via source IP ${SRC_IP}; ping -c ${PING_COUNT} -W ${PING_TIMEOUT} -I ${SRC_IP} ${DST_IP} || true; ip neigh show dev ${SRC_IFACE}"
 } > "${REPORT_DIR}/pod-ping.txt" 2>&1 || true
 
-remote_ethtool_stats "source after" "${SRC_NODE}" "${SRC_PCI}" "${COUNTERS}"
-remote_ethtool_stats "dest after" "${DST_NODE}" "${DST_PCI}" "${COUNTERS}"
+remote_ethtool_stats "source after" "${SRC_NODE}" "${SRC_SSH_TARGET}" "${SRC_PCI}" "${COUNTERS}"
+remote_ethtool_stats "dest after" "${DST_NODE}" "${DST_SSH_TARGET}" "${DST_PCI}" "${COUNTERS}"
 
 MAC_EXPR="$(echo "${SRC_MAC}|${DST_MAC}" | tr '[:upper:]' '[:lower:]')"
 run_switch_checks "${MAC_EXPR}" "${REPORT_DIR}/switch-mac-checks.txt"
