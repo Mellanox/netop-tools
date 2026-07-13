@@ -652,6 +652,16 @@ REMOTE
   } >> "${file}" 2>&1 || true
 }
 
+function extract_lldp_switch_ports()
+{
+  local file
+
+  for file in "$@"; do
+    [ -r "${file}" ] || continue
+    awk -F= '/\.port\.ifname=/ { print $2 }' "${file}"
+  done | awk 'NF && !seen[$0]++ { print }' | xargs 2>/dev/null || true
+}
+
 function collect_sriov_operator_state()
 {
   local file=${1}
@@ -721,6 +731,7 @@ function run_switch_checks()
 {
   local mac_expr=${1}
   local file=${2}
+  local switch_ports=${3:-}
   local ip_expr="${SRC_IP}|${DST_IP}"
   local idx
 
@@ -773,7 +784,7 @@ function run_switch_checks()
           continue
         fi
         echo "$ SSHPASS=<redacted> sshpass -e ${ssh_cmd[*]} ${target} ..."
-        SSHPASS="${password_value}" sshpass -e "${ssh_cmd[@]}" "${target}" "MAC_EXPR='${mac_expr}' IP_EXPR='${ip_expr}' bash -s" <<'REMOTE'
+        SSHPASS="${password_value}" sshpass -e "${ssh_cmd[@]}" "${target}" "MAC_EXPR='${mac_expr}' IP_EXPR='${ip_expr}' SWITCH_PORTS='${switch_ports}' bash -s" <<'REMOTE'
 set +e
 echo "hostname: $(hostname)"
 echo "bridge fdb:"
@@ -790,6 +801,42 @@ lldpcli show neighbors 2>/dev/null || true
 echo
 echo "lldpctl fallback:"
 lldpctl 2>/dev/null || true
+echo
+echo "VLAN/bridge membership for LLDP-discovered server ports:"
+if [ -n "${SWITCH_PORTS:-}" ]; then
+  for PORT in ${SWITCH_PORTS}; do
+    echo
+    echo "==== ${PORT} ===="
+    echo "ip -d link show ${PORT}:"
+    ip -d link show "${PORT}" 2>&1 || true
+    echo
+    echo "bridge link show dev ${PORT}:"
+    bridge link show dev "${PORT}" 2>&1 || true
+    echo
+    echo "bridge vlan show dev ${PORT}:"
+    bridge vlan show dev "${PORT}" 2>&1 || true
+    echo
+    echo "bridge fdb show dev ${PORT} matching pod MACs:"
+    bridge fdb show dev "${PORT}" 2>/dev/null | egrep -i "${MAC_EXPR}" || true
+    echo
+    echo "nv show interface ${PORT}:"
+    nv show interface "${PORT}" 2>&1 || true
+    echo
+    echo "nv show bridge domain br_default port ${PORT}:"
+    nv show bridge domain br_default port "${PORT}" 2>&1 || true
+    echo
+    echo "net show interface ${PORT}:"
+    net show interface "${PORT}" 2>&1 || true
+  done
+else
+  echo "No LLDP switch ports were discovered from source-host.txt/dest-host.txt"
+fi
+echo
+echo "all bridge VLAN membership:"
+bridge vlan show 2>/dev/null || true
+echo
+echo "nv bridge domain summary:"
+nv show bridge domain 2>/dev/null || true
 echo
 echo "FRR/BGP state:"
 if command -v vtysh >/dev/null 2>&1; then
@@ -821,7 +868,7 @@ nv show vrf default router bgp 2>/dev/null || true
 REMOTE
       else
         echo "$ ${ssh_cmd[*]} ${target} ..."
-        "${ssh_cmd[@]}" "${target}" "MAC_EXPR='${mac_expr}' IP_EXPR='${ip_expr}' bash -s" <<'REMOTE'
+        "${ssh_cmd[@]}" "${target}" "MAC_EXPR='${mac_expr}' IP_EXPR='${ip_expr}' SWITCH_PORTS='${switch_ports}' bash -s" <<'REMOTE'
 set +e
 echo "hostname: $(hostname)"
 echo "bridge fdb:"
@@ -838,6 +885,42 @@ lldpcli show neighbors 2>/dev/null || true
 echo
 echo "lldpctl fallback:"
 lldpctl 2>/dev/null || true
+echo
+echo "VLAN/bridge membership for LLDP-discovered server ports:"
+if [ -n "${SWITCH_PORTS:-}" ]; then
+  for PORT in ${SWITCH_PORTS}; do
+    echo
+    echo "==== ${PORT} ===="
+    echo "ip -d link show ${PORT}:"
+    ip -d link show "${PORT}" 2>&1 || true
+    echo
+    echo "bridge link show dev ${PORT}:"
+    bridge link show dev "${PORT}" 2>&1 || true
+    echo
+    echo "bridge vlan show dev ${PORT}:"
+    bridge vlan show dev "${PORT}" 2>&1 || true
+    echo
+    echo "bridge fdb show dev ${PORT} matching pod MACs:"
+    bridge fdb show dev "${PORT}" 2>/dev/null | egrep -i "${MAC_EXPR}" || true
+    echo
+    echo "nv show interface ${PORT}:"
+    nv show interface "${PORT}" 2>&1 || true
+    echo
+    echo "nv show bridge domain br_default port ${PORT}:"
+    nv show bridge domain br_default port "${PORT}" 2>&1 || true
+    echo
+    echo "net show interface ${PORT}:"
+    net show interface "${PORT}" 2>&1 || true
+  done
+else
+  echo "No LLDP switch ports were discovered from source-host.txt/dest-host.txt"
+fi
+echo
+echo "all bridge VLAN membership:"
+bridge vlan show 2>/dev/null || true
+echo
+echo "nv bridge domain summary:"
+nv show bridge domain 2>/dev/null || true
 echo
 echo "FRR/BGP state:"
 if command -v vtysh >/dev/null 2>&1; then
@@ -927,6 +1010,7 @@ fi
   echo "- Check source-host.txt and dest-host.txt for 'lldpcli neighbor for <PF>'."
   echo "- mlxlink PF link state is collected from the PF RDMA device in source-host.txt and dest-host.txt."
   echo "- Optional switch logins come from ${SWITCH_CONFIG} and/or SWITCH_HOSTS."
+  echo "- Switch VLAN/bridge membership is collected for LLDP-discovered switch ports."
   echo "- Confirm both ports are in the same L2 domain for VLAN used by the SriovNetwork."
   echo "- Current NAD/SriovNetwork YAML below shows whether CNI sends untagged vlan 0 or a VLAN tag."
   echo "- Check switch MAC table for:"
@@ -962,6 +1046,11 @@ collect_node_operand_logs "dest" "${DST_NODE}" "${REPORT_DIR}/sriov-operator-sta
 
 remote_collect_host "source" "${SRC_NODE}" "${SRC_SSH_TARGET}" "${SRC_PCI}" "${SRC_MAC}" "${REPORT_DIR}/source-host.txt"
 remote_collect_host "dest" "${DST_NODE}" "${DST_SSH_TARGET}" "${DST_PCI}" "${DST_MAC}" "${REPORT_DIR}/dest-host.txt"
+SWITCH_PORTS_DISCOVERED=$(extract_lldp_switch_ports "${REPORT_DIR}/source-host.txt" "${REPORT_DIR}/dest-host.txt")
+{
+  echo
+  echo "LLDP-discovered switch ports: ${SWITCH_PORTS_DISCOVERED:-none}"
+} >> "${SUMMARY}"
 
 COUNTERS="${REPORT_DIR}/host-counters-around-ping.txt"
 remote_ethtool_stats "source before" "${SRC_NODE}" "${SRC_SSH_TARGET}" "${SRC_PCI}" "${COUNTERS}"
@@ -978,7 +1067,7 @@ remote_ethtool_stats "source after" "${SRC_NODE}" "${SRC_SSH_TARGET}" "${SRC_PCI
 remote_ethtool_stats "dest after" "${DST_NODE}" "${DST_SSH_TARGET}" "${DST_PCI}" "${COUNTERS}"
 
 MAC_EXPR="$(echo "${SRC_MAC}|${DST_MAC}" | tr '[:upper:]' '[:lower:]')"
-run_switch_checks "${MAC_EXPR}" "${REPORT_DIR}/switch-mac-checks.txt"
+run_switch_checks "${MAC_EXPR}" "${REPORT_DIR}/switch-mac-checks.txt" "${SWITCH_PORTS_DISCOVERED}"
 
 cat > "${REPORT_DIR}/switch-checklist.txt" <<EOF
 Check these on the switch fabric:
@@ -1007,9 +1096,14 @@ Questions:
   9. Does it learn destination MAC ${DST_MAC} on the peer port?
   10. If this VLAN is stretched with EVPN, are FRR EVPN BGP peers established?
   11. If this VLAN is stretched with EVPN, does FRR show EVPN MAC/IP routes for ${SRC_MAC} and ${DST_MAC}?
+  12. In switch-mac-checks.txt, do the LLDP-discovered ports (${SWITCH_PORTS_DISCOVERED:-none}) have matching bridge/VLAN membership?
 
 Common Cumulus/NVIDIA switch probes:
   bridge fdb show | egrep -i '${SRC_MAC}|${DST_MAC}'
+  bridge vlan show dev <lldp-discovered-port>
+  bridge link show dev <lldp-discovered-port>
+  nv show interface <lldp-discovered-port>
+  nv show bridge domain br_default port <lldp-discovered-port>
   nv show bridge domain br_default mac-table | egrep -i '${SRC_MAC}|${DST_MAC}'
   net show bridge macs | egrep -i '${SRC_MAC}|${DST_MAC}'
   lldpcli show neighbors
