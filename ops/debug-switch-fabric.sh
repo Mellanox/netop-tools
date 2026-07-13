@@ -418,6 +418,139 @@ function expand_local_path()
   esac
 }
 
+function safe_file_component()
+{
+  local value=${1}
+  value=${value//[^a-zA-Z0-9_.-]/_}
+  value=${value##_}
+  value=${value%%_}
+  if [ -z "${value}" ]; then
+    value="switch"
+  fi
+  printf '%s\n' "${value}"
+}
+
+function yaml_quote()
+{
+  local value=${1}
+  value=${value//\'/\'\'}
+  printf "'%s'" "${value}"
+}
+
+function capture_switch_settings()
+{
+  local name=${1}
+  local target=${2}
+  local password=${3}
+  local password_env=${4}
+  local output_file=${5}
+  shift 5
+  local ssh_cmd=( "$@" )
+  local password_value="${password}"
+
+  {
+    echo "---"
+    echo "switch:"
+    echo "  name: $(yaml_quote "${name}")"
+    echo "  target: $(yaml_quote "${target}")"
+    echo "  collected: $(yaml_quote "$(date -Is)")"
+  } > "${output_file}"
+
+  if [ -z "${password_value}" ] && [ -n "${password_env}" ]; then
+    password_value="${!password_env-}"
+  fi
+
+  if [ -n "${password}" ] || [ -n "${password_env}" ]; then
+    if ! command -v sshpass >/dev/null 2>&1; then
+      {
+        echo "collection_error: $(yaml_quote "password/password_env is configured, but sshpass is not installed")"
+      } >> "${output_file}"
+      return
+    fi
+    if [ -z "${password_value}" ] && [ -n "${password_env}" ]; then
+      {
+        echo "collection_error: $(yaml_quote "password_env=${password_env} is configured, but the environment variable is empty")"
+      } >> "${output_file}"
+      return
+    fi
+    SSHPASS="${password_value}" sshpass -e "${ssh_cmd[@]}" "${target}" "bash -s" <<'REMOTE' >> "${output_file}" 2>&1 || true
+set +e
+
+function yaml_block()
+{
+  local key=${1}
+  local cmd=${2}
+  local rc
+  echo "  ${key}:"
+  echo "    command: |"
+  printf '%s\n' "${cmd}" | sed 's/^/      /'
+  echo "    output: |"
+  bash -lc "${cmd}" 2>&1 | sed 's/^/      /'
+  rc=${PIPESTATUS[0]}
+  echo "    exit_code: ${rc}"
+}
+
+echo "remote:"
+echo "  hostname: '$(hostname)'"
+echo "commands:"
+yaml_block nv_config_show "nv config show -o yaml 2>/dev/null || nv config show --output yaml 2>/dev/null || nv config show 2>&1 || true"
+yaml_block nv_show_interface "nv show interface 2>&1 || true"
+yaml_block nv_show_bridge_domain "nv show bridge domain 2>&1 || true"
+yaml_block nv_show_vrf "nv show vrf 2>&1 || true"
+yaml_block nv_show_router_bgp "nv show router bgp 2>&1 || true"
+yaml_block ip_link_detail "ip -d link show 2>&1 || true"
+yaml_block ip_addr "ip addr show 2>&1 || true"
+yaml_block ip_route_all "ip route show table all 2>&1 || true"
+yaml_block bridge_vlan "bridge vlan show 2>&1 || true"
+yaml_block bridge_link "bridge link show 2>&1 || true"
+yaml_block bridge_fdb "bridge fdb show 2>&1 || true"
+yaml_block frr_running_config "if command -v vtysh >/dev/null 2>&1; then vtysh -c 'show running-config'; else echo 'vtysh not found'; fi"
+yaml_block frr_bgp_summary "if command -v vtysh >/dev/null 2>&1; then vtysh -c 'show bgp summary'; else echo 'vtysh not found'; fi"
+yaml_block frr_evpn_summary "if command -v vtysh >/dev/null 2>&1; then vtysh -c 'show bgp l2vpn evpn summary'; else echo 'vtysh not found'; fi"
+yaml_block etc_network_interfaces "if [ -r /etc/network/interfaces ]; then cat /etc/network/interfaces; else echo '/etc/network/interfaces not readable'; fi"
+yaml_block etc_frr_conf "if [ -r /etc/frr/frr.conf ]; then cat /etc/frr/frr.conf; else echo '/etc/frr/frr.conf not readable'; fi"
+REMOTE
+  else
+    "${ssh_cmd[@]}" "${target}" "bash -s" <<'REMOTE' >> "${output_file}" 2>&1 || true
+set +e
+
+function yaml_block()
+{
+  local key=${1}
+  local cmd=${2}
+  local rc
+  echo "  ${key}:"
+  echo "    command: |"
+  printf '%s\n' "${cmd}" | sed 's/^/      /'
+  echo "    output: |"
+  bash -lc "${cmd}" 2>&1 | sed 's/^/      /'
+  rc=${PIPESTATUS[0]}
+  echo "    exit_code: ${rc}"
+}
+
+echo "remote:"
+echo "  hostname: '$(hostname)'"
+echo "commands:"
+yaml_block nv_config_show "nv config show -o yaml 2>/dev/null || nv config show --output yaml 2>/dev/null || nv config show 2>&1 || true"
+yaml_block nv_show_interface "nv show interface 2>&1 || true"
+yaml_block nv_show_bridge_domain "nv show bridge domain 2>&1 || true"
+yaml_block nv_show_vrf "nv show vrf 2>&1 || true"
+yaml_block nv_show_router_bgp "nv show router bgp 2>&1 || true"
+yaml_block ip_link_detail "ip -d link show 2>&1 || true"
+yaml_block ip_addr "ip addr show 2>&1 || true"
+yaml_block ip_route_all "ip route show table all 2>&1 || true"
+yaml_block bridge_vlan "bridge vlan show 2>&1 || true"
+yaml_block bridge_link "bridge link show 2>&1 || true"
+yaml_block bridge_fdb "bridge fdb show 2>&1 || true"
+yaml_block frr_running_config "if command -v vtysh >/dev/null 2>&1; then vtysh -c 'show running-config'; else echo 'vtysh not found'; fi"
+yaml_block frr_bgp_summary "if command -v vtysh >/dev/null 2>&1; then vtysh -c 'show bgp summary'; else echo 'vtysh not found'; fi"
+yaml_block frr_evpn_summary "if command -v vtysh >/dev/null 2>&1; then vtysh -c 'show bgp l2vpn evpn summary'; else echo 'vtysh not found'; fi"
+yaml_block etc_network_interfaces "if [ -r /etc/network/interfaces ]; then cat /etc/network/interfaces; else echo '/etc/network/interfaces not readable'; fi"
+yaml_block etc_frr_conf "if [ -r /etc/frr/frr.conf ]; then cat /etc/frr/frr.conf; else echo '/etc/frr/frr.conf not readable'; fi"
+REMOTE
+  fi
+}
+
 function resolve_node_ssh_target()
 {
   local node=${1}
@@ -751,6 +884,7 @@ function run_switch_checks()
     local password_env="${SWITCH_CFG_PASSWORD_ENVS[${idx}]}"
     local target="${host}"
     local ssh_cmd=(ssh)
+    local switch_file="${REPORT_DIR}/switch-$(safe_file_component "${name}").yaml"
 
     if [ -n "${SSH_OPTS:-}" ]; then
       # shellcheck disable=SC2206
@@ -766,10 +900,13 @@ function run_switch_checks()
       ssh_cmd+=( -i "$(expand_local_path "${identity}")" )
     fi
 
+    capture_switch_settings "${name}" "${target}" "${password}" "${password_env}" "${switch_file}" "${ssh_cmd[@]}"
+
     {
       echo
       echo "### switch ${name} (${target})"
       echo "# $(date -Is)"
+      echo "settings snapshot: ${switch_file}"
       if [ -n "${password}" ] || [ -n "${password_env}" ]; then
         if ! command -v sshpass >/dev/null 2>&1; then
           echo "ERROR: password/password_env is configured, but sshpass is not installed"
@@ -1010,6 +1147,7 @@ fi
   echo "- Check source-host.txt and dest-host.txt for 'lldpcli neighbor for <PF>'."
   echo "- mlxlink PF link state is collected from the PF RDMA device in source-host.txt and dest-host.txt."
   echo "- Optional switch logins come from ${SWITCH_CONFIG} and/or SWITCH_HOSTS."
+  echo "- Current switch settings are collected as switch-<name>.yaml for every configured switch login."
   echo "- Switch VLAN/bridge membership is collected for LLDP-discovered switch ports."
   echo "- Confirm both ports are in the same L2 domain for VLAN used by the SriovNetwork."
   echo "- Current NAD/SriovNetwork YAML below shows whether CNI sends untagged vlan 0 or a VLAN tag."
