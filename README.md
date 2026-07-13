@@ -842,6 +842,7 @@ General InfiniBand bandwidth test:
 
 ```bash
 ./ops/labelworker.sh             # Label worker nodes with default node selector
+./ops/labelworkerpool.sh         # Label worker nodes with default selector and node pool
 ./ops/labelmaster.sh             # Label control plane nodes
 ./ops/labelsu.sh                 # Label nodes for scalable unit (SU) assignment
 ./ops/dellabelworker.sh          # Remove worker labels
