@@ -243,10 +243,12 @@ function load_switch_config()
   SWITCH_CFG_USERS=()
   SWITCH_CFG_PORTS=()
   SWITCH_CFG_IDENTITIES=()
+  SWITCH_CFG_PASSWORDS=()
   SWITCH_CFG_PASSWORD_ENVS=()
   DEBUG_CFG_WORKER_SSH_USER=""
   DEBUG_CFG_WORKER_SSH_PORT=""
   DEBUG_CFG_WORKER_SSH_IDENTITY_FILE=""
+  DEBUG_CFG_WORKER_SSH_PASSWORD=""
   DEBUG_CFG_WORKER_SSH_OPTS=""
 
   if [ -r "${SWITCH_CONFIG}" ]; then
@@ -339,6 +341,7 @@ if not isinstance(worker_ssh, dict):
 print(f"DEBUG_CFG_WORKER_SSH_USER={shlex.quote(str(worker_ssh.get('user') or worker_ssh.get('username') or '').strip())}")
 print(f"DEBUG_CFG_WORKER_SSH_PORT={shlex.quote(str(worker_ssh.get('port') or '').strip())}")
 print(f"DEBUG_CFG_WORKER_SSH_IDENTITY_FILE={shlex.quote(str(worker_ssh.get('identity_file') or worker_ssh.get('identity') or worker_ssh.get('key_file') or '').strip())}")
+print(f"DEBUG_CFG_WORKER_SSH_PASSWORD={shlex.quote(str(worker_ssh.get('password') or '').strip())}")
 print(f"DEBUG_CFG_WORKER_SSH_OPTS={shlex.quote(str(worker_ssh.get('options') or worker_ssh.get('ssh_opts') or '').strip())}")
 
 if isinstance(data, list):
@@ -372,19 +375,14 @@ for index, switch in enumerate(switches):
         or ""
     ).strip()
     password_env = str(switch.get("password_env") or "").strip()
-
-    if switch.get("password") and not password_env:
-        print(
-            f"# warning: switch {name} has a password field; "
-            "use password_env instead so secrets stay out of Git",
-            file=sys.stderr,
-        )
+    password = str(switch.get("password") or "").strip()
 
     print(f"SWITCH_CFG_NAMES+=({shlex.quote(name)})")
     print(f"SWITCH_CFG_HOSTS+=({shlex.quote(host)})")
     print(f"SWITCH_CFG_USERS+=({shlex.quote(user)})")
     print(f"SWITCH_CFG_PORTS+=({shlex.quote(port)})")
     print(f"SWITCH_CFG_IDENTITIES+=({shlex.quote(identity)})")
+    print(f"SWITCH_CFG_PASSWORDS+=({shlex.quote(password)})")
     print(f"SWITCH_CFG_PASSWORD_ENVS+=({shlex.quote(password_env)})")
 PY
     # shellcheck disable=SC1090
@@ -394,6 +392,7 @@ PY
   WORKER_SSH_USER=${WORKER_SSH_USER:-${DEBUG_CFG_WORKER_SSH_USER:-}}
   WORKER_SSH_PORT=${WORKER_SSH_PORT:-${DEBUG_CFG_WORKER_SSH_PORT:-}}
   WORKER_SSH_IDENTITY_FILE=${WORKER_SSH_IDENTITY_FILE:-${DEBUG_CFG_WORKER_SSH_IDENTITY_FILE:-}}
+  WORKER_SSH_PASSWORD=${WORKER_SSH_PASSWORD:-${DEBUG_CFG_WORKER_SSH_PASSWORD:-}}
   WORKER_SSH_OPTS=${WORKER_SSH_OPTS:-${DEBUG_CFG_WORKER_SSH_OPTS:-}}
 
   if [ -n "${SWITCH_HOSTS:-}" ]; then
@@ -404,6 +403,7 @@ PY
       SWITCH_CFG_USERS+=( "" )
       SWITCH_CFG_PORTS+=( "" )
       SWITCH_CFG_IDENTITIES+=( "" )
+      SWITCH_CFG_PASSWORDS+=( "" )
       SWITCH_CFG_PASSWORD_ENVS+=( "" )
     done
   fi
@@ -468,7 +468,15 @@ function ssh_worker()
     ssh_cmd+=( -i "$(expand_local_path "${WORKER_SSH_IDENTITY_FILE}")" )
   fi
 
-  "${ssh_cmd[@]}" "${target}" "$@"
+  if [ -n "${WORKER_SSH_PASSWORD:-}" ]; then
+    if ! command -v sshpass >/dev/null 2>&1; then
+      echo "ERROR: worker_ssh.password is configured, but sshpass is not installed" >&2
+      return 127
+    fi
+    SSHPASS="${WORKER_SSH_PASSWORD}" sshpass -e "${ssh_cmd[@]}" "${target}" "$@"
+  else
+    "${ssh_cmd[@]}" "${target}" "$@"
+  fi
 }
 
 function remote_collect_host()
@@ -728,6 +736,7 @@ function run_switch_checks()
     local user="${SWITCH_CFG_USERS[${idx}]}"
     local port="${SWITCH_CFG_PORTS[${idx}]}"
     local identity="${SWITCH_CFG_IDENTITIES[${idx}]}"
+    local password="${SWITCH_CFG_PASSWORDS[${idx}]}"
     local password_env="${SWITCH_CFG_PASSWORD_ENVS[${idx}]}"
     local target="${host}"
     local ssh_cmd=(ssh)
@@ -750,13 +759,16 @@ function run_switch_checks()
       echo
       echo "### switch ${name} (${target})"
       echo "# $(date -Is)"
-      if [ -n "${password_env}" ]; then
+      if [ -n "${password}" ] || [ -n "${password_env}" ]; then
         if ! command -v sshpass >/dev/null 2>&1; then
-          echo "ERROR: password_env=${password_env} is configured, but sshpass is not installed"
+          echo "ERROR: password/password_env is configured, but sshpass is not installed"
           continue
         fi
-        local password_value="${!password_env-}"
-        if [ -z "${password_value}" ]; then
+        local password_value="${password}"
+        if [ -z "${password_value}" ] && [ -n "${password_env}" ]; then
+          password_value="${!password_env-}"
+        fi
+        if [ -z "${password_value}" ] && [ -n "${password_env}" ]; then
           echo "ERROR: password_env=${password_env} is configured, but the environment variable is empty"
           continue
         fi
