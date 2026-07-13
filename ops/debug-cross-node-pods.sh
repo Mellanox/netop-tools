@@ -138,6 +138,61 @@ if command -v ibv_info >/dev/null 2>&1; then
   ibv_info || true;
 else
   echo "ibv_info not found";
+fi;
+echo;
+echo "show_gids:";
+if command -v show_gids >/dev/null 2>&1; then
+  if [ -n "${rdma_dev}" ]; then
+    show_gids -d "${rdma_dev}" 2>/dev/null || show_gids || true;
+  else
+    show_gids || true;
+  fi;
+else
+  echo "show_gids not found";
+fi;
+echo;
+echo "sysfs GUID/GID checks:";
+if [ -n "${rdma_dev}" ] && [ -d "/sys/class/infiniband/${rdma_dev}" ]; then
+  echo "device: ${rdma_dev}";
+  for f in node_guid sys_image_guid board_id fw_ver hca_type; do
+    if [ -r "/sys/class/infiniband/${rdma_dev}/\${f}" ]; then
+      val=\$(cat "/sys/class/infiniband/${rdma_dev}/\${f}" 2>/dev/null);
+      echo "\${f}: \${val}";
+      case "\${f}" in
+      node_guid|sys_image_guid)
+        if echo "\${val}" | grep -Eq '^(00:){7}00$|^(0000:){3}0000$|^0+$'; then
+          echo "WARN: ${rdma_dev} \${f} is all zero";
+        fi
+        ;;
+      esac;
+    fi;
+  done;
+  for port in /sys/class/infiniband/${rdma_dev}/ports/*; do
+    [ -d "\${port}" ] || continue;
+    p=\$(basename "\${port}");
+    echo "port \${p}:";
+    for f in state phys_state link_layer rate lid sm_lid; do
+      [ -r "\${port}/\${f}" ] && echo "  \${f}: \$(cat "\${port}/\${f}" 2>/dev/null)";
+    done;
+    echo "  gids:";
+    for gid in "\${port}"/gids/*; do
+      [ -r "\${gid}" ] || continue;
+      idx=\$(basename "\${gid}");
+      val=\$(cat "\${gid}" 2>/dev/null);
+      type="";
+      ndev="";
+      [ -r "\${port}/gid_attrs/types/\${idx}" ] && type=\$(cat "\${port}/gid_attrs/types/\${idx}" 2>/dev/null);
+      [ -r "\${port}/gid_attrs/ndevs/\${idx}" ] && ndev=\$(cat "\${port}/gid_attrs/ndevs/\${idx}" 2>/dev/null);
+      echo "    [\${idx}] \${val} type=\${type} ndev=\${ndev}";
+      if echo "\${val}" | grep -Eq '^::\$|^0:0:0:0:0:0:0:0\$|^0000:0000:0000:0000:0000:0000:0000:0000\$'; then
+        echo "    WARN: GID index \${idx} is all zero";
+      fi;
+    done;
+  done;
+elif [ -n "${rdma_dev}" ]; then
+  echo "WARN: /sys/class/infiniband/${rdma_dev} not found";
+else
+  echo "No RDMA device name available from network-status";
 fi
 EOF
 }
@@ -336,6 +391,7 @@ build_interface_pairs "${REPORT_DIR}/src-network-status.json" "${REPORT_DIR}/dst
   echo "- Source tcpdump may miss packets with SR-IOV/offloads; counters and neighbor state are more reliable."
   echo "- Destination tcpdump seeing no ARP while source TX increments points below CNI: VF/PF/switch L2."
   echo "- Each ping is tried both with -I <interface> and -I <source-ip> to catch source binding issues."
+  echo "- Pod RDMA files include rdma link, ibv_devices, ibv_devinfo, ibv_info, show_gids, and sysfs GUID/GID checks."
 } >> "${SUMMARY}"
 
 if [ ! -s "${PAIRS_FILE}" ]; then
