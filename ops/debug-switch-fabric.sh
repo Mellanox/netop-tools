@@ -343,6 +343,71 @@ REMOTE
   } >> "${file}" 2>&1 || true
 }
 
+function collect_sriov_operator_state()
+{
+  local file=${1}
+
+  run_log "network operator sriov pods" "${file}" \
+    bash -c "${K8CL} -n ${NETOP_NAMESPACE} get pods -o wide | egrep 'sriov-network-config-daemon|sriov-device-plugin|network-operator' || true"
+  run_log "sriovnetworknodestates" "${file}" \
+    "${K8CL}" -n "${NETOP_NAMESPACE}" get sriovnetworknodestates
+  run_log "source sriovnetworknodestate yaml" "${file}" \
+    "${K8CL}" -n "${NETOP_NAMESPACE}" get sriovnetworknodestate "${SRC_NODE}" -o yaml
+  run_log "dest sriovnetworknodestate yaml" "${file}" \
+    "${K8CL}" -n "${NETOP_NAMESPACE}" get sriovnetworknodestate "${DST_NODE}" -o yaml
+  run_log "sriovnetworknodepolicies" "${file}" \
+    "${K8CL}" -n "${NETOP_NAMESPACE}" get sriovnetworknodepolicies -o wide
+  run_log "device plugin config" "${file}" \
+    "${K8CL}" -n "${NETOP_NAMESPACE}" get cm device-plugin-config -o yaml
+}
+
+function collect_node_operand_logs()
+{
+  local label=${1}
+  local node=${2}
+  local file=${3}
+  local pods
+  local pod
+
+  {
+    echo
+    echo "### ${label}: sriov-network-config-daemon logs for ${node}"
+    echo "# $(date -Is)"
+  } >> "${file}"
+  pods=$(${K8CL} -n "${NETOP_NAMESPACE}" get pod -l app=sriov-network-config-daemon \
+    --field-selector "spec.nodeName=${node}" \
+    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)
+  for pod in ${pods}; do
+    {
+      echo
+      echo "#### pod/${pod}"
+      ${K8CL} -n "${NETOP_NAMESPACE}" logs "${pod}" --tail=300
+    } >> "${file}" 2>&1 || true
+  done
+
+  {
+    echo
+    echo "### ${label}: sriov-device-plugin logs for ${node}"
+    echo "# $(date -Is)"
+  } >> "${file}"
+  pods=$(${K8CL} -n "${NETOP_NAMESPACE}" get pod -l app=sriov-device-plugin \
+    --field-selector "spec.nodeName=${node}" \
+    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)
+  for pod in ${pods}; do
+    {
+      echo
+      echo "#### pod/${pod} init"
+      ${K8CL} -n "${NETOP_NAMESPACE}" logs "${pod}" -c sriov-device-plugin-init --tail=200
+      echo
+      echo "#### pod/${pod} init previous"
+      ${K8CL} -n "${NETOP_NAMESPACE}" logs "${pod}" -c sriov-device-plugin-init --previous --tail=200
+      echo
+      echo "#### pod/${pod} device-plugin"
+      ${K8CL} -n "${NETOP_NAMESPACE}" logs "${pod}" -c sriov-device-plugin --tail=200
+    } >> "${file}" 2>&1 || true
+  done
+}
+
 function run_switch_checks()
 {
   local mac_expr=${1}
@@ -452,6 +517,7 @@ fi
   echo
   echo "Switch checks:"
   echo "- Pod RDMA and verbs state is collected in pod-rdma.txt with rdma link, ibv_devices, ibv_devinfo, and ibv_info when present."
+  echo "- SR-IOV node state, node policies, device-plugin config, and operand logs are collected in sriov-operator-state.txt."
   echo "- LLDP neighbor data is collected from each mapped host PF with lldpcli."
   echo "- Check source-host.txt and dest-host.txt for 'lldpcli neighbor for <PF>'."
   echo "- mlxlink PF link state is collected from the PF RDMA device in source-host.txt and dest-host.txt."
@@ -482,6 +548,9 @@ run_log "source node describe resources" "${REPORT_DIR}/nodes.txt" \
   "${K8CL}" describe node "${SRC_NODE}"
 run_log "dest node describe resources" "${REPORT_DIR}/nodes.txt" \
   "${K8CL}" describe node "${DST_NODE}"
+collect_sriov_operator_state "${REPORT_DIR}/sriov-operator-state.txt"
+collect_node_operand_logs "source" "${SRC_NODE}" "${REPORT_DIR}/sriov-operator-state.txt"
+collect_node_operand_logs "dest" "${DST_NODE}" "${REPORT_DIR}/sriov-operator-state.txt"
 
 remote_collect_host "source" "${SRC_NODE}" "${SRC_PCI}" "${SRC_MAC}" "${REPORT_DIR}/source-host.txt"
 remote_collect_host "dest" "${DST_NODE}" "${DST_PCI}" "${DST_MAC}" "${REPORT_DIR}/dest-host.txt"
@@ -493,8 +562,8 @@ remote_ethtool_stats "dest before" "${DST_NODE}" "${DST_PCI}" "${COUNTERS}"
 {
   echo
   echo "### pod ping $(date -Is)"
-  echo "$ ${K8CL} -n ${NS} exec ${SRC_POD} -- sh -c 'ip neigh del ${DST_IP} dev ${SRC_IFACE} 2>/dev/null || true; ping -c ${PING_COUNT} -W ${PING_TIMEOUT} -I ${SRC_IFACE} ${DST_IP} || true; ip neigh show dev ${SRC_IFACE}'"
-  ${K8CL} -n "${NS}" exec "${SRC_POD}" -- sh -c "ip neigh del ${DST_IP} dev ${SRC_IFACE} 2>/dev/null || true; ping -c ${PING_COUNT} -W ${PING_TIMEOUT} -I ${SRC_IFACE} ${DST_IP} || true; ip neigh show dev ${SRC_IFACE}"
+  echo "$ ${K8CL} -n ${NS} exec ${SRC_POD} -- sh -c 'ip neigh del ${DST_IP} dev ${SRC_IFACE} 2>/dev/null || true; ip route get ${DST_IP}; ip route get ${DST_IP} from ${SRC_IP} 2>/dev/null || true; ping -c ${PING_COUNT} -W ${PING_TIMEOUT} -I ${SRC_IFACE} ${DST_IP} || true; ping -c ${PING_COUNT} -W ${PING_TIMEOUT} -I ${SRC_IP} ${DST_IP} || true; ip neigh show dev ${SRC_IFACE}'"
+  ${K8CL} -n "${NS}" exec "${SRC_POD}" -- sh -c "ip neigh del ${DST_IP} dev ${SRC_IFACE} 2>/dev/null || true; ip route get ${DST_IP}; ip route get ${DST_IP} from ${SRC_IP} 2>/dev/null || true; echo ping via interface ${SRC_IFACE}; ping -c ${PING_COUNT} -W ${PING_TIMEOUT} -I ${SRC_IFACE} ${DST_IP} || true; echo; echo ping via source IP ${SRC_IP}; ping -c ${PING_COUNT} -W ${PING_TIMEOUT} -I ${SRC_IP} ${DST_IP} || true; ip neigh show dev ${SRC_IFACE}"
 } > "${REPORT_DIR}/pod-ping.txt" 2>&1 || true
 
 remote_ethtool_stats "source after" "${SRC_NODE}" "${SRC_PCI}" "${COUNTERS}"
