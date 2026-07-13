@@ -18,6 +18,15 @@ worker_ssh:
 switch_defaults:
   bridge_domain: br_default
   native_vlan: 1
+  # Optional. When true, generated switch-<switch>-<port>-L3.yaml files include
+  # gateway IP addresses computed from the pod IP block:
+  #   gateway = network(pod_ip/l3_prefix) + l3_gateway_index
+  # This is intended for nv-ipam CIDRPool designs with routed switch ports.
+  l3_gateways: false
+  l3_prefix: 27
+  l3_gateway_index: 1
+  # Optional. Set only if the routed server ports belong to a VRF.
+  l3_vrf: red
 
 switches:
   - name: leaf1
