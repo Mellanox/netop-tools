@@ -8,6 +8,9 @@ Track significant changes to netop-tools. Add entries here when making notable c
 - Added 6 new unit tests for 26.4.0 features (basic, globalconfig, nic_config_cx9, nic_node_policy, spectrumx, unload_rdma)
 - Code review fixes: IB_PKEY_RANGE renamed to IB_GUID_RANGE (backward-compat), NCP_GLOBAL_REPO/VER overrides, NicNodePolicy CRD file-existence guard, explicit sriovnet_rdma cases in mk-nic-node-policy.sh
 - CI fix: removed cleanup_temp_files from mk-network-cr.sh (was deleting pointer files that apply-network-cr.sh needs); corrected 26_4_* test baselines (removed 48 stale BCM-mode artifacts from tests that don't use BCM)
+- Added SR-IOV cross-node and fabric debug scripts for pod network-status, ARP/ICMP tcpdump, VF/PF mapping, LLDP, mlxlink, switch MAC/FDB, FRR/BGP, SR-IOV operator state, and RDMA GUID/GID diagnostics
+- Added Calico debug/fix helper for Tigera/Calico pod state, Project Calico CRDs, RBAC, APIService, kube-proxy, host CNI config, and nodeAddressAutodetectionV4 remediation
+- Added dry-run stale pool network cleanup helper for removing old pool-suffixed SriovNetwork and NetworkAttachmentDefinition objects after shared network name migration
 
 ---
 
