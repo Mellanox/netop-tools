@@ -2,7 +2,22 @@
 #
 #
 #
+source $NETOP_ROOT_DIR/global_ops.cfg
+#K8SVER="1.34.9-1.1"
+NODE_IP=${1}
+shift
+apt-get update
+apt-get install -y --allow-change-held-packages kubelet=${K8SVER} kubeadm=${K8SVER} kubectl=${K8SVER}
+apt-mark hold kubelet kubeadm kubectl
+
+# Verify on worker:
+
+/usr/bin/kubelet --version
+dpkg -l kubelet kubeadm kubectl
 #
+if  [ "${NODE_IP}" !+ "" ];then
+  sed -i 's/KUBELET_EXTRA_ARGS=--node-ip=.*/KUBELET_EXTRA_ARGS=--node-ip='${NODE_IP}'/' /etc/default/kubelet
+fi
 tee /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf << 'EOF'
 [Service]
 Environment="KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf"
