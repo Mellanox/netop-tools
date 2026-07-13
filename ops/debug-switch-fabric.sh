@@ -3,8 +3,9 @@
 # Map two pod SR-IOV interfaces to host PF/VF state and switch MAC checks.
 #
 # This script is read-only. It uses kubectl for pod data and ssh for host/switch
-# data. If SWITCH_HOSTS is set, it also runs a few read-only MAC table commands
-# on each switch.
+# data. It uses lldpcli on each host PF to identify the connected switch and
+# switch port. If SWITCH_HOSTS is set, it also runs a few read-only MAC table
+# commands on each switch.
 #
 set -u
 
@@ -176,6 +177,25 @@ for NETPATH in /sys/bus/pci/devices/${PF}/net/*; do
   echo
   echo "mlnx_qos:"
   mlnx_qos -i "${IFACE}" 2>/dev/null || true
+  echo
+  echo "lldpcli neighbor for ${IFACE}:"
+  if command -v lldpcli >/dev/null 2>&1; then
+    lldpcli show neighbors ports "${IFACE}" details 2>/dev/null || \
+      lldpcli show neighbors ports "${IFACE}" 2>/dev/null || true
+    echo
+    echo "lldpcli keyvalue for ${IFACE}:"
+    lldpcli -f keyvalue show neighbors ports "${IFACE}" details 2>/dev/null || \
+      lldpcli -f keyvalue show neighbors ports "${IFACE}" 2>/dev/null || true
+    echo
+    echo "lldpcli json for ${IFACE}:"
+    lldpcli -f json show neighbors ports "${IFACE}" details 2>/dev/null || \
+      lldpcli -f json show neighbors ports "${IFACE}" 2>/dev/null || true
+  else
+    echo "lldpcli not found"
+  fi
+  echo
+  echo "lldpctl fallback for ${IFACE}:"
+  lldpctl "${IFACE}" 2>/dev/null || lldpctl 2>/dev/null || true
 done
 
 echo
@@ -242,7 +262,10 @@ echo
 echo "net show bridge macs:"
 net show bridge macs 2>/dev/null | egrep -i "${MAC_EXPR}" || true
 echo
-echo "lldp neighbors:"
+echo "lldpcli neighbors:"
+lldpcli show neighbors 2>/dev/null || true
+echo
+echo "lldpctl fallback:"
 lldpctl 2>/dev/null || true
 REMOTE
     } >> "${file}" 2>&1 || true
@@ -292,6 +315,8 @@ fi
   echo "SriovNetwork guess: ${NETOP_NAMESPACE}/${NAD_NAME}"
   echo
   echo "Switch checks:"
+  echo "- LLDP neighbor data is collected from each mapped host PF with lldpcli."
+  echo "- Check source-host.txt and dest-host.txt for 'lldpcli neighbor for <PF>'."
   echo "- Confirm both ports are in the same L2 domain for VLAN used by the SriovNetwork."
   echo "- Current NAD/SriovNetwork YAML below shows whether CNI sends untagged vlan 0 or a VLAN tag."
   echo "- Check switch MAC table for:"
@@ -349,18 +374,20 @@ MAC table:
   ${DST_MAC}
 
 Questions:
-  1. Are both server ports connected to the expected switch ports?
-  2. Are both switch ports in the same L2 domain?
-  3. If the ports are trunks, does the SriovNetwork VLAN match the allowed/native VLAN?
-  4. If SriovNetwork has vlan: 0, are both ports using the same untagged/native VLAN?
-  5. Does the switch learn source MAC ${SRC_MAC} when the ping runs?
-  6. Does it learn destination MAC ${DST_MAC} on the peer port?
+  1. In source-host.txt, what switch chassis/port does lldpcli show for the source PF?
+  2. In dest-host.txt, what switch chassis/port does lldpcli show for the destination PF?
+  3. Are both server ports connected to the expected switch ports?
+  4. Are both switch ports in the same L2 domain?
+  5. If the ports are trunks, does the SriovNetwork VLAN match the allowed/native VLAN?
+  6. If SriovNetwork has vlan: 0, are both ports using the same untagged/native VLAN?
+  7. Does the switch learn source MAC ${SRC_MAC} when the ping runs?
+  8. Does it learn destination MAC ${DST_MAC} on the peer port?
 
 Common Cumulus/NVIDIA switch probes:
   bridge fdb show | egrep -i '${SRC_MAC}|${DST_MAC}'
   nv show bridge domain br_default mac-table | egrep -i '${SRC_MAC}|${DST_MAC}'
   net show bridge macs | egrep -i '${SRC_MAC}|${DST_MAC}'
-  lldpctl
+  lldpcli show neighbors
 EOF
 
 echo "Wrote report: ${REPORT_DIR}"
