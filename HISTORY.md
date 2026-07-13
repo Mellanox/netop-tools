@@ -9,7 +9,7 @@ Track significant changes to netop-tools. Add entries here when making notable c
 - Code review fixes: IB_PKEY_RANGE renamed to IB_GUID_RANGE (backward-compat), NCP_GLOBAL_REPO/VER overrides, NicNodePolicy CRD file-existence guard, explicit sriovnet_rdma cases in mk-nic-node-policy.sh
 - CI fix: removed cleanup_temp_files from mk-network-cr.sh (was deleting pointer files that apply-network-cr.sh needs); corrected 26_4_* test baselines (removed 48 stale BCM-mode artifacts from tests that don't use BCM)
 - Added SR-IOV cross-node and fabric debug scripts for pod network-status, ARP/ICMP tcpdump, VF/PF mapping, LLDP, mlxlink, switch MAC/FDB, FRR/BGP, SR-IOV operator state, and RDMA GUID/GID diagnostics
-- Added optional `ops/debug-switch-fabric.yaml` support for cluster-specific worker SSH settings plus switch SSH targets, usernames, ports, key files, and password environment variables; worker SSH uses Kubernetes node InternalIPs when node names are not DNS-resolvable
+- Added optional `ops/debug-switch-fabric.yaml` support for cluster-specific worker SSH settings plus switch SSH targets, usernames, ports, and password fields; worker SSH uses Kubernetes node InternalIPs when node names are not DNS-resolvable
 - Added Calico debug/fix helper for Tigera/Calico pod state, Project Calico CRDs, RBAC, APIService, kube-proxy, host CNI config, and nodeAddressAutodetectionV4 remediation
 - Added dry-run stale pool network cleanup helper for removing old pool-suffixed SriovNetwork and NetworkAttachmentDefinition objects after shared network name migration
 
