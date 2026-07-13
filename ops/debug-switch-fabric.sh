@@ -31,6 +31,8 @@ Environment:
   SWITCH_CONFIG    Optional switch YAML. Default: ops/debug-switch-fabric.yaml
                    Supports worker_ssh and switches sections.
   SWITCH_HOSTS     Optional space-separated switch ssh targets. Appended to YAML switches
+  SWITCH_BRIDGE_DOMAIN Optional bridge domain for generated switch-<name>-<port>-vlan0-L2.yaml files. Default: br_default
+  SWITCH_L2_VLAN   Optional native/access VLAN for vlan 0 untagged pod traffic. Default: 1
   REPORT_DIR       Existing or new output directory. Default: /tmp/netop-switch-fabric-<timestamp>
   SSH_OPTS         Optional ssh options used for worker and switch logins
 EOF
@@ -245,11 +247,14 @@ function load_switch_config()
   SWITCH_CFG_IDENTITIES=()
   SWITCH_CFG_PASSWORDS=()
   SWITCH_CFG_PASSWORD_ENVS=()
+  SWITCH_CFG_SERVER_PORTS=()
   DEBUG_CFG_WORKER_SSH_USER=""
   DEBUG_CFG_WORKER_SSH_PORT=""
   DEBUG_CFG_WORKER_SSH_IDENTITY_FILE=""
   DEBUG_CFG_WORKER_SSH_PASSWORD=""
   DEBUG_CFG_WORKER_SSH_OPTS=""
+  DEBUG_CFG_SWITCH_BRIDGE_DOMAIN=""
+  DEBUG_CFG_SWITCH_L2_VLAN=""
 
   if [ -r "${SWITCH_CONFIG}" ]; then
     local parsed="${REPORT_DIR}/switch-config.env"
@@ -275,6 +280,7 @@ def simple_yaml(path):
     current = None
     section = None
     worker_ssh = {}
+    switch_defaults = {}
     key_value = re.compile(r"^([A-Za-z0-9_-]+)\s*:\s*(.*)$")
 
     with open(path, encoding="utf-8") as stream:
@@ -289,6 +295,9 @@ def simple_yaml(path):
             if re.match(r"^worker_ssh\s*:\s*$", stripped):
                 section = "worker_ssh"
                 continue
+            if re.match(r"^switch_defaults\s*:\s*$", stripped) or re.match(r"^fabric\s*:\s*$", stripped):
+                section = "switch_defaults"
+                continue
 
             if section == "worker_ssh":
                 if re.match(r"^\S", line):
@@ -297,6 +306,15 @@ def simple_yaml(path):
                 match = key_value.match(stripped)
                 if match:
                     worker_ssh[match.group(1)] = clean_value(match.group(2))
+                continue
+
+            if section == "switch_defaults":
+                if re.match(r"^\S", line):
+                    section = None
+                    continue
+                match = key_value.match(stripped)
+                if match:
+                    switch_defaults[match.group(1)] = clean_value(match.group(2))
                 continue
 
             if section == "switches":
@@ -319,7 +337,12 @@ def simple_yaml(path):
 
     if current:
         switches.append(current)
-    return {"worker_ssh": worker_ssh, "switches": switches}
+    return {"worker_ssh": worker_ssh, "switch_defaults": switch_defaults, "switches": switches}
+
+def list_or_string(value):
+    if isinstance(value, (list, tuple)):
+        return " ".join(str(item).strip() for item in value if str(item).strip())
+    return str(value or "").strip()
 
 try:
     import yaml  # type: ignore
@@ -330,19 +353,25 @@ except Exception:
     data = simple_yaml(path)
 
 worker_ssh = {}
+switch_defaults = {}
 if isinstance(data, dict):
     worker_ssh = data.get("worker_ssh") or {}
     cluster = data.get("cluster") or {}
     if isinstance(cluster, dict) and not worker_ssh:
         worker_ssh = cluster.get("worker_ssh") or {}
+    switch_defaults = data.get("switch_defaults") or data.get("fabric") or {}
 if not isinstance(worker_ssh, dict):
     worker_ssh = {}
+if not isinstance(switch_defaults, dict):
+    switch_defaults = {}
 
 print(f"DEBUG_CFG_WORKER_SSH_USER={shlex.quote(str(worker_ssh.get('user') or worker_ssh.get('username') or '').strip())}")
 print(f"DEBUG_CFG_WORKER_SSH_PORT={shlex.quote(str(worker_ssh.get('port') or '').strip())}")
 print(f"DEBUG_CFG_WORKER_SSH_IDENTITY_FILE={shlex.quote(str(worker_ssh.get('identity_file') or worker_ssh.get('identity') or worker_ssh.get('key_file') or '').strip())}")
 print(f"DEBUG_CFG_WORKER_SSH_PASSWORD={shlex.quote(str(worker_ssh.get('password') or '').strip())}")
 print(f"DEBUG_CFG_WORKER_SSH_OPTS={shlex.quote(str(worker_ssh.get('options') or worker_ssh.get('ssh_opts') or '').strip())}")
+print(f"DEBUG_CFG_SWITCH_BRIDGE_DOMAIN={shlex.quote(str(switch_defaults.get('bridge_domain') or switch_defaults.get('bridge') or 'br_default').strip())}")
+print(f"DEBUG_CFG_SWITCH_L2_VLAN={shlex.quote(str(switch_defaults.get('l2_vlan') or switch_defaults.get('native_vlan') or switch_defaults.get('untagged_vlan') or '1').strip())}")
 
 if isinstance(data, list):
     switches = data
@@ -376,6 +405,13 @@ for index, switch in enumerate(switches):
     ).strip()
     password_env = str(switch.get("password_env") or "").strip()
     password = str(switch.get("password") or "").strip()
+    server_ports = list_or_string(
+        switch.get("server_ports")
+        or switch.get("fabric_ports")
+        or switch.get("lldp_ports")
+        or switch.get("switch_ports")
+        or ""
+    )
 
     print(f"SWITCH_CFG_NAMES+=({shlex.quote(name)})")
     print(f"SWITCH_CFG_HOSTS+=({shlex.quote(host)})")
@@ -384,6 +420,7 @@ for index, switch in enumerate(switches):
     print(f"SWITCH_CFG_IDENTITIES+=({shlex.quote(identity)})")
     print(f"SWITCH_CFG_PASSWORDS+=({shlex.quote(password)})")
     print(f"SWITCH_CFG_PASSWORD_ENVS+=({shlex.quote(password_env)})")
+    print(f"SWITCH_CFG_SERVER_PORTS+=({shlex.quote(server_ports)})")
 PY
     # shellcheck disable=SC1090
     source "${parsed}"
@@ -394,6 +431,8 @@ PY
   WORKER_SSH_IDENTITY_FILE=${WORKER_SSH_IDENTITY_FILE:-${DEBUG_CFG_WORKER_SSH_IDENTITY_FILE:-}}
   WORKER_SSH_PASSWORD=${WORKER_SSH_PASSWORD:-${DEBUG_CFG_WORKER_SSH_PASSWORD:-}}
   WORKER_SSH_OPTS=${WORKER_SSH_OPTS:-${DEBUG_CFG_WORKER_SSH_OPTS:-}}
+  SWITCH_BRIDGE_DOMAIN=${SWITCH_BRIDGE_DOMAIN:-${DEBUG_CFG_SWITCH_BRIDGE_DOMAIN:-br_default}}
+  SWITCH_L2_VLAN=${SWITCH_L2_VLAN:-${DEBUG_CFG_SWITCH_L2_VLAN:-1}}
 
   if [ -n "${SWITCH_HOSTS:-}" ]; then
     local sw
@@ -405,6 +444,7 @@ PY
       SWITCH_CFG_IDENTITIES+=( "" )
       SWITCH_CFG_PASSWORDS+=( "" )
       SWITCH_CFG_PASSWORD_ENVS+=( "" )
+      SWITCH_CFG_SERVER_PORTS+=( "" )
     done
   fi
 }
@@ -435,6 +475,165 @@ function yaml_quote()
   local value=${1}
   value=${value//\'/\'\'}
   printf "'%s'" "${value}"
+}
+
+function normalize_port_list()
+{
+  local value=${1:-}
+  value=${value//,/ }
+  value=${value//[/ }
+  value=${value//]/ }
+  value=${value//\"/ }
+  value=${value//\'/ }
+  # shellcheck disable=SC2086
+  printf '%s\n' ${value} 2>/dev/null | awk 'NF && !seen[$0]++ { print }' | xargs 2>/dev/null || true
+}
+
+function select_switch_fix_ports()
+{
+  local switch_name=${1}
+  local switch_host=${2}
+  local explicit_ports=${3}
+  local discovered_ports=${4}
+  local switch_count=${5}
+
+  python3 - "${switch_name}" "${switch_host}" "${explicit_ports}" "${discovered_ports}" "${switch_count}" \
+    "${REPORT_DIR}/source-host.txt" "${REPORT_DIR}/dest-host.txt" <<'PY'
+import re
+import sys
+
+name, host, explicit, discovered, switch_count, *paths = sys.argv[1:]
+
+def split_ports(value):
+    ports = re.split(r"[\s,\[\]'\"]+", value or "")
+    out = []
+    for port in ports:
+        if port and port not in out:
+            out.append(port)
+    return out
+
+explicit_ports = split_ports(explicit)
+if explicit_ports:
+    print(" ".join(explicit_ports))
+    raise SystemExit(0)
+
+def norm(value):
+    value = (value or "").strip().lower()
+    if "@" in value:
+        value = value.rsplit("@", 1)[1]
+    return value
+
+def host_short(value):
+    return norm(value).split(".", 1)[0]
+
+name_norm = norm(name)
+host_norm = norm(host)
+name_short = host_short(name)
+host_short_name = host_short(host)
+
+records = {}
+for path in paths:
+    try:
+        lines = open(path, encoding="utf-8", errors="replace").read().splitlines()
+    except OSError:
+        continue
+    for line in lines:
+        if not line.startswith("lldp.") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        parts = key.split(".")
+        if len(parts) < 3:
+            continue
+        prefix = ".".join(parts[:2])
+        field = ".".join(parts[2:])
+        records.setdefault(prefix, {})[field] = value.strip()
+
+matched = []
+for rec in records.values():
+    port = rec.get("port.ifname") or rec.get("port.descr") or ""
+    if not port:
+        continue
+
+    candidates = []
+    for key, value in rec.items():
+        if key.startswith("chassis.") or key in {"system.name", "hostname"}:
+            candidates.append(value)
+    candidate_norms = [norm(candidate) for candidate in candidates if candidate]
+    candidate_shorts = [host_short(candidate) for candidate in candidates if candidate]
+
+    if (
+        name_norm in candidate_norms
+        or host_norm in candidate_norms
+        or name_short in candidate_shorts
+        or host_short_name in candidate_shorts
+    ):
+        if port not in matched:
+            matched.append(port)
+
+if not matched and switch_count == "1":
+    matched = split_ports(discovered)
+
+print(" ".join(matched))
+PY
+}
+
+function write_switch_fix_yaml()
+{
+  local name=${1}
+  local host=${2}
+  local explicit_ports=${3}
+  local discovered_ports=${4}
+  local ports
+  local port
+  local output_file
+  local generated=()
+
+  ports=$(select_switch_fix_ports "${name}" "${host}" "${explicit_ports}" "${discovered_ports}" "${#SWITCH_CFG_HOSTS[@]}")
+  ports=$(normalize_port_list "${ports}")
+
+  if [ -z "${ports}" ]; then
+    return
+  fi
+
+  for port in ${ports}; do
+    output_file="${REPORT_DIR}/switch-$(safe_file_component "${name}")-$(safe_file_component "${port}")-vlan0-L2.yaml"
+    {
+      echo "# Generated by ${0##*/} on $(date -Is)"
+      echo "# Switch: ${name} (${host})"
+      echo "# Port: ${port}"
+      echo "# Purpose: proposed NVUE patch for SriovNetwork vlan: 0, which sends untagged frames."
+      echo "# Review before applying. This script does not apply switch changes."
+      echo "# Apply flow on the switch:"
+      echo "#   sudo nv config patch /absolute/path/$(basename "${output_file}")"
+      echo "#   sudo nv config diff"
+      echo "#   sudo nv config apply"
+      echo "#"
+      echo "# Assumption: untagged pod traffic should land in access/native VLAN ${SWITCH_L2_VLAN}"
+      echo "# on bridge domain ${SWITCH_BRIDGE_DOMAIN}. Override with switch_defaults.native_vlan"
+      echo "# or SWITCH_L2_VLAN if this fabric uses a different native VLAN."
+      echo "#"
+      echo "# If ${port} is currently routed or assigned to a VRF, remove that"
+      echo "# routed interface config after review before applying this L2 bridge patch."
+      echo "- set:"
+      echo "    bridge:"
+      echo "      domain:"
+      echo "        ${SWITCH_BRIDGE_DOMAIN}:"
+      echo "          vlan:"
+      echo "            '${SWITCH_L2_VLAN}': {}"
+      echo "    interface:"
+      echo "      ${port}:"
+      echo "        type: swp"
+      echo "        bridge:"
+      echo "          domain:"
+      echo "            ${SWITCH_BRIDGE_DOMAIN}:"
+      echo "              access: ${SWITCH_L2_VLAN}"
+      echo "              stp:"
+      echo "                admin-edge: on"
+    } > "${output_file}"
+    generated+=( "${output_file}" )
+  done
+
+  printf '%s\n' "${generated[@]}"
 }
 
 function capture_switch_settings()
@@ -882,9 +1081,11 @@ function run_switch_checks()
     local identity="${SWITCH_CFG_IDENTITIES[${idx}]}"
     local password="${SWITCH_CFG_PASSWORDS[${idx}]}"
     local password_env="${SWITCH_CFG_PASSWORD_ENVS[${idx}]}"
+    local server_ports="${SWITCH_CFG_SERVER_PORTS[${idx}]:-}"
     local target="${host}"
     local ssh_cmd=(ssh)
     local switch_file="${REPORT_DIR}/switch-$(safe_file_component "${name}").yaml"
+    local fix_files
 
     if [ -n "${SSH_OPTS:-}" ]; then
       # shellcheck disable=SC2206
@@ -901,12 +1102,19 @@ function run_switch_checks()
     fi
 
     capture_switch_settings "${name}" "${target}" "${password}" "${password_env}" "${switch_file}" "${ssh_cmd[@]}"
+    fix_files=$(write_switch_fix_yaml "${name}" "${host}" "${server_ports}" "${switch_ports}")
 
     {
       echo
       echo "### switch ${name} (${target})"
       echo "# $(date -Is)"
       echo "settings snapshot: ${switch_file}"
+      if [ -n "${fix_files}" ]; then
+        echo "proposed vlan 0 L2 fix YAML:"
+        printf '%s\n' "${fix_files}" | sed 's/^/  /'
+      else
+        echo "proposed vlan 0 L2 fix YAML: none generated; no switch ports matched this switch entry"
+      fi
       if [ -n "${password}" ] || [ -n "${password_env}" ]; then
         if ! command -v sshpass >/dev/null 2>&1; then
           echo "ERROR: password/password_env is configured, but sshpass is not installed"
@@ -1148,6 +1356,7 @@ fi
   echo "- mlxlink PF link state is collected from the PF RDMA device in source-host.txt and dest-host.txt."
   echo "- Optional switch logins come from ${SWITCH_CONFIG} and/or SWITCH_HOSTS."
   echo "- Current switch settings are collected as switch-<name>.yaml for every configured switch login."
+  echo "- Proposed per-port NVUE L2 patch files are generated as switch-<name>-<port>-vlan0-L2.yaml."
   echo "- Switch VLAN/bridge membership is collected for LLDP-discovered switch ports."
   echo "- Confirm both ports are in the same L2 domain for VLAN used by the SriovNetwork."
   echo "- Current NAD/SriovNetwork YAML below shows whether CNI sends untagged vlan 0 or a VLAN tag."
@@ -1251,6 +1460,11 @@ Common Cumulus/NVIDIA switch probes:
   vtysh -c 'show evpn vni'
   vtysh -c 'show evpn mac vni all' | egrep -i '${SRC_MAC}|${DST_MAC}'
   vtysh -c 'show bgp l2vpn evpn route' | egrep -i '${SRC_MAC}|${DST_MAC}|${SRC_IP}|${DST_IP}'
+
+Generated fix artifacts:
+  switch-<switchname>-<port>-vlan0-L2.yaml
+    Proposed NVUE patch for untagged SriovNetwork vlan: 0 L2 connectivity.
+    Review each file and run nv config diff before applying on a switch.
 EOF
 
 echo "Wrote report: ${REPORT_DIR}"
