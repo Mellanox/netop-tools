@@ -211,6 +211,17 @@ export NVIPAM_POOL_TYPE="IPPool"    # Per-node IP blocks (default)
 export NVIPAM_POOL_TYPE="CIDRPool"  # Per-node CIDR subnets
 ```
 
+For routed switch ports, use L3 fabric mode. This forces nv-ipam CIDRPool
+generation so pods receive per-node prefixes and route remote pod prefixes via
+the configured gateway index instead of ARPing directly across nodes.
+
+```bash
+export NETOP_SWITCH_PORT_MODE="l3"
+export NETOP_PER_NODE_PREFIX="27"
+export NETOP_GATEWAY_INDEX="1"
+export SBRMODE="true"  # recommended when pods have multiple secondary NICs
+```
+
 #### 3.4 Combined mode (BCM)
 
 For multi-device platforms (e.g., DGX with 8 NICs), combined mode merges per-device YAML files into single files:
@@ -1371,6 +1382,10 @@ CI runs `tests/unitest.sh` on ubuntu-22.04 on every push (`.github/workflows/mai
 |---|---|---|
 | `IPAM_TYPE` | `nv-ipam` | IPAM type (`nv-ipam`, `whereabouts`, `dhcp`) |
 | `NVIPAM_POOL_TYPE` | `IPPool` | Pool type (`IPPool` or `CIDRPool`) |
+| `NETOP_SWITCH_PORT_MODE` | `l2` | Secondary fabric mode. Use `l3` for routed switch ports; this forces `nv-ipam` `CIDRPool`. |
+| `NETOP_GATEWAY_INDEX` | `1` | Gateway address index inside each CIDRPool per-node prefix. |
+| `NETOP_PER_NODE_PREFIX` | `24` | Per-node prefix length used by nv-ipam CIDRPool. |
+| `NETOP_CIDRPOOL_ROUTES` | empty | Optional space/comma-separated CIDRPool route destinations. In L3 mode, defaults to the generated pool CIDR. |
 
 ### Output Control
 

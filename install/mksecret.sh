@@ -20,6 +20,11 @@ function getTool()
 if [ "${PROD_VER}" != "0" ];then
   exit
 fi
+if [ "${CREATE_CONFIG_ONLY}" = "1" ];then
+  echo "Install command: ${K8CL} delete secret ${NGC_SECRET} -n ${NETOP_NAMESPACE}"
+  echo "Install command: ${K8CL} -n ${NETOP_NAMESPACE} create secret docker-registry ${NGC_SECRET} --docker-server=nvcr.io --docker-username='\$oauthtoken' --docker-password=<redacted>"
+  exit
+fi
 ${NETOP_ROOT_DIR}/uninstall/delsecret.sh
 #echo "${NGC_API_KEY}" | ${TOOL} login --username  '$oauthtoken' --password-stdin nvcr.io
 X=$(${K8CL} get secret -n ${NETOP_NAMESPACE} | grep -c "${NGC_SECRET}")
