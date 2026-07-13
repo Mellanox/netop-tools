@@ -15,7 +15,7 @@ apt-mark hold kubelet kubeadm kubectl
 /usr/bin/kubelet --version
 dpkg -l kubelet kubeadm kubectl
 #
-if  [ "${NODE_IP}" !+ "" ];then
+if  [ "${NODE_IP}" != "" ];then
   sed -i 's/KUBELET_EXTRA_ARGS=--node-ip=.*/KUBELET_EXTRA_ARGS=--node-ip='${NODE_IP}'/' /etc/default/kubelet
 fi
 tee /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf << 'EOF'
