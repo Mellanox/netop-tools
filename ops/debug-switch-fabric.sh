@@ -33,6 +33,14 @@ Environment:
   SWITCH_HOSTS     Optional space-separated switch ssh targets. Appended to YAML switches
   SWITCH_BRIDGE_DOMAIN Optional bridge domain for generated switch-<name>-<port>-vlan0-L2.yaml files. Default: br_default
   SWITCH_L2_VLAN   Optional native/access VLAN for vlan 0 untagged pod traffic. Default: 1
+  SWITCH_L3_GATEWAYS Optional true/false. When true, generated switch-<name>-<port>-L3.yaml files
+                   include per-port gateway IPs computed from pod IP, SWITCH_L3_PREFIX,
+                   and SWITCH_L3_GATEWAY_INDEX.
+  SWITCH_L3_PREFIX Optional per-node prefix length for L3 gateway generation.
+                   Defaults to NETOP_PER_NODE_PREFIX when set.
+  SWITCH_L3_GATEWAY_INDEX Optional gateway host index inside each per-node prefix.
+                   Defaults to NETOP_GATEWAY_INDEX when set, otherwise 1.
+  SWITCH_L3_VRF    Optional VRF name to include in generated L3 gateway patches.
   REPORT_DIR       Existing or new output directory. Default: /tmp/netop-switch-fabric-<timestamp>
   SSH_OPTS         Optional ssh options used for worker and switch logins
 EOF
@@ -255,6 +263,10 @@ function load_switch_config()
   DEBUG_CFG_WORKER_SSH_OPTS=""
   DEBUG_CFG_SWITCH_BRIDGE_DOMAIN=""
   DEBUG_CFG_SWITCH_L2_VLAN=""
+  DEBUG_CFG_SWITCH_L3_GATEWAYS=""
+  DEBUG_CFG_SWITCH_L3_PREFIX=""
+  DEBUG_CFG_SWITCH_L3_GATEWAY_INDEX=""
+  DEBUG_CFG_SWITCH_L3_VRF=""
 
   if [ -r "${SWITCH_CONFIG}" ]; then
     local parsed="${REPORT_DIR}/switch-config.env"
@@ -372,6 +384,10 @@ print(f"DEBUG_CFG_WORKER_SSH_PASSWORD={shlex.quote(str(worker_ssh.get('password'
 print(f"DEBUG_CFG_WORKER_SSH_OPTS={shlex.quote(str(worker_ssh.get('options') or worker_ssh.get('ssh_opts') or '').strip())}")
 print(f"DEBUG_CFG_SWITCH_BRIDGE_DOMAIN={shlex.quote(str(switch_defaults.get('bridge_domain') or switch_defaults.get('bridge') or 'br_default').strip())}")
 print(f"DEBUG_CFG_SWITCH_L2_VLAN={shlex.quote(str(switch_defaults.get('l2_vlan') or switch_defaults.get('native_vlan') or switch_defaults.get('untagged_vlan') or '1').strip())}")
+print(f"DEBUG_CFG_SWITCH_L3_GATEWAYS={shlex.quote(str(switch_defaults.get('l3_gateways') or switch_defaults.get('l3_gateway_addresses') or switch_defaults.get('generate_l3_gateways') or '').strip())}")
+print(f"DEBUG_CFG_SWITCH_L3_PREFIX={shlex.quote(str(switch_defaults.get('l3_prefix') or switch_defaults.get('per_node_prefix') or '').strip())}")
+print(f"DEBUG_CFG_SWITCH_L3_GATEWAY_INDEX={shlex.quote(str(switch_defaults.get('l3_gateway_index') or switch_defaults.get('gateway_index') or '').strip())}")
+print(f"DEBUG_CFG_SWITCH_L3_VRF={shlex.quote(str(switch_defaults.get('l3_vrf') or switch_defaults.get('vrf') or '').strip())}")
 
 if isinstance(data, list):
     switches = data
@@ -433,6 +449,10 @@ PY
   WORKER_SSH_OPTS=${WORKER_SSH_OPTS:-${DEBUG_CFG_WORKER_SSH_OPTS:-}}
   SWITCH_BRIDGE_DOMAIN=${SWITCH_BRIDGE_DOMAIN:-${DEBUG_CFG_SWITCH_BRIDGE_DOMAIN:-br_default}}
   SWITCH_L2_VLAN=${SWITCH_L2_VLAN:-${DEBUG_CFG_SWITCH_L2_VLAN:-1}}
+  SWITCH_L3_GATEWAYS=${SWITCH_L3_GATEWAYS:-${DEBUG_CFG_SWITCH_L3_GATEWAYS:-false}}
+  SWITCH_L3_PREFIX=${SWITCH_L3_PREFIX:-${DEBUG_CFG_SWITCH_L3_PREFIX:-${NETOP_PER_NODE_PREFIX:-}}}
+  SWITCH_L3_GATEWAY_INDEX=${SWITCH_L3_GATEWAY_INDEX:-${DEBUG_CFG_SWITCH_L3_GATEWAY_INDEX:-${NETOP_GATEWAY_INDEX:-1}}}
+  SWITCH_L3_VRF=${SWITCH_L3_VRF:-${DEBUG_CFG_SWITCH_L3_VRF:-}}
 
   if [ -n "${SWITCH_HOSTS:-}" ]; then
     local sw
@@ -477,6 +497,15 @@ function yaml_quote()
   printf "'%s'" "${value}"
 }
 
+function is_true()
+{
+  local value=${1:-}
+  case "${value,,}" in
+    1|true|yes|y|on|enabled) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 function normalize_port_list()
 {
   local value=${1:-}
@@ -487,6 +516,158 @@ function normalize_port_list()
   value=${value//\'/ }
   # shellcheck disable=SC2086
   printf '%s\n' ${value} 2>/dev/null | awk 'NF && !seen[$0]++ { print }' | xargs 2>/dev/null || true
+}
+
+function select_switch_l3_gateways()
+{
+  local switch_name=${1}
+  local switch_host=${2}
+  local switch_count=${3}
+  local explicit_ports=${4}
+
+  if ! is_true "${SWITCH_L3_GATEWAYS:-false}"; then
+    return
+  fi
+  if [ -z "${SWITCH_L3_PREFIX:-}" ]; then
+    return
+  fi
+
+  python3 - "${switch_name}" "${switch_host}" "${switch_count}" \
+    "${explicit_ports}" "${SWITCH_L3_PREFIX}" "${SWITCH_L3_GATEWAY_INDEX}" \
+    "${SRC_POD}" "${SRC_NODE}" "${SRC_IP}" \
+    "${DST_POD}" "${DST_NODE}" "${DST_IP}" \
+    "${REPORT_DIR}/source-host.txt" "${REPORT_DIR}/dest-host.txt" <<'PY'
+import ipaddress
+import re
+import sys
+
+(
+    name,
+    host,
+    switch_count,
+    explicit_ports,
+    prefix,
+    gateway_index,
+    src_pod,
+    src_node,
+    src_ip,
+    dst_pod,
+    dst_node,
+    dst_ip,
+    src_file,
+    dst_file,
+) = sys.argv[1:]
+
+try:
+    prefix_int = int(prefix)
+    gateway_index_int = int(gateway_index)
+except ValueError:
+    raise SystemExit(0)
+
+def norm(value):
+    value = (value or "").strip().lower()
+    if "@" in value:
+        value = value.rsplit("@", 1)[1]
+    return value
+
+def host_short(value):
+    return norm(value).split(".", 1)[0]
+
+def split_ports(value):
+    return {
+        port
+        for port in re.split(r"[\s,\[\]'\"]+", value or "")
+        if port
+    }
+
+def gateway_cidr(ip):
+    try:
+        iface = ipaddress.ip_interface(f"{ip}/{prefix_int}")
+        network = iface.network
+        gateway = network.network_address + gateway_index_int
+    except ValueError:
+        return ""
+
+    if gateway not in network:
+        return ""
+    if isinstance(network, ipaddress.IPv4Network) and network.prefixlen < 31:
+        if gateway == network.network_address or gateway == network.broadcast_address:
+            return ""
+    return f"{gateway}/{prefix_int}"
+
+def split_records(path):
+    records = {}
+    try:
+        lines = open(path, encoding="utf-8", errors="replace").read().splitlines()
+    except OSError:
+        return records
+    for line in lines:
+        if not line.startswith("lldp.") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        parts = key.split(".")
+        if len(parts) < 3:
+            continue
+        record_id = ".".join(parts[:2])
+        field = ".".join(parts[2:])
+        records.setdefault(record_id, {})[field] = value.strip()
+    return records
+
+name_norm = norm(name)
+host_norm = norm(host)
+name_short = host_short(name)
+host_short_name = host_short(host)
+explicit_port_set = split_ports(explicit_ports)
+
+endpoints = [
+    ("source", src_pod, src_node, src_ip, src_file),
+    ("dest", dst_pod, dst_node, dst_ip, dst_file),
+]
+seen = set()
+
+for endpoint, pod, node, ip, path in endpoints:
+    gw = gateway_cidr(ip)
+    if not gw:
+        continue
+    for rec in split_records(path).values():
+        port = rec.get("port.ifname") or rec.get("port.descr") or ""
+        if not port:
+            continue
+
+        candidates = []
+        for key, value in rec.items():
+            if key.startswith("chassis.") or key in {"system.name", "hostname"}:
+                candidates.append(value)
+        candidate_norms = [norm(candidate) for candidate in candidates if candidate]
+        candidate_shorts = [host_short(candidate) for candidate in candidates if candidate]
+
+        matched = port in explicit_port_set
+        if not matched:
+            matched = (
+                name_norm in candidate_norms
+                or host_norm in candidate_norms
+                or name_short in candidate_shorts
+                or host_short_name in candidate_shorts
+            )
+        if not matched and switch_count == "1":
+            matched = True
+        if not matched:
+            continue
+
+        key = (port, gw)
+        if key in seen:
+            continue
+        seen.add(key)
+        print("\t".join([port, gw, endpoint, pod, node, ip]))
+PY
+}
+
+function l3_gateway_for_port()
+{
+  local port=${1}
+  local records=${2}
+
+  awk -F'\t' -v port="${port}" '$1 == port { print; exit }' "${records}" 2>/dev/null || true
 }
 
 function select_switch_fix_ports()
@@ -588,6 +769,13 @@ function write_switch_fix_yaml()
   local l2_file
   local l3_file
   local generated=()
+  local gateway_records
+  local gateway_record
+  local gateway_ip=""
+  local gateway_endpoint=""
+  local gateway_pod=""
+  local gateway_node=""
+  local gateway_pod_ip=""
 
   ports=$(select_switch_fix_ports "${name}" "${host}" "${explicit_ports}" "${discovered_ports}" "${#SWITCH_CFG_HOSTS[@]}")
   ports=$(normalize_port_list "${ports}")
@@ -596,9 +784,21 @@ function write_switch_fix_yaml()
     return
   fi
 
+  gateway_records="${REPORT_DIR}/switch-$(safe_file_component "${name}")-l3-gateways.tsv"
+  select_switch_l3_gateways "${name}" "${host}" "${#SWITCH_CFG_HOSTS[@]}" "${explicit_ports}" > "${gateway_records}"
+
   for port in ${ports}; do
     l2_file="${REPORT_DIR}/switch-$(safe_file_component "${name}")-$(safe_file_component "${port}")-vlan0-L2.yaml"
     l3_file="${REPORT_DIR}/switch-$(safe_file_component "${name}")-$(safe_file_component "${port}")-L3.yaml"
+    gateway_ip=""
+    gateway_endpoint=""
+    gateway_pod=""
+    gateway_node=""
+    gateway_pod_ip=""
+    gateway_record=$(l3_gateway_for_port "${port}" "${gateway_records}")
+    if [ -n "${gateway_record}" ]; then
+      IFS=$'\t' read -r _gateway_port gateway_ip gateway_endpoint gateway_pod gateway_node gateway_pod_ip <<< "${gateway_record}"
+    fi
     {
       echo "# Generated by ${0##*/} on $(date -Is)"
       echo "# Switch: ${name} (${host})"
@@ -646,9 +846,25 @@ function write_switch_fix_yaml()
       echo "#   sudo nv config apply"
       echo "#"
       echo "# This companion file removes the vlan0 L2 bridge binding from ${port}."
-      echo "# It intentionally does not invent IP addresses or VRF membership."
-      echo "# If the port needs a specific L3 VRF/IP, copy those settings from"
-      echo "# switch-$(safe_file_component "${name}").yaml or the current switch source of truth."
+      if is_true "${SWITCH_L3_GATEWAYS:-false}"; then
+        if [ -n "${gateway_ip}" ]; then
+          echo "# L3 gateway generation: enabled"
+          echo "# Endpoint: ${gateway_endpoint} ${gateway_node}/${gateway_pod} ${IFACE} pod IP ${gateway_pod_ip}"
+          echo "# Computed gateway: ${gateway_ip} from prefix ${SWITCH_L3_PREFIX} gateway index ${SWITCH_L3_GATEWAY_INDEX}"
+          if [ -n "${SWITCH_L3_VRF:-}" ]; then
+            echo "# VRF: ${SWITCH_L3_VRF}"
+          else
+            echo "# VRF: not set by this file. Set SWITCH_L3_VRF or switch_defaults.l3_vrf if needed."
+          fi
+        else
+          echo "# L3 gateway generation: enabled, but no gateway was computed for ${port}."
+          echo "# Check that SWITCH_L3_PREFIX is set and this switch name/host matches LLDP chassis data."
+        fi
+      else
+        echo "# It intentionally does not invent IP addresses or VRF membership."
+        echo "# If the port needs a specific L3 VRF/IP, copy those settings from"
+        echo "# switch-$(safe_file_component "${name}").yaml or the current switch source of truth."
+      fi
       echo "- unset:"
       echo "    interface:"
       echo "      ${port}:"
@@ -659,6 +875,16 @@ function write_switch_fix_yaml()
       echo "    interface:"
       echo "      ${port}:"
       echo "        type: swp"
+      if [ -n "${gateway_ip}" ] || [ -n "${SWITCH_L3_VRF:-}" ]; then
+        echo "        ip:"
+        if [ -n "${SWITCH_L3_VRF:-}" ]; then
+          echo "          vrf: ${SWITCH_L3_VRF}"
+        fi
+        if [ -n "${gateway_ip}" ]; then
+          echo "          address:"
+          echo "            ${gateway_ip}: {}"
+        fi
+      fi
     } > "${l3_file}"
     generated+=( "${l3_file}" )
   done
@@ -1387,7 +1613,8 @@ fi
   echo "- Optional switch logins come from ${SWITCH_CONFIG} and/or SWITCH_HOSTS."
   echo "- Current switch settings are collected as switch-<name>.yaml for every configured switch login."
   echo "- Proposed per-port NVUE L2 patch files are generated as switch-<name>-<port>-vlan0-L2.yaml."
-  echo "- Companion L3 restore stubs are generated as switch-<name>-<port>-L3.yaml."
+  echo "- Companion L3 restore patches are generated as switch-<name>-<port>-L3.yaml."
+  echo "- Set SWITCH_L3_GATEWAYS=true plus SWITCH_L3_PREFIX/NETOP_PER_NODE_PREFIX to include computed gateway IPs in L3 patches."
   echo "- Switch VLAN/bridge membership is collected for LLDP-discovered switch ports."
   echo "- Confirm both ports are in the same L2 domain for VLAN used by the SriovNetwork."
   echo "- Current NAD/SriovNetwork YAML below shows whether CNI sends untagged vlan 0 or a VLAN tag."
@@ -1496,7 +1723,10 @@ Generated fix artifacts:
   switch-<switchname>-<port>-vlan0-L2.yaml
     Proposed NVUE patch for untagged SriovNetwork vlan: 0 L2 connectivity.
   switch-<switchname>-<port>-L3.yaml
-    Companion stub to keep or restore the port as L3 without inventing VRF/IP settings.
+    Companion patch to keep or restore the port as L3. If SWITCH_L3_GATEWAYS=true
+    and SWITCH_L3_PREFIX or NETOP_PER_NODE_PREFIX is set, this includes the
+    computed gateway IP for the source/destination per-node CIDR on that port.
+    Use SWITCH_L3_VRF or switch_defaults.l3_vrf when the port belongs to a VRF.
     Review each file and run nv config diff before applying on a switch.
 EOF
 
