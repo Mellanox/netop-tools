@@ -374,6 +374,22 @@ function short_desc()
   fi
 }
 
+function speed_is_invalid()
+{
+  local value
+
+  value=$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')
+  value=${value//[[:space:]]/}
+  case "${value}" in
+  ""|-|n/a|na|none|unknown|0|0g|0gb/s|0gbps|0mb/s|0mbps|0m)
+    return 0
+    ;;
+  *)
+    return 1
+    ;;
+  esac
+}
+
 function build_mlxlink_cmd()
 {
   MLXLINK_CMD=(mlxlink)
@@ -461,7 +477,7 @@ while IFS= read -r line; do
       append_fatal_problem problems fatal_problem "physical=${physical}"
     fi
   fi
-  if [ "${speed}" = "-" ] || echo "${speed}" | grep -Eiq 'n/a|unknown|0'; then
+  if speed_is_invalid "${speed}"; then
     if [ "${down_state}" = "true" ]; then
       append_problem problems "speed=${speed}"
     else
