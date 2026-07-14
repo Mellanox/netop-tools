@@ -18,6 +18,8 @@ ALL_MELLANOX=false
 USE_DOMAIN=true
 USE_SUDO=true
 COLOR_MODE=${COLOR_MODE:-auto}
+REPORT_DIR=${REPORT_DIR:-}
+REPORT_FILE=${REPORT_FILE:-}
 LOCAL_ONLY=false
 SSH_USER=${SSH_USER:-}
 SSH_PORT=${SSH_PORT:-}
@@ -45,6 +47,10 @@ Options:
                           not only CX8/BF3/CX7 matches.
   --details               Print raw mlxlink output after the summary.
   --color MODE            Color mode: auto, always, or never. Default: auto.
+  --report-dir DIR        Write a timestamped plain-text report in DIR.
+                          Can also be set with REPORT_DIR.
+  --report-file FILE      Write a plain-text report to FILE.
+                          Can also be set with REPORT_FILE.
   --no-domain             Use lspci without -D. Default prefers lspci -D.
   --no-sudo               Do not run mlxlink through sudo when not root.
   --ssh-user USER         SSH username for server args that do not include user@.
@@ -59,6 +65,7 @@ Examples:
   $0                                  # check local worker
   $0 10.185.179.17 10.185.180.17      # check remote workers
   $0 --ssh-user root --expected-speed 400G 10.185.179.17
+  $0 --report-dir ~/netop-tools/dynamo worker1 worker2
   LINK_INCLUDE_REGEX='CX8|BlueField-3|ConnectX-7' $0 --details
 EOF
 }
@@ -90,6 +97,14 @@ while [ $# -gt 0 ]; do
     ;;
   --color)
     COLOR_MODE=${2:-}
+    shift 2
+    ;;
+  --report-dir|--output-dir)
+    REPORT_DIR=${2:-}
+    shift 2
+    ;;
+  --report-file)
+    REPORT_FILE=${2:-}
     shift 2
     ;;
   --no-domain)
@@ -185,6 +200,33 @@ function ssh_target()
     printf '%s\n' "${target}"
   fi
 }
+
+REPORT_STARTED=false
+function setup_report()
+{
+  local report_parent
+
+  [ "${REPORT_STARTED}" = "false" ] || return
+  if [ -z "${REPORT_DIR}" ] && [ -z "${REPORT_FILE}" ]; then
+    return
+  fi
+
+  if [ -n "${REPORT_FILE}" ]; then
+    REPORT_FILE=$(expand_local_path "${REPORT_FILE}")
+    report_parent=$(dirname "${REPORT_FILE}")
+    mkdir -p "${report_parent}"
+  else
+    REPORT_DIR=$(expand_local_path "${REPORT_DIR}")
+    mkdir -p "${REPORT_DIR}"
+    REPORT_FILE="${REPORT_DIR%/}/netop-worker-links-$(date +%Y%m%d_%H%M%S).txt"
+  fi
+
+  REPORT_STARTED=true
+  exec > >(tee >(sed -r $'s/\x1B\\[[0-9;]*[A-Za-z]//g' > "${REPORT_FILE}")) 2>&1
+  echo "Writing report: ${REPORT_FILE}"
+}
+
+setup_report
 
 if [ "${LOCAL_ONLY}" != "true" ] && [ ${#SERVER_TARGETS[@]} -gt 0 ]; then
   build_ssh_cmd
