@@ -289,6 +289,16 @@ function append_problem()
   out+=( "${problem}" )
 }
 
+function append_fatal_problem()
+{
+  local -n problems_ref=$1
+  local -n fatal_ref=$2
+  local problem=${3}
+
+  append_problem problems_ref "${problem}"
+  fatal_ref=true
+}
+
 function join_problems()
 {
   local -n values=$1
@@ -373,24 +383,31 @@ while IFS= read -r line; do
   [ -n "${fec}" ] || fec="-"
 
   problems=()
+  fatal_problem=false
   if [ "${rc}" -ne 0 ]; then
-    append_problem problems "mlxlink failed rc=${rc}"
+    append_fatal_problem problems fatal_problem "mlxlink failed rc=${rc}"
   fi
   if [ "${state}" = "-" ]; then
     append_problem problems "missing State"
   elif ! echo "${state}" | grep -Eiq 'active|up'; then
-    append_problem problems "state=${state}"
+    append_fatal_problem problems fatal_problem "state=${state}"
   fi
   if [ "${physical}" = "-" ]; then
     append_problem problems "missing Physical state"
   elif ! echo "${physical}" | grep -Eiq 'linkup|up'; then
-    append_problem problems "physical=${physical}"
+    append_fatal_problem problems fatal_problem "physical=${physical}"
   fi
   if [ "${speed}" = "-" ] || echo "${speed}" | grep -Eiq 'n/a|unknown|0'; then
-    append_problem problems "speed=${speed}"
+    append_fatal_problem problems fatal_problem "speed=${speed}"
   fi
   if [ -n "${EXPECTED_SPEED}" ] && [ "${speed}" != "${EXPECTED_SPEED}" ]; then
     append_problem problems "expected speed ${EXPECTED_SPEED}, got ${speed}"
+  fi
+  if grep -Eiq 'Recommendation[[:space:]]*:[[:space:]]*signal not detected|signal not detected' "${mlx_out}"; then
+    append_fatal_problem problems fatal_problem "signal not detected"
+  fi
+  if grep -Eiq 'Recommendation[[:space:]]*:[[:space:]]*Cable is unplugged|Cable is unplugged' "${mlx_out}"; then
+    append_fatal_problem problems fatal_problem "cable is unplugged"
   fi
   if grep -Eiq 'error|failed|failure|bad|unsupported|no signal|cable.*unplug|module.*bad' "${mlx_out}"; then
     append_problem problems "mlxlink output contains error/warning text"
@@ -398,7 +415,7 @@ while IFS= read -r line; do
 
   if [ ${#problems[@]} -eq 0 ]; then
     status="OK"
-  elif [ "${rc}" -ne 0 ]; then
+  elif [ "${fatal_problem}" = "true" ]; then
     status="ERROR"
   else
     status="WARN"
