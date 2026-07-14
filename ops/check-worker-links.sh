@@ -17,6 +17,7 @@ DETAILS=false
 ALL_MELLANOX=false
 USE_DOMAIN=true
 USE_SUDO=true
+COLOR_MODE=${COLOR_MODE:-auto}
 LOCAL_ONLY=false
 SSH_USER=${SSH_USER:-}
 SSH_PORT=${SSH_PORT:-}
@@ -42,6 +43,7 @@ Options:
   --all-mellanox          Check all non-virtual Mellanox/NVIDIA network devices,
                           not only CX8/BF3 matches.
   --details               Print raw mlxlink output after the summary.
+  --color MODE            Color mode: auto, always, or never. Default: auto.
   --no-domain             Use lspci without -D. Default prefers lspci -D.
   --no-sudo               Do not run mlxlink through sudo when not root.
   --ssh-user USER         SSH username for server args that do not include user@.
@@ -84,6 +86,10 @@ while [ $# -gt 0 ]; do
     DETAILS=true
     REMOTE_ARGS+=( --details )
     shift
+    ;;
+  --color)
+    COLOR_MODE=${2:-}
+    shift 2
     ;;
   --no-domain)
     USE_DOMAIN=false
@@ -131,6 +137,14 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+case "${COLOR_MODE}" in
+auto|always|never|"") ;;
+*)
+  echo "ERROR: invalid --color mode: ${COLOR_MODE}. Use auto, always, or never." >&2
+  exit 2
+  ;;
+esac
+
 function expand_local_path()
 {
   local path=${1}
@@ -173,6 +187,11 @@ function ssh_target()
 
 if [ "${LOCAL_ONLY}" != "true" ] && [ ${#SERVER_TARGETS[@]} -gt 0 ]; then
   build_ssh_cmd
+  if [ "${COLOR_MODE}" = "auto" ] && [ -t 1 ]; then
+    REMOTE_ARGS+=( --color always )
+  elif [ "${COLOR_MODE}" != "auto" ]; then
+    REMOTE_ARGS+=( --color "${COLOR_MODE}" )
+  fi
   overall_rc=0
   for server in "${SERVER_TARGETS[@]}"; do
     target=$(ssh_target "${server}")
@@ -194,6 +213,32 @@ function command_exists()
 {
   command -v "${1}" >/dev/null 2>&1
 }
+
+function color_enabled()
+{
+  if [ -n "${NO_COLOR:-}" ]; then
+    return 1
+  fi
+  case "${COLOR_MODE}" in
+  always) return 0 ;;
+  never) return 1 ;;
+  auto|"") [ -t 1 ] ;;
+  *)
+    echo "ERROR: invalid --color mode: ${COLOR_MODE}. Use auto, always, or never." >&2
+    exit 2
+    ;;
+  esac
+}
+
+if color_enabled; then
+  RED=$'\033[31m'
+  YELLOW=$'\033[33m'
+  RESET=$'\033[0m'
+else
+  RED=""
+  YELLOW=""
+  RESET=""
+fi
 
 function trim()
 {
@@ -311,6 +356,14 @@ function join_problems()
   fi
 }
 
+function append_report_problem()
+{
+  local severity=${1}
+  local message=${2}
+
+  PROBLEM_LINES+=( "${severity}|${message}" )
+}
+
 function short_desc()
 {
   local value=${1}
@@ -384,30 +437,47 @@ while IFS= read -r line; do
 
   problems=()
   fatal_problem=false
+  fault_reason=""
+  down_state=false
   if [ "${rc}" -ne 0 ]; then
     append_fatal_problem problems fatal_problem "mlxlink failed rc=${rc}"
   fi
   if [ "${state}" = "-" ]; then
     append_problem problems "missing State"
   elif ! echo "${state}" | grep -Eiq 'active|up'; then
-    append_fatal_problem problems fatal_problem "state=${state}"
+    if echo "${state}" | grep -Eiq '^down$'; then
+      append_problem problems "state=${state}"
+      down_state=true
+    else
+      append_fatal_problem problems fatal_problem "state=${state}"
+    fi
   fi
   if [ "${physical}" = "-" ]; then
     append_problem problems "missing Physical state"
   elif ! echo "${physical}" | grep -Eiq 'linkup|up'; then
-    append_fatal_problem problems fatal_problem "physical=${physical}"
+    if [ "${down_state}" = "true" ]; then
+      append_problem problems "physical=${physical}"
+    else
+      append_fatal_problem problems fatal_problem "physical=${physical}"
+    fi
   fi
   if [ "${speed}" = "-" ] || echo "${speed}" | grep -Eiq 'n/a|unknown|0'; then
-    append_fatal_problem problems fatal_problem "speed=${speed}"
+    if [ "${down_state}" = "true" ]; then
+      append_problem problems "speed=${speed}"
+    else
+      append_fatal_problem problems fatal_problem "speed=${speed}"
+    fi
   fi
   if [ -n "${EXPECTED_SPEED}" ] && [ "${speed}" != "${EXPECTED_SPEED}" ]; then
     append_problem problems "expected speed ${EXPECTED_SPEED}, got ${speed}"
   fi
   if grep -Eiq 'Recommendation[[:space:]]*:[[:space:]]*signal not detected|signal not detected' "${mlx_out}"; then
     append_fatal_problem problems fatal_problem "signal not detected"
+    fault_reason="signal not detected"
   fi
   if grep -Eiq 'Recommendation[[:space:]]*:[[:space:]]*Cable is unplugged|Cable is unplugged' "${mlx_out}"; then
     append_fatal_problem problems fatal_problem "cable is unplugged"
+    fault_reason="${fault_reason:+${fault_reason};}cable is unplugged"
   fi
   if grep -Eiq 'error|failed|failure|bad|unsupported|no signal|cable.*unplug|module.*bad' "${mlx_out}"; then
     append_problem problems "mlxlink output contains error/warning text"
@@ -423,7 +493,13 @@ while IFS= read -r line; do
 
   problem_text=$(join_problems problems)
   if [ "${problem_text}" != "-" ]; then
-    PROBLEM_LINES+=( "${bdf}: ${problem_text}" )
+    if [ -n "${fault_reason}" ]; then
+      append_report_problem "fatal" "${bdf}: state=${state};physical=${physical};speed=${speed};${fault_reason}"
+    elif [ "${status}" = "ERROR" ]; then
+      append_report_problem "fatal" "${bdf}: ${problem_text}"
+    else
+      append_report_problem "${status,,}" "${bdf}: ${problem_text}"
+    fi
   fi
 
   ROWS+=( "${status}|${bdf}|${netdevs}|${rdma_devs}|${state}|${physical}|${speed}|${width}|${autoneg}|${fec}|$(short_desc "${desc}")|${problem_text}" )
@@ -458,8 +534,17 @@ printf '%-6s %-14s %-18s %-12s %-10s %-14s %-8s %-6s %-8s %-12s %-44s %s\n' \
 
 for row in "${ROWS[@]}"; do
   IFS='|' read -r status bdf netdevs rdma_devs state physical speed width autoneg fec desc problem_text <<< "${row}"
-  printf '%-6s %-14s %-18s %-12s %-10s %-14s %-8s %-6s %-8s %-12s %-44s %s\n' \
-    "${status}" "${bdf}" "${netdevs}" "${rdma_devs}" "${state}" "${physical}" "${speed}" "${width}" "${autoneg}" "${fec}" "${desc}" "${problem_text}"
+  row_color=""
+  row_reset=""
+  if [ "${status}" = "ERROR" ]; then
+    row_color="${RED}"
+    row_reset="${RESET}"
+  elif [ "${status}" = "WARN" ]; then
+    row_color="${YELLOW}"
+    row_reset="${RESET}"
+  fi
+  printf '%s%-6s %-14s %-18s %-12s %-10s %-14s %-8s %-6s %-8s %-12s %-44s %s%s\n' \
+    "${row_color}" "${status}" "${bdf}" "${netdevs}" "${rdma_devs}" "${state}" "${physical}" "${speed}" "${width}" "${autoneg}" "${fec}" "${desc}" "${problem_text}" "${row_reset}"
 done
 
 echo
@@ -482,7 +567,15 @@ if [ ${#PROBLEM_LINES[@]} -eq 0 ]; then
   echo "  none"
 else
   for problem in "${PROBLEM_LINES[@]}"; do
-    echo "  - ${problem}"
+    severity=${problem%%|*}
+    message=${problem#*|}
+    if [ "${severity}" = "fatal" ]; then
+      printf '  %s%s%s\n' "${RED}" "${message}" "${RESET}"
+    elif [ "${severity}" = "warn" ]; then
+      printf '  - %s%s%s\n' "${YELLOW}" "${message}" "${RESET}"
+    else
+      echo "  - ${message}"
+    fi
   done
 fi
 
