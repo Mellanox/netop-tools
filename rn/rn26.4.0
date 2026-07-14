@@ -1,14 +1,14 @@
-Network Operator v26.4.0-beta.7 internal build release is ready.
+Network Operator v26.4.0 release is ready.
 
-Verification results: - Attached beta.7 tests results email
+Verification results: - Attached 26.4.0 test results email
 
-Network Operator beta.7 documentation - https://mellanox.github.io/network-operator-docs/index.html#
+Network Operator 26.4.0 documentation - https://mellanox.github.io/network-operator-docs/index.html#
 
-Please, take a note that internal release image is published to internal registry only:
+Please, take a note that the release image is published to the registry:
 •	Network Operator:
-o	NGC (staging): nvcr.io/nvstaging/mellanox/network-operator:v26.4.0-beta.7
+o	NGC: nvcr.io/nvidia/cloud-native/network-operator:v26.4.0
 •	Network Operator OCP bundle:
-o	nvcr.io/nvstaging/mellanox/network-operator-bundle:v26.4.0-beta.7
+o	nvcr.io/nvidia/cloud-native/network-operator-bundle:v26.4.0
 
 Bug Fixes:
 •	NIC configuration operator - Fix: FW reset on GB300 leads to node reboot and may prevent other devices configuration #358
