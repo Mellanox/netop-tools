@@ -489,6 +489,8 @@ while IFS= read -r line; do
   elif ! echo "${physical}" | grep -Eiq 'linkup|up'; then
     if [ "${down_state}" = "true" ]; then
       append_problem problems "physical=${physical}"
+    elif echo "${state}" | grep -Eiq 'active|up' && ! speed_is_invalid "${speed}"; then
+      append_problem problems "physical=${physical}"
     else
       append_fatal_problem problems fatal_problem "physical=${physical}"
     fi
