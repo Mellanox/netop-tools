@@ -1,17 +1,17 @@
 #!/bin/bash
 #
-# Check physical NVIDIA/Mellanox CX8 and BF3 link state on a worker node.
+# Check physical NVIDIA/Mellanox CX8 and BlueField-3 ConnectX-7 link state on a worker node.
 #
 # Discovery intentionally starts from:
 #   lspci | grep Mel | grep -v Virt
-# and then filters to physical network-link devices matching CX8/ConnectX-8 or
-# BF3/BlueField-3. Each matching PCI BDF is checked with:
+# and then filters to physical network-link devices matching CX8/ConnectX-8,
+# BlueField-3/BF3, or ConnectX-7/CX7. Each matching PCI BDF is checked with:
 #   mlxlink -d <PCIeBDF>
 #
 
 set -uo pipefail
 
-INCLUDE_REGEX=${LINK_INCLUDE_REGEX:-"CX8|ConnectX-8|BlueField-3|BF3"}
+INCLUDE_REGEX=${LINK_INCLUDE_REGEX:-"CX8|ConnectX-8|BlueField-3|BF3|ConnectX-7|CX7"}
 EXPECTED_SPEED=${EXPECTED_SPEED:-}
 DETAILS=false
 ALL_MELLANOX=false
@@ -30,18 +30,19 @@ function usage()
   cat <<EOF
 Usage: $0 [options] [server-ip-or-host ...]
 
-Checks worker-node physical NVIDIA/Mellanox CX8 and BF3 links using lspci and
-mlxlink, then prints a summary report with link state, speed, and detected
-problems. With server arguments, SSH is used to run the same check remotely on
-each worker; the script does not need to be installed on the remote worker.
+Checks worker-node physical NVIDIA/Mellanox CX8 and BlueField-3 ConnectX-7
+links using lspci and mlxlink, then prints a summary report with link state,
+speed, and detected problems. With server arguments, SSH is used to run the same
+check remotely on each worker; the script does not need to be installed on the
+remote worker.
 
 Options:
   --expected-speed SPEED  Flag links that do not report SPEED, for example 400G.
                           Can also be set with EXPECTED_SPEED.
   --include-regex REGEX   Device description regex. Default:
-                          CX8|ConnectX-8|BlueField-3|BF3
+                          CX8|ConnectX-8|BlueField-3|BF3|ConnectX-7|CX7
   --all-mellanox          Check all non-virtual Mellanox/NVIDIA network devices,
-                          not only CX8/BF3 matches.
+                          not only CX8/BF3/CX7 matches.
   --details               Print raw mlxlink output after the summary.
   --color MODE            Color mode: auto, always, or never. Default: auto.
   --no-domain             Use lspci without -D. Default prefers lspci -D.
@@ -58,7 +59,7 @@ Examples:
   $0                                  # check local worker
   $0 10.185.179.17 10.185.180.17      # check remote workers
   $0 --ssh-user root --expected-speed 400G 10.185.179.17
-  LINK_INCLUDE_REGEX='CX8|BlueField-3' $0 --details
+  LINK_INCLUDE_REGEX='CX8|BlueField-3|ConnectX-7' $0 --details
 EOF
 }
 
@@ -550,9 +551,9 @@ fi
 echo
 
 if [ ${#ROWS[@]} -eq 0 ]; then
-  echo "SUMMARY: ERROR no matching physical CX8/BF3 Mellanox network links found"
+  echo "SUMMARY: ERROR no matching physical CX8/BF3/CX7 Mellanox network links found"
   echo
-  echo "Physical Mellanox devices discovered before CX8/BF3 filtering:"
+  echo "Physical Mellanox devices discovered before CX8/BF3/CX7 filtering:"
   if [ -s "${LSPCI_FILE}" ]; then
     sed 's/^/  /' "${LSPCI_FILE}"
   else
