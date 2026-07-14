@@ -14,6 +14,7 @@ set -uo pipefail
 INCLUDE_REGEX=${LINK_INCLUDE_REGEX:-"CX8|ConnectX-8|BlueField-3|BF3|ConnectX-7|CX7"}
 EXPECTED_SPEED=${EXPECTED_SPEED:-}
 DETAILS=false
+SUMMARY_ONLY=false
 ALL_MELLANOX=false
 USE_DOMAIN=true
 USE_SUDO=true
@@ -46,6 +47,8 @@ Options:
   --all-mellanox          Check all non-virtual Mellanox/NVIDIA network devices,
                           not only CX8/BF3/CX7 matches.
   --details               Print raw mlxlink output after the summary.
+  --summary               Print only summary counts and detected WARN/ERROR
+                          entries; suppress the per-link table and raw details.
   --color MODE            Color mode: auto, always, or never. Default: auto.
   --report-dir DIR        Write a timestamped plain-text report in DIR.
                           Can also be set with REPORT_DIR.
@@ -93,6 +96,11 @@ while [ $# -gt 0 ]; do
   --details)
     DETAILS=true
     REMOTE_ARGS+=( --details )
+    shift
+    ;;
+  --summary)
+    SUMMARY_ONLY=true
+    REMOTE_ARGS+=( --summary )
     shift
     ;;
   --color)
@@ -582,49 +590,36 @@ while IFS= read -r line; do
   ROWS+=( "${status}|${bdf}|${netdevs}|${rdma_devs}|${state}|${physical}|${speed}|${width}|${autoneg}|${fec}|$(short_desc "${desc}")|${problem_text}" )
 done < "${LSPCI_FILE}"
 
-echo "Worker Mellanox physical link report"
+if [ "${SUMMARY_ONLY}" = "true" ]; then
+  echo "Worker Mellanox physical link summary"
+else
+  echo "Worker Mellanox physical link report"
+fi
 echo "host: ${HOSTNAME}"
 echo "time: ${TIMESTAMP}"
-echo "discovery: lspci $([ "${USE_DOMAIN}" = "true" ] && echo "-D " || true)| grep -i Mel | grep -vi Virt"
-echo "device filter: $([ "${ALL_MELLANOX}" = "true" ] && echo "all non-virtual Mellanox/NVIDIA network devices" || echo "${INCLUDE_REGEX}")"
-if [ -n "${EXPECTED_SPEED}" ]; then
-  echo "expected speed: ${EXPECTED_SPEED}"
+if [ "${SUMMARY_ONLY}" != "true" ]; then
+  echo "discovery: lspci $([ "${USE_DOMAIN}" = "true" ] && echo "-D " || true)| grep -i Mel | grep -vi Virt"
+  echo "device filter: $([ "${ALL_MELLANOX}" = "true" ] && echo "all non-virtual Mellanox/NVIDIA network devices" || echo "${INCLUDE_REGEX}")"
+  if [ -n "${EXPECTED_SPEED}" ]; then
+    echo "expected speed: ${EXPECTED_SPEED}"
+  fi
 fi
 echo
 
 if [ ${#ROWS[@]} -eq 0 ]; then
   echo "SUMMARY: ERROR no matching physical CX8/BF3/CX7 Mellanox network links found"
-  echo
-  echo "Physical Mellanox devices discovered before CX8/BF3/CX7 filtering:"
-  if [ -s "${LSPCI_FILE}" ]; then
-    sed 's/^/  /' "${LSPCI_FILE}"
-  else
-    echo "  none"
+  if [ "${SUMMARY_ONLY}" != "true" ]; then
+    echo
+    echo "Physical Mellanox devices discovered before CX8/BF3/CX7 filtering:"
+    if [ -s "${LSPCI_FILE}" ]; then
+      sed 's/^/  /' "${LSPCI_FILE}"
+    else
+      echo "  none"
+    fi
   fi
   exit 1
 fi
 
-printf '%-6s %-14s %-18s %-12s %-10s %-14s %-8s %-6s %-8s %-12s %-44s %s\n' \
-  "STATUS" "BDF" "NETDEV" "RDMA" "STATE" "PHYSICAL" "SPEED" "WIDTH" "AUTONEG" "FEC" "DEVICE" "PROBLEMS"
-printf '%-6s %-14s %-18s %-12s %-10s %-14s %-8s %-6s %-8s %-12s %-44s %s\n' \
-  "------" "---" "------" "----" "-----" "--------" "-----" "-----" "-------" "---" "------" "--------"
-
-for row in "${ROWS[@]}"; do
-  IFS='|' read -r status bdf netdevs rdma_devs state physical speed width autoneg fec desc problem_text <<< "${row}"
-  row_color=""
-  row_reset=""
-  if [ "${status}" = "ERROR" ]; then
-    row_color="${RED}"
-    row_reset="${RESET}"
-  elif [ "${status}" = "WARN" ]; then
-    row_color="${YELLOW}"
-    row_reset="${RESET}"
-  fi
-  printf '%s%-6s%s %-14s %s%-18s %-12s %-10s %-14s %-8s %-6s %-8s %-12s %-44s %s%s\n' \
-    "${row_color}" "${status}" "${row_reset}" "${bdf}" "${row_color}" "${netdevs}" "${rdma_devs}" "${state}" "${physical}" "${speed}" "${width}" "${autoneg}" "${fec}" "${desc}" "${problem_text}" "${row_reset}"
-done
-
-echo
 ok_count=0
 warn_count=0
 error_count=0
@@ -636,6 +631,30 @@ for row in "${ROWS[@]}"; do
   ERROR) error_count=$((error_count + 1)) ;;
   esac
 done
+
+if [ "${SUMMARY_ONLY}" != "true" ]; then
+  printf '%-6s %-14s %-18s %-12s %-10s %-14s %-8s %-6s %-8s %-12s %-44s %s\n' \
+    "STATUS" "BDF" "NETDEV" "RDMA" "STATE" "PHYSICAL" "SPEED" "WIDTH" "AUTONEG" "FEC" "DEVICE" "PROBLEMS"
+  printf '%-6s %-14s %-18s %-12s %-10s %-14s %-8s %-6s %-8s %-12s %-44s %s\n' \
+    "------" "---" "------" "----" "-----" "--------" "-----" "-----" "-------" "---" "------" "--------"
+
+  for row in "${ROWS[@]}"; do
+    IFS='|' read -r status bdf netdevs rdma_devs state physical speed width autoneg fec desc problem_text <<< "${row}"
+    row_color=""
+    row_reset=""
+    if [ "${status}" = "ERROR" ]; then
+      row_color="${RED}"
+      row_reset="${RESET}"
+    elif [ "${status}" = "WARN" ]; then
+      row_color="${YELLOW}"
+      row_reset="${RESET}"
+    fi
+    printf '%s%-6s%s %-14s %s%-18s %-12s %-10s %-14s %-8s %-6s %-8s %-12s %-44s %s%s\n' \
+      "${row_color}" "${status}" "${row_reset}" "${bdf}" "${row_color}" "${netdevs}" "${rdma_devs}" "${state}" "${physical}" "${speed}" "${width}" "${autoneg}" "${fec}" "${desc}" "${problem_text}" "${row_reset}"
+  done
+  echo
+fi
+
 echo "SUMMARY: total=${#ROWS[@]} ok=${ok_count} warn=${warn_count} error=${error_count}"
 
 echo
@@ -656,7 +675,7 @@ else
   done
 fi
 
-if [ "${DETAILS}" = "true" ]; then
+if [ "${DETAILS}" = "true" ] && [ "${SUMMARY_ONLY}" != "true" ]; then
   echo
   echo "RAW MLXLINK OUTPUT:"
   for file in "${DETAIL_FILES[@]}"; do
