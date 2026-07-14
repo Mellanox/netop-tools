@@ -457,6 +457,47 @@ function speed_is_invalid()
   esac
 }
 
+function friendly_physical_state()
+{
+  local value=${1:-}
+  local state_value=${2:-}
+
+  if echo "${state_value}" | grep -Eiq 'signal detect'; then
+    printf 'NoSignal'
+    return
+  fi
+  case "${value}" in
+  ETH_AN_FSM_ENABLE)
+    printf 'LinkTraining'
+    ;;
+  *)
+    printf '%s' "${value}"
+    ;;
+  esac
+}
+
+function summary_condition()
+{
+  local state_value=${1:-}
+  local physical_value=${2:-}
+  local speed_value=${3:-}
+  local fault_value=${4:-}
+
+  if echo "${fault_value}" | grep -Eiq 'signal not detected' ||
+     echo "${state_value}" | grep -Eiq 'signal detect' ||
+     echo "${physical_value}" | grep -Eiq '^NoSignal$'; then
+    printf 'Down,NoSignal'
+  elif echo "${fault_value}" | grep -Eiq 'cable is unplugged'; then
+    printf 'Down,CableUnplugged'
+  elif echo "${state_value}" | grep -Eiq '^down$'; then
+    printf 'Down,%s' "${physical_value}"
+  elif speed_is_invalid "${speed_value}"; then
+    printf '%s,InvalidSpeed' "${state_value}"
+  else
+    printf '%s,%s' "${state_value}" "${physical_value}"
+  fi
+}
+
 function build_mlxlink_cmd()
 {
   MLXLINK_CMD=(mlxlink)
@@ -517,6 +558,7 @@ while IFS= read -r line; do
   [ -n "${width}" ] || width="-"
   [ -n "${autoneg}" ] || autoneg="-"
   [ -n "${fec}" ] || fec="-"
+  physical_report=$(friendly_physical_state "${physical}" "${state}")
 
   problems=()
   fatal_problem=false
@@ -540,14 +582,14 @@ while IFS= read -r line; do
   elif ! echo "${physical}" | grep -Eiq 'linkup|up'; then
     if [ "${down_state}" = "true" ]; then
       if echo "${physical}" | grep -Eiq '^disabled$'; then
-        append_fatal_problem problems fatal_problem "physical=${physical}"
+        append_fatal_problem problems fatal_problem "physical=${physical_report}"
       else
-        append_problem problems "physical=${physical}"
+        append_problem problems "physical=${physical_report}"
       fi
     elif echo "${state}" | grep -Eiq 'active|up' && ! speed_is_invalid "${speed}"; then
       :
     else
-      append_fatal_problem problems fatal_problem "physical=${physical}"
+      append_fatal_problem problems fatal_problem "physical=${physical_report}"
     fi
   fi
   if speed_is_invalid "${speed}"; then
@@ -563,6 +605,7 @@ while IFS= read -r line; do
   if grep -Eiq 'Recommendation[[:space:]]*:[[:space:]]*signal not detected|signal not detected' "${mlx_out}"; then
     append_fatal_problem problems fatal_problem "signal not detected"
     fault_reason="signal not detected"
+    physical_report="NoSignal"
   fi
   if grep -Eiq 'Recommendation[[:space:]]*:[[:space:]]*Cable is unplugged|Cable is unplugged' "${mlx_out}"; then
     append_fatal_problem problems fatal_problem "cable is unplugged"
@@ -581,17 +624,18 @@ while IFS= read -r line; do
   fi
 
   problem_text=$(join_problems problems)
+  condition=$(summary_condition "${state}" "${physical_report}" "${speed}" "${fault_reason}")
   if [ "${problem_text}" != "-" ]; then
     if [ -n "${fault_reason}" ]; then
-      append_report_problem "fatal" "${bdf}: state=${state};physical=${physical};speed=${speed};${fault_reason}"
+      append_report_problem "fatal" "${bdf}: ${condition}|state=${state};physical=${physical_report};speed=${speed};${fault_reason}"
     elif [ "${status}" = "ERROR" ]; then
-      append_report_problem "fatal" "${bdf}: ${problem_text}"
+      append_report_problem "fatal" "${bdf}: ${condition}|${problem_text}"
     else
-      append_report_problem "${status,,}" "${bdf}: ${problem_text}"
+      append_report_problem "${status,,}" "${bdf}: ${condition}|${problem_text}"
     fi
   fi
 
-  ROWS+=( "${status}|${bdf}|${netdevs}|${rdma_devs}|${state}|${physical}|${speed}|${width}|${autoneg}|${fec}|$(short_desc "${desc}")|${problem_text}" )
+  ROWS+=( "${status}|${bdf}|${netdevs}|${rdma_devs}|${state}|${physical_report}|${speed}|${width}|${autoneg}|${fec}|$(short_desc "${desc}")|${problem_text}" )
 done < "${LSPCI_FILE}"
 
 if [ "${SUMMARY_ONLY}" = "true" ]; then
@@ -672,9 +716,15 @@ for problem in "${PROBLEM_LINES[@]}"; do
   severity=${problem%%|*}
   message=${problem#*|}
   if [ "${severity}" = "fatal" ]; then
+    if [ "${SUMMARY_ONLY}" = "true" ]; then
+      message=${message%%|*}
+    else
+      message=${message/|/;}
+    fi
     print_problem_message "  " "${RED}" "${message}"
     printed_problem=true
   elif [ "${severity}" = "warn" ] && [ "${SUMMARY_ONLY}" != "true" ]; then
+    message=${message/|/;}
     print_problem_message "  - " "${YELLOW}" "${message}"
     printed_problem=true
   elif [ "${SUMMARY_ONLY}" != "true" ]; then
