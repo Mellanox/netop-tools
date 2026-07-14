@@ -1,0 +1,24 @@
+Network Operator v26.4.0-beta.7 internal build release is ready.
+
+Verification results: - Attached beta.7 tests results email
+
+Network Operator beta.7 documentation - https://mellanox.github.io/network-operator-docs/index.html#
+
+Please, take a note that internal release image is published to internal registry only:
+•	Network Operator:
+o	NGC (staging): nvcr.io/nvstaging/mellanox/network-operator:v26.4.0-beta.7
+•	Network Operator OCP bundle:
+o	nvcr.io/nvstaging/mellanox/network-operator-bundle:v26.4.0-beta.7
+
+Bug Fixes:
+•	NIC configuration operator - Fix: FW reset on GB300 leads to node reboot and may prevent other devices configuration #358
+•	SRIOV Operator/Spectrum-x Operator - [SPC-X] Fix: Add HW steering mode in SRIOVNetworkNodePolicy devlink params #181, #215
+•	Spectrum-x Operator - Fix: Setting SRIOVNetworkPoolConfig maxUnavailable=1 to reduce impact of parallel draining all cluster nodes in with E/W NICs #211
+•	Spectrum-x Operator - Fix: Set OVS bridge datatype to netdev #212
+•	Spectrum-x Operator - Fix: Add rdmaDeviceName according to railTopology name to avoid setting same rdma device name on host #219
+•	DOCA OFED - Fix: DTK failing over missing DMKS packages. Make --without-dkms conditional on USE_DKMS #319
+
+netop-tools updates:
+•	Add L3 switch fabric support for routed SR-IOV pod networks using nv-ipam CIDRPool.
+•	Add ops/debug-switch-fabric.sh L3 gateway generation for switch-<switch>-<port>-L3.yaml artifacts.
+•	Add ops/apply-switch-fabric.sh to generate dry-run switch gateway patches from switch config, global_ops_user.cfg, live CIDRPool allocations, and LLDP-discovered worker PF ports; --apply copies patches to switches and runs nv config patch/diff/apply.
