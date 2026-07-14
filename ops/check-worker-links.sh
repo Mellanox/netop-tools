@@ -441,6 +441,21 @@ function short_desc()
   fi
 }
 
+function device_family()
+{
+  local value=${1:-}
+
+  if echo "${value}" | grep -Eiq 'BlueField-3|BF3|MT43244'; then
+    printf 'BF3'
+  elif echo "${value}" | grep -Eiq 'CX8|ConnectX-8'; then
+    printf 'CX8'
+  elif echo "${value}" | grep -Eiq 'CX7|ConnectX-7'; then
+    printf 'CX7'
+  else
+    printf 'Mellanox'
+  fi
+}
+
 function speed_is_invalid()
 {
   local value
@@ -537,6 +552,8 @@ while IFS= read -r line; do
   bdf_raw=${line%% *}
   bdf=$(normalize_bdf "${bdf_raw}")
   desc=${line#* }
+  dev_family=$(device_family "${desc}")
+  problem_id="${dev_family} ${bdf}"
   netdevs=$(sysfs_csv "${bdf}" net)
   rdma_devs=$(sysfs_csv "${bdf}" infiniband)
   mlx_out="${WORKDIR}/mlxlink-${bdf//[:.]/_}.txt"
@@ -627,11 +644,11 @@ while IFS= read -r line; do
   condition=$(summary_condition "${state}" "${physical_report}" "${speed}" "${fault_reason}")
   if [ "${problem_text}" != "-" ]; then
     if [ -n "${fault_reason}" ]; then
-      append_report_problem "fatal" "${bdf}: ${condition}|state=${state};physical=${physical_report};speed=${speed};${fault_reason}"
+      append_report_problem "fatal" "${problem_id}: ${condition}|state=${state};physical=${physical_report};speed=${speed};${fault_reason}"
     elif [ "${status}" = "ERROR" ]; then
-      append_report_problem "fatal" "${bdf}: ${condition}|${problem_text}"
+      append_report_problem "fatal" "${problem_id}: ${condition}|${problem_text}"
     else
-      append_report_problem "${status,,}" "${bdf}: ${condition}|${problem_text}"
+      append_report_problem "${status,,}" "${problem_id}: ${condition}|${problem_text}"
     fi
   fi
 
