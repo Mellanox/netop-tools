@@ -457,6 +457,17 @@ function speed_is_invalid()
   esac
 }
 
+function mlxlink_reports_no_issue()
+{
+  local status_opcode=${1:-}
+  local recommendation=${2:-}
+
+  status_opcode=$(trim "${status_opcode}")
+  recommendation=$(trim "${recommendation}")
+
+  [ "${status_opcode}" = "0" ] && echo "${recommendation}" | grep -Eiq '^No issue was observed$'
+}
+
 function build_mlxlink_cmd()
 {
   MLXLINK_CMD=(mlxlink)
@@ -510,6 +521,8 @@ while IFS= read -r line; do
   width=$(trim "$(mlx_field "Width" "${mlx_out}")")
   autoneg=$(trim "$(mlx_field "Auto Negotiation" "${mlx_out}")")
   fec=$(trim "$(mlx_field "FEC" "${mlx_out}")")
+  status_opcode=$(trim "$(mlx_field "Status Opcode" "${mlx_out}")")
+  recommendation=$(trim "$(mlx_field "Recommendation" "${mlx_out}")")
 
   [ -n "${state}" ] || state="-"
   [ -n "${physical}" ] || physical="-"
@@ -517,6 +530,8 @@ while IFS= read -r line; do
   [ -n "${width}" ] || width="-"
   [ -n "${autoneg}" ] || autoneg="-"
   [ -n "${fec}" ] || fec="-"
+  [ -n "${status_opcode}" ] || status_opcode="-"
+  [ -n "${recommendation}" ] || recommendation="-"
 
   problems=()
   fatal_problem=false
@@ -540,6 +555,8 @@ while IFS= read -r line; do
   elif ! echo "${physical}" | grep -Eiq 'linkup|up'; then
     if [ "${down_state}" = "true" ]; then
       append_problem problems "physical=${physical}"
+    elif echo "${state}" | grep -Eiq 'active|up' && ! speed_is_invalid "${speed}" && mlxlink_reports_no_issue "${status_opcode}" "${recommendation}"; then
+      :
     elif echo "${state}" | grep -Eiq 'active|up' && ! speed_is_invalid "${speed}"; then
       append_problem problems "physical=${physical}"
     else
