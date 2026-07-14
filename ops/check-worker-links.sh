@@ -26,6 +26,7 @@ SSH_USER=${SSH_USER:-}
 SSH_PORT=${SSH_PORT:-}
 SSH_IDENTITY_FILE=${SSH_IDENTITY_FILE:-}
 SSH_OPTS=${SSH_OPTS:-}
+REPORT_TARGET=${NETOP_WORKER_LINK_TARGET:-}
 SERVER_TARGETS=()
 
 function usage()
@@ -246,14 +247,14 @@ if [ "${LOCAL_ONLY}" != "true" ] && [ ${#SERVER_TARGETS[@]} -gt 0 ]; then
   overall_rc=0
   for server in "${SERVER_TARGETS[@]}"; do
     target=$(ssh_target "${server}")
+    report_target=${target#*@}
     echo "================================================================================"
     echo "Remote worker link check: ${target}"
     echo "================================================================================"
-    "${SSH_CMD[@]}" "${target}" "bash -s -- --local-only ${REMOTE_ARGS[*]@Q}" < "$0"
+    "${SSH_CMD[@]}" "${target}" "NETOP_WORKER_LINK_TARGET=${report_target@Q} bash -s -- --local-only ${REMOTE_ARGS[*]@Q}" < "$0"
     rc=$?
     if [ "${rc}" -ne 0 ]; then
       overall_rc=${rc}
-      echo "ERROR: remote check failed for ${target} rc=${rc}" >&2
     fi
     echo
   done
@@ -662,7 +663,11 @@ if [ "${SUMMARY_ONLY}" = "true" ]; then
 else
   echo "Worker Mellanox physical link report"
 fi
-echo "host: ${HOSTNAME}"
+if [ -n "${REPORT_TARGET}" ]; then
+  echo "host: ${HOSTNAME} ${REPORT_TARGET}"
+else
+  echo "host: ${HOSTNAME}"
+fi
 echo "time: ${TIMESTAMP}"
 if [ "${SUMMARY_ONLY}" != "true" ]; then
   echo "discovery: lspci $([ "${USE_DOMAIN}" = "true" ] && echo "-D " || true)| grep -i Mel | grep -vi Virt"
