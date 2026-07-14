@@ -240,6 +240,22 @@ else
   RESET=""
 fi
 
+function print_problem_message()
+{
+  local lead=${1}
+  local color=${2}
+  local message=${3}
+  local prefix=""
+  local detail=${message}
+
+  if [[ "${message}" == *": "* ]]; then
+    prefix="${message%%: *}: "
+    detail="${message#*: }"
+  fi
+
+  printf '%s%s%s%s%s\n' "${lead}" "${prefix}" "${color}" "${detail}" "${RESET}"
+}
+
 function trim()
 {
   local value=${1:-}
@@ -559,8 +575,8 @@ for row in "${ROWS[@]}"; do
     row_color="${YELLOW}"
     row_reset="${RESET}"
   fi
-  printf '%s%-6s %-14s %-18s %-12s %-10s %-14s %-8s %-6s %-8s %-12s %-44s %s%s\n' \
-    "${row_color}" "${status}" "${bdf}" "${netdevs}" "${rdma_devs}" "${state}" "${physical}" "${speed}" "${width}" "${autoneg}" "${fec}" "${desc}" "${problem_text}" "${row_reset}"
+  printf '%s%-6s%s %-14s %s%-18s %-12s %-10s %-14s %-8s %-6s %-8s %-12s %-44s %s%s\n' \
+    "${row_color}" "${status}" "${row_reset}" "${bdf}" "${row_color}" "${netdevs}" "${rdma_devs}" "${state}" "${physical}" "${speed}" "${width}" "${autoneg}" "${fec}" "${desc}" "${problem_text}" "${row_reset}"
 done
 
 echo
@@ -586,9 +602,9 @@ else
     severity=${problem%%|*}
     message=${problem#*|}
     if [ "${severity}" = "fatal" ]; then
-      printf '  %s%s%s\n' "${RED}" "${message}" "${RESET}"
+      print_problem_message "  " "${RED}" "${message}"
     elif [ "${severity}" = "warn" ]; then
-      printf '  - %s%s%s\n' "${YELLOW}" "${message}" "${RESET}"
+      print_problem_message "  - " "${YELLOW}" "${message}"
     else
       echo "  - ${message}"
     fi
