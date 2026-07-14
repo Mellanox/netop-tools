@@ -47,8 +47,8 @@ Options:
   --all-mellanox          Check all non-virtual Mellanox/NVIDIA network devices,
                           not only CX8/BF3/CX7 matches.
   --details               Print raw mlxlink output after the summary.
-  --summary               Print only summary counts and detected WARN/ERROR
-                          entries; suppress the per-link table and raw details.
+  --summary               Print only summary counts and detected ERROR entries;
+                          suppress warnings, per-link table, and raw details.
   --color MODE            Color mode: auto, always, or never. Default: auto.
   --report-dir DIR        Write a timestamped plain-text report in DIR.
                           Can also be set with REPORT_DIR.
@@ -457,17 +457,6 @@ function speed_is_invalid()
   esac
 }
 
-function mlxlink_reports_no_issue()
-{
-  local status_opcode=${1:-}
-  local recommendation=${2:-}
-
-  status_opcode=$(trim "${status_opcode}")
-  recommendation=$(trim "${recommendation}")
-
-  [ "${status_opcode}" = "0" ] && echo "${recommendation}" | grep -Eiq '^No issue was observed$'
-}
-
 function build_mlxlink_cmd()
 {
   MLXLINK_CMD=(mlxlink)
@@ -521,8 +510,6 @@ while IFS= read -r line; do
   width=$(trim "$(mlx_field "Width" "${mlx_out}")")
   autoneg=$(trim "$(mlx_field "Auto Negotiation" "${mlx_out}")")
   fec=$(trim "$(mlx_field "FEC" "${mlx_out}")")
-  status_opcode=$(trim "$(mlx_field "Status Opcode" "${mlx_out}")")
-  recommendation=$(trim "$(mlx_field "Recommendation" "${mlx_out}")")
 
   [ -n "${state}" ] || state="-"
   [ -n "${physical}" ] || physical="-"
@@ -530,8 +517,6 @@ while IFS= read -r line; do
   [ -n "${width}" ] || width="-"
   [ -n "${autoneg}" ] || autoneg="-"
   [ -n "${fec}" ] || fec="-"
-  [ -n "${status_opcode}" ] || status_opcode="-"
-  [ -n "${recommendation}" ] || recommendation="-"
 
   problems=()
   fatal_problem=false
@@ -554,11 +539,13 @@ while IFS= read -r line; do
     append_problem problems "missing Physical state"
   elif ! echo "${physical}" | grep -Eiq 'linkup|up'; then
     if [ "${down_state}" = "true" ]; then
-      append_problem problems "physical=${physical}"
-    elif echo "${state}" | grep -Eiq 'active|up' && ! speed_is_invalid "${speed}" && mlxlink_reports_no_issue "${status_opcode}" "${recommendation}"; then
-      :
+      if echo "${physical}" | grep -Eiq '^disabled$'; then
+        append_fatal_problem problems fatal_problem "physical=${physical}"
+      else
+        append_problem problems "physical=${physical}"
+      fi
     elif echo "${state}" | grep -Eiq 'active|up' && ! speed_is_invalid "${speed}"; then
-      append_problem problems "physical=${physical}"
+      :
     else
       append_fatal_problem problems fatal_problem "physical=${physical}"
     fi
@@ -675,21 +662,28 @@ fi
 echo "SUMMARY: total=${#ROWS[@]} ok=${ok_count} warn=${warn_count} error=${error_count}"
 
 echo
-echo "DETECTED PROBLEMS:"
-if [ ${#PROBLEM_LINES[@]} -eq 0 ]; then
-  echo "  none"
+if [ "${SUMMARY_ONLY}" = "true" ]; then
+  echo "DETECTED ERRORS:"
 else
-  for problem in "${PROBLEM_LINES[@]}"; do
-    severity=${problem%%|*}
-    message=${problem#*|}
-    if [ "${severity}" = "fatal" ]; then
-      print_problem_message "  " "${RED}" "${message}"
-    elif [ "${severity}" = "warn" ]; then
-      print_problem_message "  - " "${YELLOW}" "${message}"
-    else
-      echo "  - ${message}"
-    fi
-  done
+  echo "DETECTED PROBLEMS:"
+fi
+printed_problem=false
+for problem in "${PROBLEM_LINES[@]}"; do
+  severity=${problem%%|*}
+  message=${problem#*|}
+  if [ "${severity}" = "fatal" ]; then
+    print_problem_message "  " "${RED}" "${message}"
+    printed_problem=true
+  elif [ "${severity}" = "warn" ] && [ "${SUMMARY_ONLY}" != "true" ]; then
+    print_problem_message "  - " "${YELLOW}" "${message}"
+    printed_problem=true
+  elif [ "${SUMMARY_ONLY}" != "true" ]; then
+    echo "  - ${message}"
+    printed_problem=true
+  fi
+done
+if [ "${printed_problem}" = "false" ]; then
+  echo "  none"
 fi
 
 if [ "${DETAILS}" = "true" ] && [ "${SUMMARY_ONLY}" != "true" ]; then
