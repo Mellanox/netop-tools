@@ -506,6 +506,8 @@ function summary_condition()
     printf 'Down,CableUnplugged'
   elif echo "${state_value}" | grep -Eiq '^down$'; then
     printf 'Down,%s' "${physical_value}"
+  elif echo "${state_value}" | grep -Eiq '^n/a$' && speed_is_invalid "${speed_value}"; then
+    printf 'Down,NoSpeedSelected'
   elif speed_is_invalid "${speed_value}"; then
     printf '%s,InvalidSpeed' "${state_value}"
   else
