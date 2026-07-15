@@ -33,7 +33,7 @@ RDMASHAREDMODE="false"
 #
 # ens6f0np0 operating CX8 E-W (4 VFs)
 # ens10f1np1 operating BF3 N-S (shared RDMA Device) (IPPool 192.168.100.X, exclude 240-254)
-NETOP_NETLIST( a,,,0000:65:00.1 b,,,0000:E4:00.1 )
+NETOP_NETLIST=( a,,,0000:65:00.1 b,,,0000:E4:00.1 )
 #
 #NETOP_NODEPOOLS=( "NETOP_NETLIST_05" "NETOP_NETLIST_16" )
 #NETOP_NODESELECTOR_05="netop.nvidia.com/pool"
