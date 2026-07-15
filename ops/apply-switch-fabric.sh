@@ -740,6 +740,8 @@ for NETPATH in /sys/bus/pci/devices/${PF}/net/*; do
     fi
   fi
 done
+printf 'PF=%q\n' "${PF}"
+printf 'PF_IFACE=%q\n' "${PF_IFACES}"
 echo "ERROR=no-lldp"
 REMOTE
 
