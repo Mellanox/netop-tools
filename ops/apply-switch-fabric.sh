@@ -709,7 +709,6 @@ function discover_lldp_for_device()
 set +e
 PF=""
 IFACE_HINT=""
-PF_IFACES=""
 if [ -e "/sys/bus/pci/devices/${DEVICE}" ]; then
   PF="${DEVICE}"
   if [ -e "/sys/bus/pci/devices/${DEVICE}/physfn" ]; then
@@ -728,7 +727,6 @@ for NETPATH in /sys/bus/pci/devices/${PF}/net/*; do
   if [ -n "${IFACE_HINT}" ] && [ "${IFACE}" != "${IFACE_HINT}" ]; then
     continue
   fi
-  PF_IFACES="${PF_IFACES:+${PF_IFACES},}${IFACE}"
   if command -v lldpcli >/dev/null 2>&1; then
     KV=$(lldpcli -f keyvalue show neighbors ports "${IFACE}" details 2>/dev/null || \
       lldpcli -f keyvalue show neighbors ports "${IFACE}" 2>/dev/null || true)
@@ -1152,7 +1150,7 @@ for record_idx in "${!CRD_RECORD_POOL_NAMES[@]}"; do
     # shellcheck disable=SC1090
     eval "${lldp_env}"
     if [ -n "${ERROR:-}" ] || [ -z "${SWITCH_PORT:-}" ]; then
-      echo "WARN: LLDP discovery failed for ${node}/${device}: ${ERROR:-missing switch port} pf=${PF:-unknown} iface=${PF_IFACE:-unknown}" | tee -a "${WARNINGS}" >&2
+      echo "WARN: LLDP discovery failed for ${node}/${device}: ${ERROR:-missing switch port}" | tee -a "${WARNINGS}" >&2
       continue
     fi
 
