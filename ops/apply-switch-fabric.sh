@@ -21,7 +21,8 @@ if [ -z "${DEFAULT_CONFIG}" ]; then
 fi
 
 CONFIG_FILE="${DEFAULT_CONFIG}"
-GLOBAL_CONFIG="${GLOBAL_OPS_USER:-}"
+GLOBAL_CONFIG=""
+CRD_DIR="${CRD_DIR:-}"
 REPORT_DIR="${REPORT_DIR:-/tmp/netop-switch-fabric-apply-$(date +%Y%m%d_%H%M%S)}"
 APPLY=false
 FORCE=false
@@ -31,32 +32,33 @@ NODE_FILTER=""
 function usage()
 {
   cat <<EOF
-Usage: $0 [--config FILE] [--global-config FILE] [--output-dir DIR] [--apply]
-          [--force] [--network-indexes a,b] [--nodes node1,node2]
+Usage: $0 [--config FILE] [--crd-dir DIR] [--output-dir DIR] [--apply]
+          [--network-indexes a,b] [--nodes node1,node2]
 
 Generate switch-<switch>-<port>-L3.yaml patches for nv-ipam CIDRPool routed
 SR-IOV networks. The script uses:
   - switch YAML for switch/worker SSH credentials and optional defaults
-  - global_ops_user.cfg/global_ops.cfg for node pools, device lists, CIDRPools
+  - rendered CRDs from the active usecase directory
   - kubectl CIDRPool status for actual per-node gateway allocations
   - worker SSH + lldpcli to map each PF to a switch and port
 
 Options:
   --config FILE          Switch fabric YAML. Default: SWITCH_CONFIG, ./config.yaml,
                          or ops/debug-switch-fabric.yaml.
-  --global-config FILE   global_ops_user.cfg to source through global_ops.cfg.
-                         Default: GLOBAL_OPS_USER or ./global_ops_user.cfg.
+  --crd-dir DIR          Directory containing rendered Network Operator CRDs.
+                         Default: CRD_DIR, ./uc, or usecase/sriovnet_rdma.
+  --global-config FILE   Accepted for compatibility but not sourced.
   --output-dir DIR       Directory for generated patches and logs.
   --apply                Copy patches to switches and run nv config patch/diff/apply.
                          Default is dry-run.
-  --force                Continue when NETOP_SWITCH_PORT_MODE is not l3.
+  --force                Accepted for compatibility; no effect.
   --network-indexes LIST Limit to network indexes, for example a,b,h.
   --nodes LIST           Limit to Kubernetes node names.
   -h, --help             Show this help.
 
 Examples:
-  $0 --config ops/debug-switch-fabric.yaml --global-config ~/netop-tools/dynamo/global_ops_user.cfg
-  $0 --config ops/debug-switch-fabric.yaml --global-config ~/netop-tools/dynamo/global_ops_user.cfg --apply
+  $0 --config ops/debug-switch-fabric.yaml --crd-dir ./uc
+  $0 --config ops/debug-switch-fabric.yaml --crd-dir usecase/sriovnet_rdma --apply
 EOF
 }
 
@@ -85,6 +87,10 @@ while [ $# -gt 0 ]; do
     ;;
   --global-config)
     GLOBAL_CONFIG=${2:-}
+    shift 2
+    ;;
+  --crd-dir)
+    CRD_DIR=${2:-}
     shift 2
     ;;
   --output-dir)
@@ -126,15 +132,19 @@ if [ -z "${NETOP_ROOT_DIR:-}" ]; then
   export NETOP_ROOT_DIR
 fi
 
-if [ -z "${GLOBAL_CONFIG}" ]; then
-  GLOBAL_CONFIG="${NETOP_ROOT_DIR}/global_ops_user.cfg"
+if [ -z "${CRD_DIR}" ]; then
+  if [ -d "${NETOP_ROOT_DIR}/uc" ]; then
+    CRD_DIR="${NETOP_ROOT_DIR}/uc"
+  else
+    CRD_DIR="${NETOP_ROOT_DIR}/usecase/sriovnet_rdma"
+  fi
 fi
-if [ ! -r "${GLOBAL_CONFIG}" ]; then
-  echo "ERROR: global config not readable: ${GLOBAL_CONFIG}" >&2
-  exit 2
-fi
-if [ ! -r "${NETOP_ROOT_DIR}/global_ops.cfg" ]; then
-  echo "ERROR: global_ops.cfg not found under NETOP_ROOT_DIR=${NETOP_ROOT_DIR}" >&2
+case "${CRD_DIR}" in
+  "~/"*) CRD_DIR="${HOME}/${CRD_DIR#~/}" ;;
+esac
+if [ ! -d "${CRD_DIR}" ]; then
+  echo "ERROR: rendered CRD directory not readable: ${CRD_DIR}" >&2
+  echo "Pass --crd-dir usecase/<usecase> after running mk-config.sh." >&2
   exit 2
 fi
 if [ ! -r "${CONFIG_FILE}" ]; then
@@ -143,23 +153,8 @@ if [ ! -r "${CONFIG_FILE}" ]; then
   exit 2
 fi
 
-export GLOBAL_OPS_USER="${GLOBAL_CONFIG}"
-# shellcheck source=/dev/null
-source "${NETOP_ROOT_DIR}/global_ops.cfg"
-
 K8CL=${K8CL:-kubectl}
 read -r -a K8CL_CMD <<< "${K8CL}"
-
-if [ "${NETOP_SWITCH_PORT_MODE,,}" != "l3" ] && [ "${FORCE}" != "true" ]; then
-  echo "ERROR: NETOP_SWITCH_PORT_MODE=${NETOP_SWITCH_PORT_MODE:-unset}; expected l3." >&2
-  echo "Use --force to generate patches anyway." >&2
-  exit 2
-fi
-if [ "${IPAM_TYPE}" != "nv-ipam" ] || [ "${NVIPAM_POOL_TYPE}" != "CIDRPool" ]; then
-  echo "ERROR: L3 switch gateway generation expects IPAM_TYPE=nv-ipam and NVIPAM_POOL_TYPE=CIDRPool." >&2
-  echo "Current: IPAM_TYPE=${IPAM_TYPE:-unset} NVIPAM_POOL_TYPE=${NVIPAM_POOL_TYPE:-unset}" >&2
-  exit 2
-fi
 
 mkdir -p "${REPORT_DIR}"
 
@@ -417,6 +412,190 @@ PY
   SWITCH_REMOTE_DIR=${SWITCH_REMOTE_DIR:-${DEBUG_CFG_SWITCH_REMOTE_DIR:-/tmp}}
 }
 
+function parse_rendered_crds()
+{
+  CRD_RECORD_POLICY_NAMES=()
+  CRD_RECORD_SELECTORS=()
+  CRD_RECORD_RESOURCES=()
+  CRD_RECORD_DEVICES=()
+  CRD_RECORD_DEVICE_TYPES=()
+  CRD_RECORD_NETWORKS=()
+  CRD_RECORD_POOL_NAMES=()
+  CRD_RECORD_POOL_NAMESPACES=()
+  CRD_RECORD_POOL_CIDRS=()
+  CRD_RECORD_GATEWAY_INDEXES=()
+  CRD_RECORD_PREFIXES=()
+  CRD_RECORD_NET_INDEXES=()
+
+  local parsed="${REPORT_DIR}/rendered-crds.env"
+  if ! python3 - "${CRD_DIR}" > "${parsed}" <<'PY'
+import glob
+import json
+import os
+import re
+import shlex
+import sys
+
+crd_dir = sys.argv[1]
+
+try:
+    import yaml  # type: ignore
+except Exception as exc:
+    print(f"ERROR: python3 yaml module is required to parse rendered CRDs: {exc}", file=sys.stderr)
+    raise SystemExit(2)
+
+def q(value):
+    return shlex.quote(str(value or ""))
+
+def emit(name, value):
+    print(f"{name}+=({q(value)})")
+
+def listify(value):
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        return [item.strip().strip('"').strip("'") for item in value.split(",") if item.strip()]
+    return [str(value).strip()] if str(value).strip() else []
+
+def selector_expr(selector):
+    if not isinstance(selector, dict):
+        return ""
+    parts = []
+    for key in sorted(selector):
+        value = selector[key]
+        if value is None or str(value) == "":
+            parts.append(str(key))
+        else:
+            parts.append(f"{key}={value}")
+    return ",".join(parts)
+
+def infer_index(*values):
+    ignored = {"", "default", "pool", "sriov", "sriovnet", "rdma", "vf", "cx8", "network", "node", "policy"}
+    for value in values:
+        tokens = [token for token in re.split(r"[-_]", str(value or "")) if token]
+        for token in reversed(tokens):
+            lowered = token.lower()
+            if lowered in ignored:
+                continue
+            if re.match(r"^[a-z0-9]{1,4}$", lowered):
+                return lowered
+    return ""
+
+docs = []
+paths = sorted(glob.glob(os.path.join(crd_dir, "*.yaml")) + glob.glob(os.path.join(crd_dir, "*.yml")))
+for path in paths:
+    with open(path, encoding="utf-8") as stream:
+        for doc in yaml.safe_load_all(stream):
+            if isinstance(doc, dict):
+                doc["_netop_source_file"] = path
+                docs.append(doc)
+
+pools = {}
+pools_by_name = {}
+networks = []
+policies = []
+warnings = []
+
+for doc in docs:
+    kind = str(doc.get("kind") or "")
+    metadata = doc.get("metadata") or {}
+    spec = doc.get("spec") or {}
+    name = str(metadata.get("name") or "").strip().strip('"')
+    namespace = str(metadata.get("namespace") or "").strip().strip('"')
+
+    if kind == "CIDRPool":
+        pool = {
+            "name": name,
+            "namespace": namespace,
+            "cidr": str(spec.get("cidr") or "").strip(),
+            "gateway_index": str(spec.get("gatewayIndex") or "").strip(),
+            "prefix": str(spec.get("perNodeNetworkPrefix") or "").strip(),
+        }
+        pools[(namespace, name)] = pool
+        pools_by_name.setdefault(name, pool)
+        continue
+
+    if kind == "SriovNetwork":
+        ipam_raw = spec.get("ipam") or ""
+        try:
+            ipam = json.loads(ipam_raw) if isinstance(ipam_raw, str) else {}
+        except Exception:
+            warnings.append(f"unable to parse ipam JSON in SriovNetwork/{name}")
+            ipam = {}
+        if ipam.get("type") != "nv-ipam" or ipam.get("poolType") != "CIDRPool":
+            continue
+        resource = str(spec.get("resourceName") or "").strip().strip('"')
+        pool_name = str(ipam.get("poolName") or "").strip()
+        if not resource or not pool_name:
+            warnings.append(f"SriovNetwork/{name} is missing resourceName or CIDRPool poolName")
+            continue
+        networks.append(
+            {
+                "name": name,
+                "namespace": namespace,
+                "resource": resource,
+                "pool_name": pool_name,
+            }
+        )
+        continue
+
+    if kind == "SriovNetworkNodePolicy":
+        resource = str(spec.get("resourceName") or "").strip()
+        nic_selector = spec.get("nicSelector") or {}
+        devices = listify(nic_selector.get("rootDevices"))
+        device_type = "bdf"
+        if not devices:
+            devices = listify(nic_selector.get("pfNames"))
+            device_type = "pfname"
+        if not resource or not devices:
+            warnings.append(f"SriovNetworkNodePolicy/{name} is missing resourceName or rootDevices/pfNames")
+            continue
+        policies.append(
+            {
+                "name": name,
+                "selector": selector_expr(spec.get("nodeSelector") or {}),
+                "resource": resource,
+                "devices": devices,
+                "device_type": device_type,
+            }
+        )
+
+if not paths:
+    warnings.append(f"no YAML files found in {crd_dir}")
+
+for policy in policies:
+    matching_networks = [network for network in networks if network["resource"] == policy["resource"]]
+    if not matching_networks:
+        warnings.append(f"{policy['name']} resourceName={policy['resource']} has no rendered SriovNetwork using CIDRPool")
+        continue
+    for device in policy["devices"]:
+        for network in matching_networks:
+            pool = pools.get((network["namespace"], network["pool_name"])) or pools_by_name.get(network["pool_name"]) or {}
+            emit("CRD_RECORD_POLICY_NAMES", policy["name"])
+            emit("CRD_RECORD_SELECTORS", policy["selector"])
+            emit("CRD_RECORD_RESOURCES", policy["resource"])
+            emit("CRD_RECORD_DEVICES", device)
+            emit("CRD_RECORD_DEVICE_TYPES", policy["device_type"])
+            emit("CRD_RECORD_NETWORKS", network["name"])
+            emit("CRD_RECORD_POOL_NAMES", network["pool_name"])
+            emit("CRD_RECORD_POOL_NAMESPACES", pool.get("namespace") or network["namespace"])
+            emit("CRD_RECORD_POOL_CIDRS", pool.get("cidr") or "")
+            emit("CRD_RECORD_GATEWAY_INDEXES", pool.get("gateway_index") or "")
+            emit("CRD_RECORD_PREFIXES", pool.get("prefix") or "")
+            emit("CRD_RECORD_NET_INDEXES", infer_index(network["pool_name"], network["name"], policy["resource"], policy["name"]))
+
+for warning in warnings:
+    emit("CRD_WARNINGS", warning)
+PY
+  then
+    return 2
+  fi
+  # shellcheck disable=SC1090
+  source "${parsed}"
+}
+
 function node_selector_arg()
 {
   local key=${1}
@@ -426,6 +605,17 @@ function node_selector_arg()
     printf '%s=%s\n' "${key}" "${value}"
   else
     printf '%s\n' "${key}"
+  fi
+}
+
+function nodes_for_selector_expr()
+{
+  local selector=${1}
+
+  if [ -z "${selector}" ]; then
+    kctl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null | sort
+  else
+    kctl get nodes -l "${selector}" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null | sort
   fi
 }
 
@@ -499,31 +689,40 @@ function ssh_worker()
   fi
 }
 
-function discover_lldp_for_bdf()
+function discover_lldp_for_device()
 {
   local node=${1}
   local ssh_target=${2}
-  local bdf=${3}
-  local cache="${REPORT_DIR}/lldp-${node}-${bdf//[:.]/_}.env"
+  local device=${3}
+  local cache="${REPORT_DIR}/lldp-${node}-${device//[:.\/]/_}.env"
 
   if [ -r "${cache}" ]; then
     cat "${cache}"
     return
   fi
 
-  ssh_worker "${ssh_target}" "BDF='${bdf}' bash -s" <<'REMOTE' > "${cache}.tmp" 2>"${cache}.err" || true
+  ssh_worker "${ssh_target}" "DEVICE='${device}' bash -s" <<'REMOTE' > "${cache}.tmp" 2>"${cache}.err" || true
 set +e
-if [ ! -e "/sys/bus/pci/devices/${BDF}" ]; then
-  echo "ERROR=missing-pci"
+PF=""
+IFACE_HINT=""
+if [ -e "/sys/bus/pci/devices/${DEVICE}" ]; then
+  PF="${DEVICE}"
+  if [ -e "/sys/bus/pci/devices/${DEVICE}/physfn" ]; then
+    PF=$(basename "$(readlink -f "/sys/bus/pci/devices/${DEVICE}/physfn" 2>/dev/null)")
+  fi
+elif [ -e "/sys/class/net/${DEVICE}" ]; then
+  IFACE_HINT="${DEVICE}"
+  PF=$(basename "$(readlink -f "/sys/class/net/${DEVICE}/device" 2>/dev/null)")
+else
+  echo "ERROR=missing-device"
   exit 0
-fi
-PF="${BDF}"
-if [ -e "/sys/bus/pci/devices/${BDF}/physfn" ]; then
-  PF=$(basename "$(readlink -f "/sys/bus/pci/devices/${BDF}/physfn" 2>/dev/null)")
 fi
 for NETPATH in /sys/bus/pci/devices/${PF}/net/*; do
   [ -e "${NETPATH}" ] || continue
   IFACE=$(basename "${NETPATH}")
+  if [ -n "${IFACE_HINT}" ] && [ "${IFACE}" != "${IFACE_HINT}" ]; then
+    continue
+  fi
   if command -v lldpcli >/dev/null 2>&1; then
     KV=$(lldpcli -f keyvalue show neighbors ports "${IFACE}" details 2>/dev/null || \
       lldpcli -f keyvalue show neighbors ports "${IFACE}" 2>/dev/null || true)
@@ -549,11 +748,12 @@ REMOTE
 
 function cidrpool_gateway()
 {
-  local pool=${1}
-  local node=${2}
+  local namespace=${1}
+  local pool=${2}
+  local node=${3}
   local json
 
-  json=$(kctl -n "${NETOP_NAMESPACE}" get cidrpool.nv-ipam.nvidia.com "${pool}" -o json 2>/dev/null) || return
+  json=$(kctl -n "${namespace}" get cidrpool.nv-ipam.nvidia.com "${pool}" -o json 2>/dev/null) || return
   python3 -c '
 import ipaddress
 import json
@@ -584,25 +784,21 @@ for allocation in data.get("status", {}).get("allocations", []) or []:
 function fallback_gateway()
 {
   local network_range=${1}
-  local network_position=${2}
-  local node_position=${3}
-  local prefix=${4}
-  local gateway_index=${5}
+  local node_position=${2}
+  local prefix=${3}
+  local gateway_index=${4}
 
-  python3 - "${network_range}" "${network_position}" "${node_position}" "${prefix}" "${gateway_index}" <<'PY'
+  python3 - "${network_range}" "${node_position}" "${prefix}" "${gateway_index}" <<'PY'
 import ipaddress
 import sys
 
-network_range, network_position, node_position, prefix, gateway_index = sys.argv[1:]
+network_range, node_position, prefix, gateway_index = sys.argv[1:]
 try:
     base = ipaddress.ip_network(network_range, strict=False)
-    network_index = int(network_position)
     node_index = int(node_position)
     prefix_len = int(prefix)
     gateway_index_int = int(gateway_index)
-    network_start = int(base.network_address) + (base.num_addresses * network_index)
-    network = ipaddress.ip_network(f"{ipaddress.ip_address(network_start)}/{base.prefixlen}", strict=False)
-    node_blocks = list(network.subnets(new_prefix=prefix_len))
+    node_blocks = list(base.subnets(new_prefix=prefix_len))
     node_block = node_blocks[node_index]
     gateway = node_block.network_address + gateway_index_int
 except Exception:
@@ -783,13 +979,15 @@ function apply_patch_to_switch()
 }
 
 parse_switch_config
+parse_rendered_crds
 
 if [ ${#SWITCH_CFG_HOSTS[@]} -eq 0 ]; then
   echo "ERROR: no switches found in ${CONFIG_FILE}" >&2
   exit 2
 fi
-if [ -z "${SWITCH_L3_PREFIX:-}" ]; then
-  echo "ERROR: no L3 prefix found. Set NETOP_PER_NODE_PREFIX, SWITCH_L3_PREFIX, or switch_defaults.l3_prefix." >&2
+if ! declare -p CRD_RECORD_POOL_NAMES >/dev/null 2>&1 || [ ${#CRD_RECORD_POOL_NAMES[@]} -eq 0 ]; then
+  echo "ERROR: no rendered L3 CIDRPool SR-IOV records found in ${CRD_DIR}" >&2
+  echo "Expected SriovNetworkNodePolicy, SriovNetwork with nv-ipam CIDRPool, and CIDRPool CRDs." >&2
   exit 2
 fi
 
@@ -801,63 +999,48 @@ WARNINGS="${REPORT_DIR}/warnings.txt"
 : > "${PATCH_LIST}"
 : > "${WARNINGS}"
 
+if declare -p CRD_WARNINGS >/dev/null 2>&1; then
+  for warning in "${CRD_WARNINGS[@]}"; do
+    echo "WARN: ${warning}" | tee -a "${WARNINGS}" >&2
+  done
+fi
+
+if [ -n "${GLOBAL_CONFIG:-}" ]; then
+  echo "WARN: --global-config is accepted for compatibility but is not sourced; using rendered CRDs from ${CRD_DIR}" | tee -a "${WARNINGS}" >&2
+fi
+
 echo "Mode: $([ "${APPLY}" = "true" ] && echo apply || echo dry-run)"
 echo "Switch config: ${CONFIG_FILE}"
-echo "Global config: ${GLOBAL_CONFIG}"
+echo "Rendered CRD dir: ${CRD_DIR}"
 echo "Output dir: ${REPORT_DIR}"
-echo "Network range: ${NETOP_NETWORK_RANGE}"
-echo "Gateway index: ${SWITCH_L3_GATEWAY_INDEX}"
-echo "Per-node prefix: ${SWITCH_L3_PREFIX}"
+echo "Default gateway index: ${SWITCH_L3_GATEWAY_INDEX}"
+echo "Default per-node prefix: ${SWITCH_L3_PREFIX:-<from CIDRPool>}"
 echo "VRF: ${SWITCH_L3_VRF:-<unset>}"
 echo
 
-POOL_SOURCES=()
-if declare -p NETOP_NODEPOOLS >/dev/null 2>&1 && [ ${#NETOP_NODEPOOLS[@]} -gt 0 ]; then
-  POOL_SOURCES=( "${NETOP_NODEPOOLS[@]}" )
-else
-  POOL_SOURCES=( "NETOP_NETLIST" )
-fi
-SU_VALUES=()
-if declare -p NETOP_SULIST >/dev/null 2>&1; then
-  SU_VALUES=( "${NETOP_SULIST[@]}" )
-fi
-if [ ${#SU_VALUES[@]} -eq 0 ]; then
-  SU_VALUES=( "" )
-fi
+for record_idx in "${!CRD_RECORD_POOL_NAMES[@]}"; do
+  policy_name="${CRD_RECORD_POLICY_NAMES[${record_idx}]}"
+  selector="${CRD_RECORD_SELECTORS[${record_idx}]}"
+  resource_name="${CRD_RECORD_RESOURCES[${record_idx}]}"
+  device="${CRD_RECORD_DEVICES[${record_idx}]}"
+  device_type="${CRD_RECORD_DEVICE_TYPES[${record_idx}]}"
+  network_name="${CRD_RECORD_NETWORKS[${record_idx}]}"
+  pool_name="${CRD_RECORD_POOL_NAMES[${record_idx}]}"
+  pool_namespace="${CRD_RECORD_POOL_NAMESPACES[${record_idx}]}"
+  pool_cidr="${CRD_RECORD_POOL_CIDRS[${record_idx}]}"
+  pool_gateway_index="${CRD_RECORD_GATEWAY_INDEXES[${record_idx}]:-${SWITCH_L3_GATEWAY_INDEX:-1}}"
+  pool_prefix="${CRD_RECORD_PREFIXES[${record_idx}]:-${SWITCH_L3_PREFIX:-}}"
+  nidx="${CRD_RECORD_NET_INDEXES[${record_idx}]}"
 
-for pool_source in "${POOL_SOURCES[@]}"; do
-  pool_id=$(normalize_id "${pool_source}")
-  if [ -n "${pool_id}" ]; then
-    netlist_var="NETOP_NETLIST_${pool_id}"
-    selector_var="NETOP_NODESELECTOR_${pool_id}"
-    selector_val_var="NETOP_NODESELECTOR_VAL_${pool_id}"
-    fabric_var="NETOP_FABRIC_${pool_id}"
-  else
-    netlist_var="NETOP_NETLIST"
-    selector_var="NETOP_NODESELECTOR"
-    selector_val_var="NETOP_NODESELECTOR_VAL"
-    fabric_var=""
+  if [ ${#FILTER_NETWORK_INDEXES[@]} -gt 0 ] && ! csv_contains "${nidx}" "${FILTER_NETWORK_INDEXES[@]}"; then
+    continue
   fi
-
-  if ! declare -p "${netlist_var}" >/dev/null 2>&1; then
-    echo "WARN: ${netlist_var} is not defined; skipping ${pool_source}" | tee -a "${WARNINGS}" >&2
+  if [ -z "${pool_namespace}" ]; then
+    echo "WARN: ${policy_name}/${network_name} has no CIDRPool namespace; skipping" | tee -a "${WARNINGS}" >&2
     continue
   fi
 
-  eval "POOL_NETLIST=( \"\${${netlist_var}[@]}\" )"
-  selector_key="${!selector_var:-${NETOP_NODESELECTOR:-node-role.kubernetes.io/worker}}"
-  selector_val="${!selector_val_var:-${NETOP_NODESELECTOR_VAL:-}}"
-  fabric=""
-  network_range="${NETOP_NETWORK_RANGE}"
-  if [ -n "${fabric_var}" ]; then
-    fabric="${!fabric_var:-}"
-    if [ -n "${fabric}" ]; then
-      range_var="NETOP_NETWORK_RANGE_${fabric//-/_}"
-      network_range="${!range_var:-${NETOP_NETWORK_RANGE}}"
-    fi
-  fi
-
-  mapfile -t POOL_NODES < <(nodes_for_selector "${selector_key}" "${selector_val}")
+  mapfile -t POOL_NODES < <(nodes_for_selector_expr "${selector}")
   if [ ${#FILTER_NODES[@]} -gt 0 ]; then
     FILTERED_NODES=()
     for node in "${POOL_NODES[@]}"; do
@@ -866,66 +1049,51 @@ for pool_source in "${POOL_SOURCES[@]}"; do
     POOL_NODES=( "${FILTERED_NODES[@]}" )
   fi
   if [ ${#POOL_NODES[@]} -eq 0 ]; then
-    echo "WARN: no nodes matched selector $(node_selector_arg "${selector_key}" "${selector_val}") for ${pool_source}" | tee -a "${WARNINGS}" >&2
+    echo "WARN: no nodes matched selector ${selector:-<all>} for ${policy_name}/${network_name}" | tee -a "${WARNINGS}" >&2
     continue
   fi
 
   for node_pos in "${!POOL_NODES[@]}"; do
     node="${POOL_NODES[${node_pos}]}"
     ssh_target=$(resolve_node_ssh_target "${node}")
-    for net_pos in "${!POOL_NETLIST[@]}"; do
-      entry="${POOL_NETLIST[${net_pos}]}"
-      nidx="${entry%%,*}"
-      if [ ${#FILTER_NETWORK_INDEXES[@]} -gt 0 ] && ! csv_contains "${nidx}" "${FILTER_NETWORK_INDEXES[@]}"; then
-        continue
-      fi
-      device_fields=$(echo "${entry}" | cut -d',' -f4- | sed 's/,$//')
-      bdf="${device_fields%%,*}"
-      if [ -z "${bdf}" ]; then
-        echo "WARN: ${pool_source}/${nidx} has no BDF in ${entry}; skipping" | tee -a "${WARNINGS}" >&2
-        continue
-      fi
+    lldp_env=$(discover_lldp_for_device "${node}" "${ssh_target}" "${device}")
+    SWITCH_CHASSIS=""
+    SWITCH_PORT=""
+    PF=""
+    PF_IFACE=""
+    ERROR=""
+    # shellcheck disable=SC1090
+    eval "${lldp_env}"
+    if [ -n "${ERROR:-}" ] || [ -z "${SWITCH_PORT:-}" ]; then
+      echo "WARN: LLDP discovery failed for ${node}/${device}: ${ERROR:-missing switch port}" | tee -a "${WARNINGS}" >&2
+      continue
+    fi
 
-      lldp_env=$(discover_lldp_for_bdf "${node}" "${ssh_target}" "${bdf}")
-      SWITCH_CHASSIS=""
-      SWITCH_PORT=""
-      PF=""
-      PF_IFACE=""
-      ERROR=""
-      # shellcheck disable=SC1090
-      eval "${lldp_env}"
-      if [ -n "${ERROR:-}" ] || [ -z "${SWITCH_PORT:-}" ]; then
-        echo "WARN: LLDP discovery failed for ${node}/${bdf}: ${ERROR:-missing switch port}" | tee -a "${WARNINGS}" >&2
-        continue
+    switch_idx=$(switch_index_for_lldp "${SWITCH_CHASSIS}" "${SWITCH_PORT}")
+    if [ -z "${switch_idx}" ]; then
+      echo "WARN: no switch config entry matched LLDP chassis=${SWITCH_CHASSIS} port=${SWITCH_PORT} for ${node}/${device}" | tee -a "${WARNINGS}" >&2
+      continue
+    fi
+
+    gw=$(cidrpool_gateway "${pool_namespace}" "${pool_name}" "${node}")
+    gw_source="cidrpool-status"
+    if [ -z "${gw}" ]; then
+      gw=""
+      if [ -n "${pool_cidr}" ] && [ -n "${pool_prefix}" ] && [ -n "${pool_gateway_index}" ]; then
+        gw=$(fallback_gateway "${pool_cidr}" "${node_pos}" "${pool_prefix}" "${pool_gateway_index}")
       fi
+      gw_source="rendered-crd-fallback-node-order"
+      echo "WARN: no CIDRPool allocation found for ${pool_namespace}/${pool_name}/${node}; fallback gateway=${gw:-missing}" | tee -a "${WARNINGS}" >&2
+    fi
+    if [ -z "${gw}" ]; then
+      echo "WARN: unable to determine gateway for ${pool_namespace}/${pool_name}/${node}; skipping" | tee -a "${WARNINGS}" >&2
+      continue
+    fi
 
-      switch_idx=$(switch_index_for_lldp "${SWITCH_CHASSIS}" "${SWITCH_PORT}")
-      if [ -z "${switch_idx}" ]; then
-        echo "WARN: no switch config entry matched LLDP chassis=${SWITCH_CHASSIS} port=${SWITCH_PORT} for ${node}/${bdf}" | tee -a "${WARNINGS}" >&2
-        continue
-      fi
-
-      for su in "${SU_VALUES[@]}"; do
-        sutag=${su:+-${su}}
-        pool_name="${NETOP_NETWORK_POOL}-${nidx}${sutag}"
-        gw=$(cidrpool_gateway "${pool_name}" "${node}")
-        gw_source="cidrpool-status"
-        if [ -z "${gw}" ]; then
-          gw=$(fallback_gateway "${network_range}" "${net_pos}" "${node_pos}" "${SWITCH_L3_PREFIX}" "${SWITCH_L3_GATEWAY_INDEX}")
-          gw_source="fallback-node-order"
-          echo "WARN: no CIDRPool allocation found for ${pool_name}/${node}; fallback gateway=${gw:-missing}" | tee -a "${WARNINGS}" >&2
-        fi
-        if [ -z "${gw}" ]; then
-          echo "WARN: unable to determine gateway for ${pool_name}/${node}; skipping" | tee -a "${WARNINGS}" >&2
-          continue
-        fi
-
-        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-          "${switch_idx}" "${SWITCH_CFG_NAMES[${switch_idx}]}" "${SWITCH_CFG_HOSTS[${switch_idx}]}" \
-          "${SWITCH_PORT}" "${gw}" "${node}" "${pool_name}" "${nidx}" "${bdf}" "${PF_IFACE}" "${gw_source}" \
-          >> "${PLAN}"
-      done
-    done
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "${switch_idx}" "${SWITCH_CFG_NAMES[${switch_idx}]}" "${SWITCH_CFG_HOSTS[${switch_idx}]}" \
+      "${SWITCH_PORT}" "${gw}" "${node}" "${pool_name}" "${nidx}" "${device}" "${PF_IFACE}" "${gw_source}" \
+      >> "${PLAN}"
   done
 done
 
@@ -974,9 +1142,9 @@ done < "${PATCH_LIST}"
   echo "time: $(date -Is)"
   echo "mode: $([ "${APPLY}" = "true" ] && echo apply || echo dry-run)"
   echo "switch_config: ${CONFIG_FILE}"
-  echo "global_config: ${GLOBAL_CONFIG}"
-  echo "netop_namespace: ${NETOP_NAMESPACE}"
-  echo "switch_l3_prefix: ${SWITCH_L3_PREFIX}"
+  echo "rendered_crd_dir: ${CRD_DIR}"
+  echo "global_config: ${GLOBAL_CONFIG:-}"
+  echo "switch_l3_prefix_default: ${SWITCH_L3_PREFIX:-}"
   echo "switch_l3_gateway_index: ${SWITCH_L3_GATEWAY_INDEX}"
   echo "switch_l3_vrf: ${SWITCH_L3_VRF:-}"
   echo
