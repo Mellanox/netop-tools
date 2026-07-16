@@ -19,11 +19,23 @@ fi
 
 function emit_cidrpool_exclusions()
 {
-  local raw="${NETOP_NETWORK_EXCLUDED:-}"
+  local raw=""
   local normalized
   local entry
   local start_ip
   local end_ip
+
+  if declare -p NETOP_NETWORK_EXCLUDE >/dev/null 2>&1; then
+    case "$(declare -p NETOP_NETWORK_EXCLUDE)" in
+    declare\ -a*|declare\ -ax*)
+      raw="${NETOP_NETWORK_EXCLUDE[*]}"
+      ;;
+    *)
+      raw="${NETOP_NETWORK_EXCLUDE:-}"
+      ;;
+    esac
+  fi
+  raw="${raw:-${NETOP_NETWORK_EXCLUDED:-}}"
 
   case "${raw,,}" in
   ""|none|false|disabled)
@@ -41,7 +53,7 @@ function emit_cidrpool_exclusions()
     entry="${entry//:/ - }"
     read -r start_ip _ end_ip _ <<< "${entry}"
     if [ -z "${start_ip}" ] || [ -z "${end_ip}" ]; then
-      echo "ERROR: invalid NETOP_NETWORK_EXCLUDED entry '${entry}'. Use startIP-endIP entries separated by spaces or semicolons." >&2
+      echo "ERROR: invalid NETOP_NETWORK_EXCLUDE entry '${entry}'. Use startIP-endIP entries separated by spaces or semicolons." >&2
       exit 1
     fi
     echo "  - startIP: ${start_ip}"
