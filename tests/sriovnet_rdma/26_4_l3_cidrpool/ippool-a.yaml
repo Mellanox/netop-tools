@@ -8,6 +8,9 @@ spec:
   cidr: 192.170.0.0/16
   gatewayIndex: 1
   perNodeNetworkPrefix: 27
+  exclusions:
+  - startIP: 192.170.255.240
+    endIP: 192.170.255.254
   routes:
   - dst: 192.170.0.0/16
   nodeSelector:

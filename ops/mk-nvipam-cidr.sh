@@ -1,27 +1,34 @@
 #!/bin/bash
 #
 # define nvipam CIDRPool resource - writes to stdout
-# Args: IPPOOL_NAME NETWORK_RANGE GATEWAY_INDEX PER_NODE_PREFIX
+# Args: IPPOOL_NAME NETWORK_RANGE GATEWAY_INDEX PER_NODE_PREFIX [NETWORK_INDEX]
 #
 # Called from mk-network-cr.sh as:
-#   mk-nvipam-cidr.sh "${IPPOOL_NAME}" "${RANGE}" "${NETOP_GATEWAY_INDEX}" "${NETOP_PER_NODE_PREFIX}" >> ${FILE}
+#   mk-nvipam-cidr.sh "${IPPOOL_NAME}" "${RANGE}" "${NETOP_GATEWAY_INDEX}" "${NETOP_PER_NODE_PREFIX}" "${NIDX}" >> ${FILE}
 #
 source "${NETOP_ROOT_DIR}/global_ops.cfg"
 IPPOOL_NAME="${1}"
 NETWORK_RANGE="${2}"
 GATEWAY_INDEX="${3}"
 PER_NODE_PREFIX="${4}"
+NETWORK_INDEX="${5:-}"
 CIDRPOOL_ROUTES="${NETOP_CIDRPOOL_ROUTES:-}"
+CIDRPOOL_EXCLUSION_LINES=()
 
 if [ -z "${CIDRPOOL_ROUTES}" ] && [ "${NETOP_SWITCH_PORT_MODE,,}" = "l3" ]; then
   CIDRPOOL_ROUTES="${NETWORK_RANGE}"
 fi
 
-function emit_cidrpool_exclusions()
+function build_cidrpool_exclusions()
 {
   local -a exclusions=()
+  local -a matching_ranges=()
   local entry
+  local item
+  local range_entry
+  local idx
   local normalized
+  local parsed
   local start_ip
   local end_ip
 
@@ -39,32 +46,62 @@ function emit_cidrpool_exclusions()
   fi
 
   if [ ${#exclusions[@]} -eq 0 ]; then
-    return
+    return 0
   fi
 
-  echo "  exclusions:"
-  for entry in "${exclusions[@]}"; do
-    case "${entry,,}" in
+  for item in "${exclusions[@]}"; do
+    case "${item,,}" in
     ""|none|false|disabled)
       continue
       ;;
     esac
-    normalized="${entry//$'\n'/;}"
+    normalized="${item//$'\n'/;}"
     normalized="${normalized//;/ }"
     for entry in ${normalized}; do
-      entry="${entry//,/ - }"
-      entry="${entry//-/ - }"
-      entry="${entry//:/ - }"
-      read -r start_ip _ end_ip _ <<< "${entry}"
-      if [ -z "${start_ip}" ] || [ -z "${end_ip}" ]; then
-        echo "ERROR: invalid NETOP_NETWORK_EXCLUDE entry '${entry}'. Use startIP-endIP entries separated by spaces or semicolons." >&2
+      idx=""
+      range_entry="${entry}"
+      if [[ "${entry}" == *,* ]]; then
+        idx="${entry%%,*}"
+        range_entry="${entry#*,}"
+        if [ -n "${NETWORK_INDEX}" ] && [ "${idx}" != "${NETWORK_INDEX}" ]; then
+          continue
+        fi
+      elif [ -n "${NETWORK_INDEX}" ]; then
+        echo "ERROR: invalid NETOP_NETWORK_EXCLUDE entry '${entry}'. Use network-index,startIP-endIP entries." >&2
         exit 1
       fi
-      echo "  - startIP: ${start_ip}"
-      echo "    endIP: ${end_ip}"
+      matching_ranges+=( "${range_entry}" )
     done
   done
+
+  if [ ${#matching_ranges[@]} -eq 0 ]; then
+    return 0
+  fi
+
+  CIDRPOOL_EXCLUSION_LINES+=( "  exclusions:" )
+  for range_entry in "${matching_ranges[@]}"; do
+    parsed="${range_entry//,/ - }"
+    parsed="${parsed//-/ - }"
+    read -r start_ip _ end_ip _ <<< "${parsed}"
+    if [ -z "${start_ip}" ] || [ -z "${end_ip}" ]; then
+      echo "ERROR: invalid NETOP_NETWORK_EXCLUDE entry '${range_entry}'. Use network-index,startIP-endIP entries." >&2
+      exit 1
+    fi
+    CIDRPOOL_EXCLUSION_LINES+=( "  - startIP: ${start_ip}" )
+    CIDRPOOL_EXCLUSION_LINES+=( "    endIP: ${end_ip}" )
+  done
 }
+
+function emit_cidrpool_exclusions()
+{
+  local line
+
+  for line in "${CIDRPOOL_EXCLUSION_LINES[@]}"; do
+    echo "${line}"
+  done
+}
+
+build_cidrpool_exclusions
 
 cat <<POOLHEREDOC
 ---
