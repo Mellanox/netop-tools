@@ -17,6 +17,38 @@ if [ -z "${CIDRPOOL_ROUTES}" ] && [ "${NETOP_SWITCH_PORT_MODE,,}" = "l3" ]; then
   CIDRPOOL_ROUTES="${NETWORK_RANGE}"
 fi
 
+function emit_cidrpool_exclusions()
+{
+  local raw="${NETOP_NETWORK_EXCLUDED:-}"
+  local normalized
+  local entry
+  local start_ip
+  local end_ip
+
+  case "${raw,,}" in
+  ""|none|false|disabled)
+    return
+    ;;
+  esac
+
+  normalized="${raw//$'\n'/;}"
+  normalized="${normalized//;/ }"
+
+  echo "  exclusions:"
+  for entry in ${normalized}; do
+    entry="${entry//,/ - }"
+    entry="${entry//-/ - }"
+    entry="${entry//:/ - }"
+    read -r start_ip _ end_ip _ <<< "${entry}"
+    if [ -z "${start_ip}" ] || [ -z "${end_ip}" ]; then
+      echo "ERROR: invalid NETOP_NETWORK_EXCLUDED entry '${entry}'. Use startIP-endIP entries separated by spaces or semicolons." >&2
+      exit 1
+    fi
+    echo "  - startIP: ${start_ip}"
+    echo "    endIP: ${end_ip}"
+  done
+}
+
 cat <<POOLHEREDOC
 ---
 apiVersion: nv-ipam.nvidia.com/v1alpha1
@@ -29,6 +61,8 @@ spec:
   gatewayIndex: ${GATEWAY_INDEX}
   perNodeNetworkPrefix: ${PER_NODE_PREFIX}
 POOLHEREDOC
+
+emit_cidrpool_exclusions
 
 case "${CIDRPOOL_ROUTES,,}" in
 none|false|disabled)
