@@ -235,13 +235,20 @@ for DEVDEF in ${NETOP_NETLIST[@]};do
   DEVNAMES=`echo ${DEVNAMES} | sed 's/,/","/g'`
   let NETWORKS=NETWORKS-1
   if [ ${NETWORKS} -le 0 ];then
-	  COMMA=""
+		  COMMA=""
   fi
   if [[ "${DEVNAMES}" == *:* ]];then
-     PCI_ADDRS='"pciAddresses": ["'${DEVNAMES}'"]'
+     if [ "${NETOP_PCI_ROOTDEV}" = "true" ];then
+       PCI_ADDRS='"pciAddresses": []'
+       ROOT_DEVS='"rootDevices": ["'${DEVNAMES}'"]'
+     else
+       PCI_ADDRS='"pciAddresses": ["'${DEVNAMES}'"]'
+       ROOT_DEVS='"rootDevices": []'
+     fi
      PF_NAMES='"pfNames": []'
   else
      PCI_ADDRS='"pciAddresses": []'
+     ROOT_DEVS='"rootDevices": []'
      PF_NAMES='"pfNames": [ "'${DEVNAMES}'" ]'
   fi
 cat << SRIOV_DEV_PLUGIN2
@@ -254,7 +261,7 @@ cat << SRIOV_DEV_PLUGIN2
               "drivers": [],
               ${PF_NAMES},
               ${PCI_ADDRS},
-              "rootDevices": [],
+              ${ROOT_DEVS},
               "linkTypes": [${LINK_TYPES}],
               "isRdma": true
             }

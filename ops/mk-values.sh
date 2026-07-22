@@ -408,7 +408,11 @@ echo "      deviceIDs: [${DEVICEID}]"
   fi
   if [ "${DEVNAMES}" != "" ];then
     if [[ ${DEVNAMES} == *:* ]]; then
+      if [ "${NETOP_PCI_ROOTDEV}" = "true" ];then
+echo "      rootDevices: [\"${DEVNAMES}\"]"
+      else
 echo "      pciAddresses: [\"${DEVNAMES}\"]"
+      fi
     else
 echo "      pfNames: [\"${DEVNAMES}\"] unsupported use pciAddresses: selector"
       exit 1
