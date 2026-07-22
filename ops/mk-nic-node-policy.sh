@@ -216,10 +216,17 @@ HEREDOC
     let NETWORKS=NETWORKS-1
     [ ${NETWORKS} -le 0 ] && COMMA=""
     if [[ "${DEVNAMES}" == *:* ]];then
-      PCI_ADDRS='"pciAddresses": ["'${DEVNAMES}'"]'
+      if [ "${NETOP_PCI_ROOTDEV}" = "true" ];then
+        PCI_ADDRS='"pciAddresses": []'
+        ROOT_DEVS='"rootDevices": ["'${DEVNAMES}'"]'
+      else
+        PCI_ADDRS='"pciAddresses": ["'${DEVNAMES}'"]'
+        ROOT_DEVS='"rootDevices": []'
+      fi
       PF_NAMES='"pfNames": []'
     else
       PCI_ADDRS='"pciAddresses": []'
+      ROOT_DEVS='"rootDevices": []'
       PF_NAMES='"pfNames": [ "'${DEVNAMES}'" ]'
     fi
 cat << HEREDOC >> ${FILE}
@@ -230,6 +237,7 @@ cat << HEREDOC >> ${FILE}
               "vendors": ["${NETOP_VENDOR}"],
               ${PF_NAMES},
               ${PCI_ADDRS},
+              ${ROOT_DEVS},
               "isRdma": true
             }
           }${COMMA}
