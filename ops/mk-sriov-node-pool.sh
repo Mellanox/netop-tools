@@ -2,6 +2,13 @@
 #
 #
 source ${NETOP_ROOT_DIR}/global_ops.cfg
+function track_sriov_pool_file()
+{
+  if [ -f netop_sriov_pool_files ] && grep -qxF -- "${NETOP_SRIOV_NODE_POOL_FILE}" netop_sriov_pool_files;then
+    return
+  fi
+  echo "${NETOP_SRIOV_NODE_POOL_FILE}" >> netop_sriov_pool_files
+}
 function sriov_node_pool()
 {
 if [[ "${NETOP_SRIOV_NODE_POOL}" == *% ]];then
@@ -42,7 +49,7 @@ fi
 case ${USECASE} in
 sriovnet_rdma|sriovibnet_rdma|sriovnet_dra)
    sriov_node_pool > ${NETOP_SRIOV_NODE_POOL_FILE}
-   echo "${NETOP_SRIOV_NODE_POOL_FILE}" > netop_sriov_pool_files
+   track_sriov_pool_file
    ;;
 *)
    rm -f netop_sriov_pool_files
