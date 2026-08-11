@@ -13,6 +13,25 @@ else
   done
 fi
 NETOP_NICNODE_FILES=()
+NETOP_NODEPOLICY_FILES=()
+NETOP_NETWORK_FILES=()
+function add_file_list_entries()
+{
+  local LIST_FILE="${1}"
+  local ARRAY_NAME="${2}"
+  local FILE
+  local EXISTING
+  local -n OUT_FILES="${ARRAY_NAME}"
+
+  [ -f "${LIST_FILE}" ] || return
+  for FILE in $(cat "${LIST_FILE}");do
+    for EXISTING in "${OUT_FILES[@]}";do
+      [ "${EXISTING}" = "${FILE}" ] && continue 2
+    done
+    OUT_FILES+=("${FILE}")
+  done
+}
+rm -f netop_sriov_pool_files netop_nodepolicy_files netop_network_files
 if [ ${#NETOP_NODEPOOLS[@]} -gt 0 ]; then
   _IPPOOLS_DONE=false
   _NODEPOOL_LABEL_FILE="${NETOP_NODEPOOL_LABEL_FILE:-node-pool-labels.sh}"
@@ -48,8 +67,8 @@ if [ ${#NETOP_NODEPOOLS[@]} -gt 0 ]; then
         NETOP_NICNODE_FILES+=("${NIC_NODE_POLICY_FILE}")
         ;;
     esac
-    # Network CRs and IPPools are shared by resource/network name across
-    # node pools. Only the per-pool node policies vary by device list.
+    # IPPools are shared by resource name across node pools. Node policies and
+    # network CRs remain pool-scoped and must be tracked across loop iterations.
     if [ "${_IPPOOLS_DONE}" = "true" ]; then
       export NETOP_SKIP_IPPOOL=true
     else
@@ -57,12 +76,20 @@ if [ ${#NETOP_NODEPOOLS[@]} -gt 0 ]; then
       _IPPOOLS_DONE=true
     fi
     ${NETOP_ROOT_DIR}/ops/mk-network-cr.sh
+    add_file_list_entries netop_nodepolicy_files NETOP_NODEPOLICY_FILES
+    add_file_list_entries netop_network_files NETOP_NETWORK_FILES
     ${NETOP_ROOT_DIR}/ops/mk-sriov-node-pool.sh
   done
   if [ "${_NODEPOOL_LABELS_REQUIRED}" = "true" ]; then
     chmod +x "${_NODEPOOL_LABEL_FILE}"
   else
     rm -f "${_NODEPOOL_LABEL_FILE}"
+  fi
+  if [ ${#NETOP_NODEPOLICY_FILES[@]} -gt 0 ]; then
+    echo "${NETOP_NODEPOLICY_FILES[@]}" > netop_nodepolicy_files
+  fi
+  if [ ${#NETOP_NETWORK_FILES[@]} -gt 0 ]; then
+    echo "${NETOP_NETWORK_FILES[@]}" > netop_network_files
   fi
   unset NETOP_ACTIVE_POOL NIC_NODE_POLICY_FILE NETOP_SRIOV_NODE_POOL_FILE NETOP_SKIP_IPPOOL
 else

@@ -8,13 +8,9 @@
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 # IPPools are shared by resource/network name across node pools.
 POOL_SUFFIX=""
-# Network CRs are shared by resource name. In multi-pool mode, keep
-# SriovNetworkNodePolicy names pool-scoped, but do not put the pool id in the
-# SriovNetwork metadata name.
+# Network CRs are pool-scoped in multi-pool mode. global_ops.cfg appends the
+# active pool id to NETOP_NETWORK_NAME before this script is sourced.
 NETWORK_CR_BASE_NAME="${NETOP_NETWORK_NAME}"
-if [ -n "${NETOP_ACTIVE_POOL:-}" ]; then
-  NETWORK_CR_BASE_NAME="${NETWORK_CR_BASE_NAME%-${NETOP_ACTIVE_POOL,,}}"
-fi
 function validate_fabric_ipam_mode()
 {
   local mode="${NETOP_SWITCH_PORT_MODE,,}"

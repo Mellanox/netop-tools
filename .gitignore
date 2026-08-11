@@ -41,6 +41,7 @@ netop_network_files
 netop_nodepolicy_files
 netop_nicnode_files
 netop_dra_files
+netop_sriov_pool_files
 
 # Generated YAML output (in uc/ symlink target — usecase/<name>/)
 usecase/*/NicClusterPolicy*.yaml
