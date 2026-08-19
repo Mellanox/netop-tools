@@ -140,7 +140,7 @@ function prepare_kubeconfig() {
   fi
 
   cp "${HOST_KUBECONFIG}" "${WORK_KUBECONFIG}"
-  chmod 0644 "${WORK_KUBECONFIG}"
+  chmod 0600 "${WORK_KUBECONFIG}"
 }
 
 function sync_l8k_config_namespace() {
