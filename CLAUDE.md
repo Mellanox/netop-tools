@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **netop-tools** automates deployment and management of NVIDIA Network Operator in Kubernetes clusters. It handles RDMA networking, SR-IOV Virtual Functions (VFs), IPoIB, Macvlan, and HostDev network configurations for AI/ML workloads on bare metal and virtualized Kubernetes environments.
 
-The codebase consists of ~250 Bash scripts organized by function, plus a Python CLI (`python_tools/`) that provides a unified interface for common operations.
+The codebase consists of ~250 Bash scripts organized by function.
 
 ## Setup
 
@@ -17,10 +17,6 @@ cp config/{platform}/global_ops_user.cfg.{variant} global_ops_user.cfg
 # edit global_ops_user.cfg for your environment
 source global_ops.cfg                       # loads all config (requires global_ops_user.cfg)
 ./setuc.sh [usecase]                        # creates uc/ symlink → usecase/{USECASE}/
-
-# Python CLI (alternative)
-python3 python_tools/netop_tools.py config show       # view loaded config
-python3 python_tools/netop_tools.py config validate   # validate environment
 ```
 
 ## Testing
@@ -77,27 +73,6 @@ This symlinks `.git/hooks/pre-commit` to `tools/git-hooks/pre-commit` so updates
 
 `NETOP_ROOT_DIR` must be set before sourcing any config. The `CREATE_CONFIG_ONLY` variable (default `"1"`) controls whether scripts actually execute `helm`/`kubectl` commands or just echo them — this is how the test harness works.
 
-### Python CLI (`python_tools/`)
-
-Unified Python CLI replacing common bash workflows. Invocation: `python3 python_tools/netop_tools.py [--verbose] [--config-file PATH] COMMAND`
-
-- `netop_tools.py` — main entry point, argparse setup, command dispatch
-- `config.py` — `NetOpConfig` dataclass, 5-stage config cascade (defaults → auto-detect → global_ops.cfg → ENV → global_ops_user.cfg), shell config parser
-- `utils.py` — `CommandResult` dataclass, `run_command()`, kubectl/helm/docker wrappers, validation helpers
-- `k8s_tools.py` — K8s operations (setup_usecase, install_k8s_master, cluster_status)
-- `must_gather.py` — `NetworkOperatorMustGather` class, artifact collection into timestamped directory
-
-**Implemented commands** (`commands/`):
-- `ops_commands.py` — `ops network {status|apply|delete}`, `ops config values`, `ops node {label|annotate|cordon|uncordon}`, `ops device {set-vfs|get-vfs}`, `ops check {ipam|sriov}`
-- `install_commands.py` — `install {helm|network-operator|chart|calico|crds}`, `install wait {k8s|calico}`
-- `uninstall_commands.py` — `uninstall {network-operator|calico|evicted-pods|secret}`
-
-**Legacy commands** (backward-compatible): `subnet`, `setvfs`, `finddev`, `setuc`, `ins-k8`, `start-k8`, `must-gather`, `config {show|validate|export}`
-
-**Stub commands** (not yet implemented): `rdma`, `repo`, `restart`, `test`, `upgrade`
-
-Dependencies: Python 3 (stdlib only), optional PyYAML for YAML output.
-
 ### Deployment Pipeline
 
 ```
@@ -143,7 +118,6 @@ ins-network-operator.sh
 | `ops/` | Core operations: config generation (`mk-*.sh`), CR management, device tools (~110 scripts) |
 | `install/` | K8s cluster bootstrap, platform-specific installers (`ubuntu/`, `rhel/`) |
 | `uninstall/` | Cleanup/removal scripts |
-| `python_tools/` | Python CLI: unified command interface, config management, ops/install/uninstall commands |
 | `config/{platform}/` | Pre-built platform configs: bcm11, dell, dgx (B200/B300/GB200/GB300/H100/H200/Spark), examples, igx, kvm, lenovo, oci, pdx, smc |
 | `usecase/{name}/` | Use-case definitions with `netop.cfg` and generated YAML output |
 | `tests/` | Test configs + baseline YAML files |

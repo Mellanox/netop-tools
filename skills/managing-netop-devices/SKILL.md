@@ -16,10 +16,6 @@ Device management, RDMA testing, and node operations for Network Operator cluste
 
 # Query current VF count
 ./ops/getnumvfs.sh
-
-# Python CLI
-python3 python_tools/netop_tools.py ops device set-vfs 8
-python3 python_tools/netop_tools.py ops device get-vfs
 ```
 
 ## PCI Device Info
@@ -88,11 +84,6 @@ python3 python_tools/netop_tools.py ops device get-vfs
 source ${NETOP_ROOT_DIR}/ops/cordon.sh
 cordon                             # Cordon all workers
 uncordon                           # Uncordon all workers
-
-# Python CLI
-python3 python_tools/netop_tools.py ops node cordon
-python3 python_tools/netop_tools.py ops node uncordon
-python3 python_tools/netop_tools.py ops node label rdma-capable true
 
 # Control plane as worker
 ./ops/add-controlplane-as-worker.sh <NODENAME>
