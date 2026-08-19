@@ -137,7 +137,7 @@ function run_password_prompted_command()
     set +x
     ;;
   esac
-  printf '%s\n' "${NGC_API_KEY}" | script -q -e -c "${CMD}" /dev/null
+  printf '%s\n' "${NGC_API_KEY}" | script -q -e -E never -c "${CMD}" /dev/null
   STATUS=$?
   if [ "${XTRACE_WAS_ENABLED}" = "1" ];then
     set -x
@@ -166,7 +166,11 @@ function pullContainers()
         ${TOOL} pull ${CONTAINER_PATH}
       fi
       if [ "$?" != "0" ];then
-        echo "CONTAINER PULL FAILED: ${TOOL} pull ${CONTAINER_PATH}"
+        if should_use_ngc_auth "${REPOSITORY}";then
+          echo "CONTAINER PULL FAILED: ${TOOL} pull --creds \$oauthtoken:<REDACTED> ${CONTAINER_PATH}"
+        else
+          echo "CONTAINER PULL FAILED: ${TOOL} pull ${CONTAINER_PATH}"
+        fi
         exit 1
       fi
       ;;
@@ -188,7 +192,11 @@ function pullContainers()
         ${TOOL} images pull ${CONTAINER_PATH}
       fi
       if [ "$?" != "0" ];then
-        echo "CONTAINER PULL FAILED: ${TOOL} images pull ${CONTAINER_PATH}"
+        if should_use_ngc_auth "${REPOSITORY}";then
+          echo "CONTAINER PULL FAILED: ${TOOL} images pull --user \$oauthtoken:<REDACTED> ${CONTAINER_PATH}"
+        else
+          echo "CONTAINER PULL FAILED: ${TOOL} images pull ${CONTAINER_PATH}"
+        fi
         exit 1
       fi
       ctr_save_tarball
