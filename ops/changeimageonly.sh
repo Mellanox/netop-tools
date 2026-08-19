@@ -56,7 +56,7 @@ case $- in
   set +x
   ;;
 esac
-export NGC_API_KEY=`cat /root/.ngc/config|grep apikey|cut -d' ' -f3`
+NGC_API_KEY=`cat /root/.ngc/config|grep apikey|cut -d' ' -f3`
 printf '%s\n' "${NGC_API_KEY}" | script -q -e -E never -c "crictl pull --username '\$oauthtoken' nvcr.io/nvstaging/mellanox/network-operator:v${NETOP_VERSION}" /dev/null
 unset NGC_API_KEY
 if [ "${XTRACE_WAS_ENABLED}" = "1" ];then
