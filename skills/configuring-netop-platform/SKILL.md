@@ -86,8 +86,4 @@ source global_ops.cfg
 ./install/ins-network-operator.sh
 # Review generated YAML:
 ls -la usecase/${USECASE}/*.yaml
-
-# Python CLI validation:
-python3 python_tools/netop_tools.py config validate
-python3 python_tools/netop_tools.py config show
 ```

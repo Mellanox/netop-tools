@@ -43,16 +43,6 @@ ${NETOP_ROOT_DIR}/install/ins-network-operator.sh
 | `ops/mk-sriov-node-pool.sh` | `sriov-node-pool-config.yaml` | SR-IOV VF allocation |
 | `ops/mk-nic-config.sh` | `nic-config-crd-{type}.yaml` | NIC firmware config (if `NIC_CONFIG_ENABLE=true`) |
 
-### Python CLI alternative
-
-```bash
-python3 python_tools/netop_tools.py install helm
-python3 python_tools/netop_tools.py install chart
-python3 python_tools/netop_tools.py install network-operator
-python3 python_tools/netop_tools.py install calico
-python3 python_tools/netop_tools.py install crds
-```
-
 ## Post-Deploy Verification
 
 ```bash

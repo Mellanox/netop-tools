@@ -176,7 +176,6 @@ _NETWORK_MUST_GATHER_NAMESPACE_RESOURCES = [
     "endpoints",
     "endpointslices.discovery.k8s.io",
     "configmaps",
-    "secrets",
     "serviceaccounts",
     "roles.rbac.authorization.k8s.io",
     "rolebindings.rbac.authorization.k8s.io",
@@ -198,6 +197,10 @@ _NETWORK_CRD_KEYWORDS = [
     "network.openshift.io",
     "operator.openshift.io",
 ]
+
+_SENSITIVE_NAMESPACE_RESOURCES = {"secret", "secrets"}
+_GLOBAL_OPS_COMMAND_RE = re.compile(r"^\s*(?:export\s+)?(?P<key>K8CL|HELMCL)\s*=\s*(?P<value>.*)$")
+_SHELL_DEFAULT_RE = re.compile(r"^\$\{(?P<key>[A-Za-z_][A-Za-z0-9_]*)[:]?-(?P<default>.*)\}$")
 
 LOG = logging.getLogger("k8s_namespace_state_dump")
 
@@ -231,7 +234,6 @@ def find_default_global_ops() -> Path | None:
     candidates = [
         script_dir / "global_ops.cfg",
         script_dir.parent / "global_ops.cfg",
-        Path.cwd() / "global_ops.cfg",
     ]
     seen: set[Path] = set()
     for candidate in candidates:
@@ -242,6 +244,52 @@ def find_default_global_ops() -> Path | None:
         if resolved.is_file():
             return resolved
     return None
+
+
+def shell_words(value: str) -> list[str]:
+    lexer = shlex.shlex(value, posix=True)
+    lexer.whitespace_split = True
+    lexer.commenters = "#"
+    return list(lexer)
+
+
+def resolve_global_ops_value(key: str, token: str, env_value: str | None) -> str | None:
+    match = _SHELL_DEFAULT_RE.match(token)
+    if match:
+        if match.group("key") != key:
+            return None
+        return env_value or match.group("default")
+    if "${" in token or "$(" in token or "`" in token:
+        return None
+    return token
+
+
+def parse_global_ops_commands(global_ops_path: Path, env: dict[str, str]) -> tuple[dict[str, str], list[str]]:
+    commands: dict[str, str] = {}
+    warnings: list[str] = []
+    for line_number, line in enumerate(global_ops_path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        match = _GLOBAL_OPS_COMMAND_RE.match(line)
+        if not match:
+            continue
+
+        key = match.group("key")
+        try:
+            words = shell_words(match.group("value"))
+        except ValueError as exc:
+            warnings.append(f"{global_ops_path}:{line_number}: could not parse {key}: {exc}")
+            continue
+
+        if len(words) != 1:
+            warnings.append(f"{global_ops_path}:{line_number}: ignoring non-data {key} assignment")
+            continue
+
+        value = resolve_global_ops_value(key, words[0], env.get(key))
+        if value is None:
+            warnings.append(f"{global_ops_path}:{line_number}: ignoring unsupported {key} expansion")
+            continue
+        commands[key] = value
+
+    return commands, warnings
 
 
 def load_global_ops_commands(global_ops_path: Path | None) -> GlobalOpsCommands:
@@ -255,53 +303,18 @@ def load_global_ops_commands(global_ops_path: Path | None) -> GlobalOpsCommands:
             "global_ops.cfg not found; using environment/default commands",
         )
 
-    script = r'''
-global_ops=$1
-netop_root=$2
-if [ -z "${NETOP_ROOT_DIR:-}" ]; then
-    export NETOP_ROOT_DIR="$netop_root"
-fi
-source "$global_ops" >/dev/null || exit $?
-printf '%s\0%s\0' "${K8CL:-}" "${HELMCL:-}"
-'''
     try:
-        proc = subprocess.run(
-            ["bash", "-c", script, "bash", str(global_ops_path), str(global_ops_path.parent)],
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=15,
-            check=False,
-        )
-    except FileNotFoundError:
-        return GlobalOpsCommands(env_k8cl, env_helmcl, "environment", "bash not found; using environment/default commands")
-    except subprocess.TimeoutExpired:
+        commands, warnings = parse_global_ops_commands(global_ops_path, dict(os.environ))
+    except OSError as exc:
         return GlobalOpsCommands(
             env_k8cl,
             env_helmcl,
             "environment",
-            f"timed out sourcing {global_ops_path}; using environment/default commands",
+            f"could not read {global_ops_path}: {exc}; using environment/default commands",
         )
 
-    if proc.returncode != 0:
-        detail = (proc.stderr or proc.stdout).strip().splitlines()
-        message = detail[-1] if detail else f"exit code {proc.returncode}"
-        return GlobalOpsCommands(
-            env_k8cl,
-            env_helmcl,
-            "environment",
-            f"could not source {global_ops_path}: {message}; using environment/default commands",
-        )
-
-    values = proc.stdout.split("\0")
-    if len(values) < 2:
-        return GlobalOpsCommands(
-            env_k8cl,
-            env_helmcl,
-            "environment",
-            f"could not read K8CL/HELMCL from {global_ops_path}; using environment/default commands",
-        )
-    return GlobalOpsCommands(values[0] or env_k8cl, values[1] or env_helmcl, str(global_ops_path))
+    warning = "; ".join(warnings) if warnings else None
+    return GlobalOpsCommands(env_k8cl or commands.get("K8CL"), env_helmcl or commands.get("HELMCL"), str(global_ops_path), warning)
 
 
 def split_command(command: str, label: str) -> list[str] | None:
@@ -531,6 +544,15 @@ def list_lines(result: CmdResult) -> list[str]:
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
+def is_sensitive_namespace_resource(resource: str) -> bool:
+    normalized = resource.strip().lower()
+    for segment in normalized.split("/"):
+        name = segment.split(".", 1)[0]
+        if name in _SENSITIVE_NAMESPACE_RESOURCES:
+            return True
+    return False
+
+
 def json_items(data: dict) -> list[dict]:
     items = data.get("items", [])
     return [item for item in items if isinstance(item, dict)]
@@ -679,7 +701,7 @@ def dump_namespace_resources(c: Collector) -> tuple[list[dict], list[dict], set[
         c.warn("could not discover namespaced API resources; falling back to common resource list")
         resources = [
             "pods", "services", "endpoints", "endpointslices.discovery.k8s.io",
-            "configmaps", "secrets", "serviceaccounts", "persistentvolumeclaims",
+            "configmaps", "serviceaccounts", "persistentvolumeclaims",
             "deployments.apps", "daemonsets.apps", "statefulsets.apps", "replicasets.apps",
             "jobs.batch", "cronjobs.batch",
             "network-attachment-definitions.k8s.cni.cncf.io",
@@ -687,6 +709,9 @@ def dump_namespace_resources(c: Collector) -> tuple[list[dict], list[dict], set[
 
     seen_crd_resources: set[str] = set()
     for resource in resources:
+        if is_sensitive_namespace_resource(resource):
+            c.warn(f"skipping sensitive namespaced resource {resource} in namespace {c.namespace}")
+            continue
         rel = f"namespaced/{safe_name(resource)}.yaml"
         result = c.capture(rel, ["get", resource, "-n", c.namespace, "-o", "yaml"], timeout=max(c.timeout, 120))
         if result.rc == 0 and "." in resource:
@@ -821,6 +846,9 @@ def dump_network_must_gather(c: Collector, *, log_tail: int) -> set[str]:
         c.capture(f"{ns_dir}/namespace.yaml", ["get", "namespace", namespace, "-o", "yaml"])
         c.capture(f"{ns_dir}/describe.txt", ["describe", "namespace", namespace])
         for resource in _NETWORK_MUST_GATHER_NAMESPACE_RESOURCES:
+            if is_sensitive_namespace_resource(resource):
+                c.warn(f"skipping sensitive must-gather resource {resource} in namespace {namespace}")
+                continue
             capture_optional(
                 c,
                 f"{ns_dir}/resources/{safe_name(resource)}.yaml",
@@ -865,7 +893,6 @@ def dump_connected_objects(c: Collector, pods: list[dict], pvcs: list[dict], crd
     for kind, names in [
         ("serviceaccount", pod_refs["serviceaccounts"]),
         ("configmap", pod_refs["configmaps"]),
-        ("secret", pod_refs["secrets"]),
         ("persistentvolumeclaim", pod_refs["pvcs"]),
     ]:
         for name in sorted(names):
@@ -873,6 +900,9 @@ def dump_connected_objects(c: Collector, pods: list[dict], pvcs: list[dict], crd
                 f"connected/{kind}s/{safe_name(name)}.yaml",
                 ["get", kind, name, "-n", c.namespace, "-o", "yaml"],
             )
+
+    if pod_refs["secrets"]:
+        c.warn(f"skipping {len(pod_refs['secrets'])} connected secret reference(s) in namespace {c.namespace}")
 
     crd_result = c.run(["get", "crds", "-o", "json"])
     crd_data = load_json(crd_result)
@@ -927,7 +957,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--global-ops",
         default="",
-        help="Path to global_ops.cfg. Default: discover beside this script or in the current directory.",
+        help="Path to global_ops.cfg. Default: discover beside this script or its parent.",
     )
     parser.add_argument(
         "-o", "--out-dir",

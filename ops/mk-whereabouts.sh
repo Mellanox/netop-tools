@@ -27,3 +27,4 @@ spec:
     }
 HEREDOC
 cat ${FILE}
+done

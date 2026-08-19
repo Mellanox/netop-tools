@@ -12,9 +12,6 @@ Systematic diagnostic flow for Network Operator issues.
 ```bash
 # Full must-gather (saves to /tmp/nvidia-network-operator_YYYYMMDD_HHMM/)
 ./must-gather-network.sh
-
-# Python CLI alternative
-python3 python_tools/netop_tools.py must-gather --output-dir /tmp/diag
 ```
 
 ## Step 2: Check Operator Health
@@ -54,8 +51,6 @@ kubectl get pods -n ${NETOP_NAMESPACE}
 ./ops/checkippool.sh <NODENAME>    # Per-node IP usage
 ./ops/getippool.sh                 # Pool definitions
 ./ops/getallocatedip.sh            # Currently allocated IPs
-# Python CLI
-python3 python_tools/netop_tools.py ops check ipam
 ```
 
 ### Connectivity issues

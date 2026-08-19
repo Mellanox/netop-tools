@@ -10,8 +10,18 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 function cni()
 {
   PLUGINS="cni-plugins-linux-amd64-${CNI_PLUGINS_VERSION}.tgz"
+  CNI_TMP_DIR=$(mktemp -d) || exit 1
+  trap 'rm -rf "${CNI_TMP_DIR}"' RETURN
+  curl -fL -o "${CNI_TMP_DIR}/${PLUGINS}" "https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/${PLUGINS}" || exit 1
+  curl -fL -o "${CNI_TMP_DIR}/${PLUGINS}.sha256" "https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/${PLUGINS}.sha256" || exit 1
+  EXPECTED_SHA256=$(awk '{print $1; exit}' "${CNI_TMP_DIR}/${PLUGINS}.sha256")
+  if [ -z "${EXPECTED_SHA256}" ];then
+    echo "ERROR: Missing SHA256 checksum for ${PLUGINS}"
+    exit 1
+  fi
+  echo "${EXPECTED_SHA256}  ${CNI_TMP_DIR}/${PLUGINS}" | sha256sum -c - || exit 1
   [ ! -d /opt/cni/bin ] && mkdir -p /opt/cni/bin
-  curl -L --insecure -o - https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/${PLUGINS} | tar xfz - -C /opt/cni/bin
+  tar xfz "${CNI_TMP_DIR}/${PLUGINS}" -C /opt/cni/bin || exit 1
   popd
 }
 # Set SELinux in permissive mode (effectively disabling it)
