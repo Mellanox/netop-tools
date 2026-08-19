@@ -46,10 +46,22 @@ ln -s ./release/netop-chart-23.5.0-sriov-dp-volume netop-chart
 
 
 # because this is not in the cloud-native repository you’ll need to replicate the process you use for logging into pull the image.
-# I preloaded the images into my nodes using crictl.
+# I preloaded the images into my nodes without putting the NGC API key on the
+# pull command line.
 export NETOP_VERSION="23.5.0-sriov-dp-volume"
+XTRACE_WAS_ENABLED=0
+case $- in
+*x*)
+  XTRACE_WAS_ENABLED=1
+  set +x
+  ;;
+esac
 export NGC_API_KEY=`cat /root/.ngc/config|grep apikey|cut -d' ' -f3`
-crictl pull --creds '$oauthtoken':${NGC_API_KEY} nvcr.io/nvstaging/mellanox/network-operator:v${NETOP_VERSION}
+printf '%s\n' "${NGC_API_KEY}" | script -q -e -c "crictl pull --username '\$oauthtoken' nvcr.io/nvstaging/mellanox/network-operator:v${NETOP_VERSION}" /dev/null
+unset NGC_API_KEY
+if [ "${XTRACE_WAS_ENABLED}" = "1" ];then
+  set -x
+fi
 
 # then I ran the upgrade script, I’m attaching the scripts I use as example scripts.
 # if YOU use the scripts below, YOU will need to edit to match you environment.

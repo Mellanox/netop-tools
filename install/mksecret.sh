@@ -22,13 +22,53 @@ if [ "${PROD_VER}" != "0" ];then
 fi
 if [ "${CREATE_CONFIG_ONLY}" = "1" ];then
   echo "Install command: ${K8CL} delete secret ${NGC_SECRET} -n ${NETOP_NAMESPACE}"
-  echo "Install command: ${K8CL} -n ${NETOP_NAMESPACE} create secret docker-registry ${NGC_SECRET} --docker-server=nvcr.io --docker-username='\$oauthtoken' --docker-password=<redacted>"
+  echo "Install command: ${K8CL} -n ${NETOP_NAMESPACE} create secret generic ${NGC_SECRET} --from-file=.dockerconfigjson=<tempfile> --type=kubernetes.io/dockerconfigjson"
   exit
 fi
+XTRACE_WAS_ENABLED=0
+HAS_NGC_API_KEY=0
+case $- in
+*x*)
+  XTRACE_WAS_ENABLED=1
+  set +x
+  ;;
+esac
+[ -n "${NGC_API_KEY:-}" ]
+HAS_NGC_API_KEY=$?
+if [ "${XTRACE_WAS_ENABLED}" = "1" ];then
+  set -x
+fi
+if [ ${HAS_NGC_API_KEY} -ne 0 ];then
+  echo "ERROR: NGC_API_KEY is required to create the staging image pull secret"
+  exit 1
+fi
 ${NETOP_ROOT_DIR}/uninstall/delsecret.sh
-#echo "${NGC_API_KEY}" | ${TOOL} login --username  '$oauthtoken' --password-stdin nvcr.io
+FILE=$(mktemp "${TMPDIR:-/tmp}/netop-dockerconfig.XXXXXX")
+trap 'rm -f "${FILE}"' EXIT
+chmod 0600 "${FILE}"
+XTRACE_WAS_ENABLED=0
+case $- in
+*x*)
+  XTRACE_WAS_ENABLED=1
+  set +x
+  ;;
+esac
+AUTH=$(printf '%s' "\$oauthtoken:${NGC_API_KEY}" | base64 -w0)
+cat << DOCKER > "${FILE}"
+{
+  "auths": {
+    "nvcr.io": {
+      "username": "\$oauthtoken",
+      "password": "${NGC_API_KEY}",
+      "auth": "${AUTH}"
+    }
+  }
+}
+DOCKER
+if [ "${XTRACE_WAS_ENABLED}" = "1" ];then
+  set -x
+fi
 X=$(${K8CL} get secret -n ${NETOP_NAMESPACE} | grep -c "${NGC_SECRET}")
 if [ "${X}" = "0" ];then
-  #${K8CL} -n ${NETOP_NAMESPACE} create secret generic ${NGC_SECRET} --from-file=.dockerconfigjson=${FILE} --type=kubernetes.io/dockerconfigjson
-  ${K8CL} -n ${NETOP_NAMESPACE} create secret docker-registry ${NGC_SECRET} --docker-server=nvcr.io --docker-username='$oauthtoken' --docker-password="${NGC_API_KEY}"
+  ${K8CL} -n ${NETOP_NAMESPACE} create secret generic ${NGC_SECRET} --from-file=.dockerconfigjson="${FILE}" --type=kubernetes.io/dockerconfigjson
 fi

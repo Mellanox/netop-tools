@@ -9,6 +9,7 @@ install/insgo.sh
 install/insdocker.sh
 install/insk8base.sh
 global_ops_user.cfg
+ngcapi.cfg
 # ---------------------------------------------------------------
 # Internal-only — never committed.
 # Put internal analyses, customer/cluster logs, and credentials under internal/.
