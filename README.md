@@ -1156,31 +1156,6 @@ Push and pull container images to/from a Harbor registry using different contain
 
 Configuration in `harbor/harbor.cfg`.
 
-### NGC (NVIDIA GPU Cloud)
-
-Manage images on the NGC registry:
-
-```bash
-# Login
-./ngc/ngclogin.sh [api_key_file]
-
-# NGC CLI operations
-./ngc/ngcpullimage.sh
-./ngc/ngcpushimage.sh
-./ngc/ngc_exec.sh               # Execute commands in NGC environment
-./ngc/ngcconfigset.sh           # Set NGC config parameters
-
-# Docker operations against NGC
-./ngc/dockerpull.sh
-./ngc/dockerpushimage.sh
-./ngc/dockertagimage.sh
-
-# Remote Docker daemon
-./ngc/env_DOCKER_HOST.sh        # Set up DOCKER_HOST for remote daemon
-```
-
-Configuration in `ngc/ngc.cfg`.
-
 ### Container image lifecycle
 
 ```bash
@@ -1458,7 +1433,6 @@ Key platform differences:
 | `rdmatest/` | RDMA verification and bandwidth testing scripts |
 | `rdmatools/` | RDMA debug containers, performance tools, Dockerfiles |
 | `harbor/` | Harbor container registry push/pull tools |
-| `ngc/` | NGC (NVIDIA GPU Cloud) registry management |
 | `arptools/` | ARP configuration utilities |
 | `repotools/` | Git repository workflow automation |
 | `containers/` | Container image lists per operator version (CSV format) |
