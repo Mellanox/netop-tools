@@ -176,7 +176,6 @@ _NETWORK_MUST_GATHER_NAMESPACE_RESOURCES = [
     "endpoints",
     "endpointslices.discovery.k8s.io",
     "configmaps",
-    "secrets",
     "serviceaccounts",
     "roles.rbac.authorization.k8s.io",
     "rolebindings.rbac.authorization.k8s.io",
@@ -198,6 +197,8 @@ _NETWORK_CRD_KEYWORDS = [
     "network.openshift.io",
     "operator.openshift.io",
 ]
+
+_SENSITIVE_NAMESPACE_RESOURCES = {"secret", "secrets"}
 
 LOG = logging.getLogger("k8s_namespace_state_dump")
 
@@ -531,6 +532,15 @@ def list_lines(result: CmdResult) -> list[str]:
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
+def is_sensitive_namespace_resource(resource: str) -> bool:
+    normalized = resource.strip().lower()
+    for segment in normalized.split("/"):
+        name = segment.split(".", 1)[0]
+        if name in _SENSITIVE_NAMESPACE_RESOURCES:
+            return True
+    return False
+
+
 def json_items(data: dict) -> list[dict]:
     items = data.get("items", [])
     return [item for item in items if isinstance(item, dict)]
@@ -679,7 +689,7 @@ def dump_namespace_resources(c: Collector) -> tuple[list[dict], list[dict], set[
         c.warn("could not discover namespaced API resources; falling back to common resource list")
         resources = [
             "pods", "services", "endpoints", "endpointslices.discovery.k8s.io",
-            "configmaps", "secrets", "serviceaccounts", "persistentvolumeclaims",
+            "configmaps", "serviceaccounts", "persistentvolumeclaims",
             "deployments.apps", "daemonsets.apps", "statefulsets.apps", "replicasets.apps",
             "jobs.batch", "cronjobs.batch",
             "network-attachment-definitions.k8s.cni.cncf.io",
@@ -687,6 +697,9 @@ def dump_namespace_resources(c: Collector) -> tuple[list[dict], list[dict], set[
 
     seen_crd_resources: set[str] = set()
     for resource in resources:
+        if is_sensitive_namespace_resource(resource):
+            c.warn(f"skipping sensitive namespaced resource {resource} in namespace {c.namespace}")
+            continue
         rel = f"namespaced/{safe_name(resource)}.yaml"
         result = c.capture(rel, ["get", resource, "-n", c.namespace, "-o", "yaml"], timeout=max(c.timeout, 120))
         if result.rc == 0 and "." in resource:
@@ -821,6 +834,9 @@ def dump_network_must_gather(c: Collector, *, log_tail: int) -> set[str]:
         c.capture(f"{ns_dir}/namespace.yaml", ["get", "namespace", namespace, "-o", "yaml"])
         c.capture(f"{ns_dir}/describe.txt", ["describe", "namespace", namespace])
         for resource in _NETWORK_MUST_GATHER_NAMESPACE_RESOURCES:
+            if is_sensitive_namespace_resource(resource):
+                c.warn(f"skipping sensitive must-gather resource {resource} in namespace {namespace}")
+                continue
             capture_optional(
                 c,
                 f"{ns_dir}/resources/{safe_name(resource)}.yaml",
@@ -865,7 +881,6 @@ def dump_connected_objects(c: Collector, pods: list[dict], pvcs: list[dict], crd
     for kind, names in [
         ("serviceaccount", pod_refs["serviceaccounts"]),
         ("configmap", pod_refs["configmaps"]),
-        ("secret", pod_refs["secrets"]),
         ("persistentvolumeclaim", pod_refs["pvcs"]),
     ]:
         for name in sorted(names):
@@ -873,6 +888,9 @@ def dump_connected_objects(c: Collector, pods: list[dict], pvcs: list[dict], crd
                 f"connected/{kind}s/{safe_name(name)}.yaml",
                 ["get", kind, name, "-n", c.namespace, "-o", "yaml"],
             )
+
+    if pod_refs["secrets"]:
+        c.warn(f"skipping {len(pod_refs['secrets'])} connected secret reference(s) in namespace {c.namespace}")
 
     crd_result = c.run(["get", "crds", "-o", "json"])
     crd_data = load_json(crd_result)
