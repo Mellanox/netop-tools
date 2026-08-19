@@ -7,11 +7,14 @@ import os
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, field
 from configparser import ConfigParser
 
 logger = logging.getLogger(__name__)
+
+_EXECUTION_CONTROL_VARS = {"K8CL", "CREATE_CONFIG_ONLY"}
+
 
 @dataclass
 class NetOpConfig:
@@ -76,95 +79,107 @@ class NetOpConfig:
         config = cls()
         
         # Set NETOP_ROOT_DIR from environment or auto-detect
-        if 'NETOP_ROOT_DIR' in os.environ:
+        explicit_root = 'NETOP_ROOT_DIR' in os.environ
+        if explicit_root:
             config.netop_root_dir = os.environ['NETOP_ROOT_DIR']
         else:
-            # Auto-detect the netop-tools root directory
-            current_dir = Path.cwd()
-            
-            # If we're in python_tools subdirectory, go up one level
-            if current_dir.name == 'python_tools':
-                config.netop_root_dir = str(current_dir.parent)
-            # If we're running from a script in python_tools, get the parent
-            elif (current_dir / 'python_tools').exists():
-                config.netop_root_dir = str(current_dir)
-            else:
-                # Look for netop-tools indicators (allsh file, install directory, etc.)
-                search_dir = current_dir
-                while search_dir != search_dir.parent:
-                    if (search_dir / 'allsh').exists() or (search_dir / 'install').exists():
-                        config.netop_root_dir = str(search_dir)
-                        break
-                    search_dir = search_dir.parent
-                else:
-                    # Fallback to current directory
-                    config.netop_root_dir = str(current_dir)
+            config.netop_root_dir = str(cls._detect_netop_root())
+
+        protected_config_vars = set() if explicit_root else _EXECUTION_CONTROL_VARS
         
         # First load from global_ops.cfg if it exists
-        config._load_global_config()
-        
-        # Load environment variables with defaults (these override global config)
-        config.k8s_version = os.environ.get('K8SVER', config.k8s_version)
-        config.k8_client = os.environ.get('K8CL', config.k8_client)
-        config.host_os = os.environ.get('HOST_OS', config.host_os)
-        config.netop_namespace = os.environ.get('NETOP_NAMESPACE', config.netop_namespace)
-        config.netop_network_range = os.environ.get('NETOP_NETWORK_RANGE', config.netop_network_range)
-        config.netop_network_gw = os.environ.get('NETOP_NETWORK_GW', config.netop_network_gw)
-        try:
-            config.netop_pernode_blocksize = int(os.environ.get('NETOP_PERNODE_BLOCKSIZE', str(config.netop_pernode_blocksize)))
-        except ValueError:
-            logger.warning(f"Invalid NETOP_PERNODE_BLOCKSIZE value: {os.environ.get('NETOP_PERNODE_BLOCKSIZE')}")
-        config.netop_version = os.environ.get('NETOP_VERSION', config.netop_version)
-        config.usecase = os.environ.get('USECASE', config.usecase)
-        try:
-            config.num_vfs = int(os.environ.get('NUM_VFS', str(config.num_vfs)))
-        except ValueError:
-            logger.warning(f"Invalid NUM_VFS value: {os.environ.get('NUM_VFS')}")
-        config.ipam_type = os.environ.get('IPAM_TYPE', config.ipam_type)
-        config.nvipam_pool_type = os.environ.get('NVIPAM_POOL_TYPE', config.nvipam_pool_type)
-        try:
-            config.netop_mtu = int(os.environ.get('NETOP_MTU', str(config.netop_mtu)))
-        except ValueError:
-            logger.warning(f"Invalid NETOP_MTU value: {os.environ.get('NETOP_MTU')}")
-        config.worker_node = os.environ.get('WORKERNODE', config.worker_node)
-        config.sysctl_config = os.environ.get('SYSCTL_CONFIG', config.sysctl_config)
-        
-        # Boolean flags
-        config.ofed_enable = os.environ.get('OFED_ENABLE', 'true').lower() == 'true'
-        config.ofed_blacklist_enable = os.environ.get('OFED_BLACKLIST_ENABLE', 'false').lower() == 'true'
-        config.nfd_enable = os.environ.get('NFD_ENABLE', 'true').lower() == 'true'
-        config.create_config_only = os.environ.get('CREATE_CONFIG_ONLY', '1') == '1'
-        config.nic_config_enable = os.environ.get('NIC_CONFIG_ENABLE', 'true').lower() == 'true'
-        config.enable_nfsrdma = os.environ.get('ENABLE_NFSRDMA', 'false').lower() == 'true'
-        config.rdma_shared_mode = os.environ.get('RDMASHAREDMODE', 'true').lower() == 'true'
-        config.sbr_mode = os.environ.get('SBRMODE', 'false').lower() == 'true'
-        config.prod_version = os.environ.get('PROD_VER', '1') == '1'
-        
-        # Finally load user configuration if available (this overrides everything)
-        user_config_path = os.environ.get('GLOBAL_OPS_USER', 
+        config._load_global_config(protected_keys=protected_config_vars)
+
+        # Then load user configuration if available.
+        user_config_path = os.environ.get('GLOBAL_OPS_USER',
                                           os.path.join(config.netop_root_dir, 'global_ops_user.cfg'))
-        config._load_user_config(user_config_path)
+        config._load_user_config(user_config_path, protected_keys=protected_config_vars)
+
+        # Load environment variables last so they have highest priority.
+        config._apply_env_overrides()
         
         return config
-    
-    def _load_global_config(self) -> None:
+
+    @staticmethod
+    def _is_netop_root(path: Path) -> bool:
+        return (
+            (path / 'global_ops.cfg').is_file()
+            and (path / 'python_tools' / 'config.py').is_file()
+        )
+
+    @classmethod
+    def _detect_netop_root(cls) -> Path:
+        """Detect the source-tree root without trusting the caller's CWD."""
+        module_root = Path(__file__).resolve().parent.parent
+        if cls._is_netop_root(module_root):
+            return module_root
+        raise RuntimeError("NETOP_ROOT_DIR is not set; set it explicitly when running outside the netop-tools source tree")
+
+    def _apply_env_overrides(self) -> None:
+        """Apply environment variable overrides."""
+        self.k8s_version = os.environ.get('K8SVER', self.k8s_version)
+        self.k8_client = os.environ.get('K8CL', self.k8_client)
+        self.host_os = os.environ.get('HOST_OS', self.host_os)
+        self.netop_namespace = os.environ.get('NETOP_NAMESPACE', self.netop_namespace)
+        self.netop_network_range = os.environ.get('NETOP_NETWORK_RANGE', self.netop_network_range)
+        self.netop_network_gw = os.environ.get('NETOP_NETWORK_GW', self.netop_network_gw)
+        try:
+            self.netop_pernode_blocksize = int(os.environ.get('NETOP_PERNODE_BLOCKSIZE', str(self.netop_pernode_blocksize)))
+        except ValueError:
+            logger.warning(f"Invalid NETOP_PERNODE_BLOCKSIZE value: {os.environ.get('NETOP_PERNODE_BLOCKSIZE')}")
+        self.netop_version = os.environ.get('NETOP_VERSION', self.netop_version)
+        self.usecase = os.environ.get('USECASE', self.usecase)
+        try:
+            self.num_vfs = int(os.environ.get('NUM_VFS', str(self.num_vfs)))
+        except ValueError:
+            logger.warning(f"Invalid NUM_VFS value: {os.environ.get('NUM_VFS')}")
+        self.ipam_type = os.environ.get('IPAM_TYPE', self.ipam_type)
+        self.nvipam_pool_type = os.environ.get('NVIPAM_POOL_TYPE', self.nvipam_pool_type)
+        try:
+            self.netop_mtu = int(os.environ.get('NETOP_MTU', str(self.netop_mtu)))
+        except ValueError:
+            logger.warning(f"Invalid NETOP_MTU value: {os.environ.get('NETOP_MTU')}")
+        self.worker_node = os.environ.get('WORKERNODE', self.worker_node)
+        self.sysctl_config = os.environ.get('SYSCTL_CONFIG', self.sysctl_config)
+        
+        # Boolean flags
+        if 'OFED_ENABLE' in os.environ:
+            self.ofed_enable = os.environ['OFED_ENABLE'].lower() == 'true'
+        if 'OFED_BLACKLIST_ENABLE' in os.environ:
+            self.ofed_blacklist_enable = os.environ['OFED_BLACKLIST_ENABLE'].lower() == 'true'
+        if 'NFD_ENABLE' in os.environ:
+            self.nfd_enable = os.environ['NFD_ENABLE'].lower() == 'true'
+        if 'CREATE_CONFIG_ONLY' in os.environ:
+            self.create_config_only = os.environ['CREATE_CONFIG_ONLY'] == '1'
+        if 'NIC_CONFIG_ENABLE' in os.environ:
+            self.nic_config_enable = os.environ['NIC_CONFIG_ENABLE'].lower() == 'true'
+        if 'ENABLE_NFSRDMA' in os.environ:
+            self.enable_nfsrdma = os.environ['ENABLE_NFSRDMA'].lower() == 'true'
+        if 'RDMASHAREDMODE' in os.environ:
+            self.rdma_shared_mode = os.environ['RDMASHAREDMODE'].lower() == 'true'
+        if 'SBRMODE' in os.environ:
+            self.sbr_mode = os.environ['SBRMODE'].lower() == 'true'
+        if 'PROD_VER' in os.environ:
+            self.prod_version = os.environ['PROD_VER'] == '1'
+
+    def _load_global_config(self, protected_keys: Optional[Set[str]] = None) -> None:
         """Load global configuration from global_ops.cfg"""
         global_config_path = os.path.join(self.netop_root_dir, 'global_ops.cfg')
         if os.path.exists(global_config_path):
             logger.info(f"Loading global configuration from: {global_config_path}")
-            self._parse_shell_config(global_config_path)
+            self._parse_shell_config(global_config_path, protected_keys=protected_keys)
         else:
             logger.debug(f"Global configuration file not found: {global_config_path}")
     
-    def _load_user_config(self, config_path: str) -> None:
+    def _load_user_config(self, config_path: str, protected_keys: Optional[Set[str]] = None) -> None:
         """Load user-specific configuration from file and override existing values"""
         if os.path.exists(config_path):
             logger.info(f"Loading user configuration from: {config_path}")
-            self._parse_shell_config(config_path)
+            self._parse_shell_config(config_path, protected_keys=protected_keys)
         else:
             logger.warning(f"User configuration file not found: {config_path}")
     
-    def _parse_shell_config(self, config_path: str) -> None:
+    def _parse_shell_config(self, config_path: str, protected_keys: Optional[Set[str]] = None) -> None:
         """Parse shell-style config file and update configuration values"""
         config_values = {}
 
@@ -230,7 +245,7 @@ class NetOpConfig:
                         config_values[key] = value
         
         # Map shell variables to config attributes and update them
-        self._update_from_shell_vars(config_values)
+        self._update_from_shell_vars(config_values, protected_keys=protected_keys)
     
     def _expand_bash_variables(self, value: str) -> str:
         """Expand bash variable syntax like ${VAR:-"default"}"""
@@ -305,12 +320,20 @@ class NetOpConfig:
         
         return value
     
-    def _update_from_shell_vars(self, shell_vars: Dict[str, str]) -> None:
+    def _update_from_shell_vars(self, shell_vars: Dict[str, str], protected_keys: Optional[Set[str]] = None) -> None:
         """Update configuration from shell variables dictionary"""
+        protected_keys = protected_keys or set()
+
+        def is_allowed(key: str) -> bool:
+            if key in protected_keys:
+                logger.warning(f"Ignoring {key} from autodetected config file")
+                return False
+            return True
+
         # Core configuration
         if 'K8SVER' in shell_vars:
             self.k8s_version = shell_vars['K8SVER']
-        if 'K8CL' in shell_vars:
+        if 'K8CL' in shell_vars and is_allowed('K8CL'):
             self.k8_client = shell_vars['K8CL']
         if 'HOST_OS' in shell_vars:
             self.host_os = shell_vars['HOST_OS']
@@ -368,7 +391,7 @@ class NetOpConfig:
             self.ofed_blacklist_enable = shell_vars['OFED_BLACKLIST_ENABLE'].lower() == 'true'
         if 'NFD_ENABLE' in shell_vars:
             self.nfd_enable = shell_vars['NFD_ENABLE'].lower() == 'true'
-        if 'CREATE_CONFIG_ONLY' in shell_vars:
+        if 'CREATE_CONFIG_ONLY' in shell_vars and is_allowed('CREATE_CONFIG_ONLY'):
             self.create_config_only = shell_vars['CREATE_CONFIG_ONLY'] == '1'
         if 'NIC_CONFIG_ENABLE' in shell_vars:
             self.nic_config_enable = shell_vars['NIC_CONFIG_ENABLE'].lower() == 'true'
