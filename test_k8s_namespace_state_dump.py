@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+import os
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import k8s_namespace_state_dump as dump
@@ -146,6 +149,46 @@ class TestSecretCollectionSafety(unittest.TestCase):
             ["get", "configmap", "operator-config", "-n", collector.namespace, "-o", "yaml"],
             collector.capture_args,
         )
+
+
+class TestGlobalOpsLoadingSafety(unittest.TestCase):
+    def test_find_default_global_ops_ignores_cwd(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            base_dir = Path(temp_dir)
+            script_dir = base_dir / "repo"
+            cwd_dir = base_dir / "attacker-cwd"
+            script_dir.mkdir()
+            cwd_dir.mkdir()
+            (cwd_dir / "global_ops.cfg").write_text('K8CL="attacker-kubectl"\n', encoding="utf-8")
+
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(cwd_dir)
+                with patch.object(dump, "__file__", str(script_dir / "k8s_namespace_state_dump.py")):
+                    self.assertIsNone(dump.find_default_global_ops())
+            finally:
+                os.chdir(old_cwd)
+
+    def test_global_ops_is_parsed_without_shell_execution(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = Path(temp_dir) / "global_ops.cfg"
+            sentinel = Path(temp_dir) / "sourced"
+            cfg.write_text(
+                f'touch "{sentinel}"\n'
+                'export K8CL=${K8CL:-"kubectl"}\n'
+                'export HELMCL="microk8s helm"\n',
+                encoding="utf-8",
+            )
+
+            with (
+                patch.object(dump.subprocess, "run", side_effect=AssertionError("global_ops.cfg must not execute")),
+                patch.dict(os.environ, {}, clear=True),
+            ):
+                commands = dump.load_global_ops_commands(cfg)
+
+            self.assertEqual(commands.k8cl, "kubectl")
+            self.assertEqual(commands.helmcl, "microk8s helm")
+            self.assertFalse(sentinel.exists())
 
 
 if __name__ == "__main__":

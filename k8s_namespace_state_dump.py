@@ -199,6 +199,8 @@ _NETWORK_CRD_KEYWORDS = [
 ]
 
 _SENSITIVE_NAMESPACE_RESOURCES = {"secret", "secrets"}
+_GLOBAL_OPS_COMMAND_RE = re.compile(r"^\s*(?:export\s+)?(?P<key>K8CL|HELMCL)\s*=\s*(?P<value>.*)$")
+_SHELL_DEFAULT_RE = re.compile(r"^\$\{(?P<key>[A-Za-z_][A-Za-z0-9_]*)[:]?-(?P<default>.*)\}$")
 
 LOG = logging.getLogger("k8s_namespace_state_dump")
 
@@ -232,7 +234,6 @@ def find_default_global_ops() -> Path | None:
     candidates = [
         script_dir / "global_ops.cfg",
         script_dir.parent / "global_ops.cfg",
-        Path.cwd() / "global_ops.cfg",
     ]
     seen: set[Path] = set()
     for candidate in candidates:
@@ -243,6 +244,52 @@ def find_default_global_ops() -> Path | None:
         if resolved.is_file():
             return resolved
     return None
+
+
+def shell_words(value: str) -> list[str]:
+    lexer = shlex.shlex(value, posix=True)
+    lexer.whitespace_split = True
+    lexer.commenters = "#"
+    return list(lexer)
+
+
+def resolve_global_ops_value(key: str, token: str, env_value: str | None) -> str | None:
+    match = _SHELL_DEFAULT_RE.match(token)
+    if match:
+        if match.group("key") != key:
+            return None
+        return env_value or match.group("default")
+    if "${" in token or "$(" in token or "`" in token:
+        return None
+    return token
+
+
+def parse_global_ops_commands(global_ops_path: Path, env: dict[str, str]) -> tuple[dict[str, str], list[str]]:
+    commands: dict[str, str] = {}
+    warnings: list[str] = []
+    for line_number, line in enumerate(global_ops_path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        match = _GLOBAL_OPS_COMMAND_RE.match(line)
+        if not match:
+            continue
+
+        key = match.group("key")
+        try:
+            words = shell_words(match.group("value"))
+        except ValueError as exc:
+            warnings.append(f"{global_ops_path}:{line_number}: could not parse {key}: {exc}")
+            continue
+
+        if len(words) != 1:
+            warnings.append(f"{global_ops_path}:{line_number}: ignoring non-data {key} assignment")
+            continue
+
+        value = resolve_global_ops_value(key, words[0], env.get(key))
+        if value is None:
+            warnings.append(f"{global_ops_path}:{line_number}: ignoring unsupported {key} expansion")
+            continue
+        commands[key] = value
+
+    return commands, warnings
 
 
 def load_global_ops_commands(global_ops_path: Path | None) -> GlobalOpsCommands:
@@ -256,53 +303,18 @@ def load_global_ops_commands(global_ops_path: Path | None) -> GlobalOpsCommands:
             "global_ops.cfg not found; using environment/default commands",
         )
 
-    script = r'''
-global_ops=$1
-netop_root=$2
-if [ -z "${NETOP_ROOT_DIR:-}" ]; then
-    export NETOP_ROOT_DIR="$netop_root"
-fi
-source "$global_ops" >/dev/null || exit $?
-printf '%s\0%s\0' "${K8CL:-}" "${HELMCL:-}"
-'''
     try:
-        proc = subprocess.run(
-            ["bash", "-c", script, "bash", str(global_ops_path), str(global_ops_path.parent)],
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=15,
-            check=False,
-        )
-    except FileNotFoundError:
-        return GlobalOpsCommands(env_k8cl, env_helmcl, "environment", "bash not found; using environment/default commands")
-    except subprocess.TimeoutExpired:
+        commands, warnings = parse_global_ops_commands(global_ops_path, dict(os.environ))
+    except OSError as exc:
         return GlobalOpsCommands(
             env_k8cl,
             env_helmcl,
             "environment",
-            f"timed out sourcing {global_ops_path}; using environment/default commands",
+            f"could not read {global_ops_path}: {exc}; using environment/default commands",
         )
 
-    if proc.returncode != 0:
-        detail = (proc.stderr or proc.stdout).strip().splitlines()
-        message = detail[-1] if detail else f"exit code {proc.returncode}"
-        return GlobalOpsCommands(
-            env_k8cl,
-            env_helmcl,
-            "environment",
-            f"could not source {global_ops_path}: {message}; using environment/default commands",
-        )
-
-    values = proc.stdout.split("\0")
-    if len(values) < 2:
-        return GlobalOpsCommands(
-            env_k8cl,
-            env_helmcl,
-            "environment",
-            f"could not read K8CL/HELMCL from {global_ops_path}; using environment/default commands",
-        )
-    return GlobalOpsCommands(values[0] or env_k8cl, values[1] or env_helmcl, str(global_ops_path))
+    warning = "; ".join(warnings) if warnings else None
+    return GlobalOpsCommands(env_k8cl or commands.get("K8CL"), env_helmcl or commands.get("HELMCL"), str(global_ops_path), warning)
 
 
 def split_command(command: str, label: str) -> list[str] | None:
@@ -945,7 +957,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--global-ops",
         default="",
-        help="Path to global_ops.cfg. Default: discover beside this script or in the current directory.",
+        help="Path to global_ops.cfg. Default: discover beside this script or its parent.",
     )
     parser.add_argument(
         "-o", "--out-dir",
