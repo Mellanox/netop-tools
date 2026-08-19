@@ -8,9 +8,10 @@ import sys
 import argparse
 import logging
 import json
+import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Optional, Any
+from typing import Dict, Optional, TextIO
 
 try:
     from .config import get_config
@@ -33,29 +34,59 @@ class NetworkOperatorMustGather:
         """
         self.config = get_config()
         
-        if artifact_dir is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-            artifact_dir = f"/tmp/nvidia-network-operator_{timestamp}"
-        
-        self.artifact_dir = Path(artifact_dir)
-        self.artifact_dir.mkdir(parents=True, exist_ok=True)
+        self.artifact_dir = self.create_artifact_dir(artifact_dir)
         
         # Setup logging to file
-        log_file = self.artifact_dir / "must-gather.log"
-        self.setup_file_logging(str(log_file))
+        self.setup_file_logging("must-gather.log")
         
         logger.info(f"Network Operator must-gather started")
         logger.info(f"Artifact directory: {self.artifact_dir}")
+
+    @staticmethod
+    def create_artifact_dir(artifact_dir: Optional[str]) -> Path:
+        """Create a private artifact directory that cannot be pre-planted."""
+        if artifact_dir is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            path = Path(tempfile.mkdtemp(prefix=f"nvidia-network-operator_{timestamp}_", dir="/tmp"))
+        else:
+            path = Path(artifact_dir)
+            if path.exists() or path.is_symlink():
+                raise FileExistsError(f"refusing to use existing artifact directory: {path}")
+            path.mkdir(mode=0o700, parents=True, exist_ok=False)
+
+        os.chmod(path, 0o700)
+        return path
+
+    def artifact_path(self, relpath: str) -> Path:
+        """Return an artifact path for a simple relative output name."""
+        path = Path(relpath)
+        if path.is_absolute() or ".." in path.parts:
+            raise ValueError(f"artifact path must stay inside output directory: {relpath}")
+        return self.artifact_dir / path
+
+    def open_artifact(self, relpath: str) -> TextIO:
+        """Create a new artifact file without following a pre-existing path."""
+        path = self.artifact_path(relpath)
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path, flags, 0o600)
+        return os.fdopen(fd, "w", encoding="utf-8")
+
+    def write_artifact(self, relpath: str, text: str) -> None:
+        with self.open_artifact(relpath) as f:
+            f.write(text)
     
-    def setup_file_logging(self, log_file: str):
+    def setup_file_logging(self, log_name: str):
         """Setup logging to file in addition to console"""
+        log_file = self.artifact_path(log_name)
         root_logger = logging.getLogger()
         # Avoid adding duplicate handlers if called more than once
-        if any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == log_file
-               for h in root_logger.handlers):
+        if any(getattr(h, 'baseFilename', None) == str(log_file) for h in root_logger.handlers):
             return
 
-        file_handler = logging.FileHandler(log_file)
+        stream = self.open_artifact(log_name)
+        file_handler = logging.StreamHandler(stream)
+        file_handler.baseFilename = str(log_file)
         file_handler.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
@@ -79,8 +110,7 @@ class NetworkOperatorMustGather:
             result = kubectl("get", "clusterversion/version", output="yaml")
             if result.success:
                 try:
-                    with open(self.artifact_dir / "openshift_version.yaml", 'w') as f:
-                        f.write(result.stdout)
+                    self.write_artifact("openshift_version.yaml", result.stdout)
                 except OSError as e:
                     logger.warning(f"Failed to write openshift_version.yaml: {e}")
         else:
@@ -131,26 +161,22 @@ class NetworkOperatorMustGather:
         # Get pod status
         result = kubectl("get", "pod", operator_pod_name, "-owide", namespace=namespace)
         if result.success:
-            with open(self.artifact_dir / "network_operator_pod.status", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("network_operator_pod.status", result.stdout)
         
         # Get pod YAML
         result = kubectl("get", "pod", operator_pod_name, "-oyaml", namespace=namespace)
         if result.success:
-            with open(self.artifact_dir / "network_operator_pod.yaml", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("network_operator_pod.yaml", result.stdout)
         
         # Get pod logs
         result = kubectl("logs", operator_pod_name, namespace=namespace)
         if result.success:
-            with open(self.artifact_dir / "network_operator_pod.log", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("network_operator_pod.log", result.stdout)
         
         # Get previous pod logs
         result = kubectl("logs", operator_pod_name, "--previous", namespace=namespace)
         if result.success:
-            with open(self.artifact_dir / "network_operator_pod.previous.log", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("network_operator_pod.previous.log", result.stdout)
         
         return True
     
@@ -161,21 +187,18 @@ class NetworkOperatorMustGather:
         # Get all pods in namespace (status)
         result = kubectl("get", "pods", "-owide", namespace=namespace)
         if result.success:
-            with open(self.artifact_dir / "network_operand_pods.status", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("network_operand_pods.status", result.stdout)
         
         # Get all pods in namespace (YAML)
         result = kubectl("get", "pods", "-oyaml", namespace=namespace)
         if result.success:
-            with open(self.artifact_dir / "network_operand_pods.yaml", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("network_operand_pods.yaml", result.stdout)
         
         # Get pod images
         result = kubectl("get", "pods", namespace=namespace, 
                         output="jsonpath='{range .items[*]}{\"\\n\"}{.metadata.name}{\":\\t\"}{range .spec.containers[*]}{.image}{\" \"}{end}{end}'")
         if result.success:
-            with open(self.artifact_dir / "network_operand_pod_images.txt", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("network_operand_pod_images.txt", result.stdout)
         
         # Get individual pod logs and descriptions
         result = kubectl("get", "pods", namespace=namespace, output="json")
@@ -198,20 +221,17 @@ class NetworkOperatorMustGather:
                 # Get pod logs
                 result = kubectl("logs", pod_name, "--all-containers", "--prefix", namespace=namespace)
                 if result.success:
-                    with open(self.artifact_dir / f"network_operand_pod_{pod_name}.log", 'w') as f:
-                        f.write(result.stdout)
+                    self.write_artifact(f"network_operand_pod_{pod_name}.log", result.stdout)
 
                 # Get previous pod logs
                 result = kubectl("logs", pod_name, "--all-containers", "--prefix", "--previous", namespace=namespace)
                 if result.success:
-                    with open(self.artifact_dir / f"network_operand_pod_{pod_name}.previous.log", 'w') as f:
-                        f.write(result.stdout)
+                    self.write_artifact(f"network_operand_pod_{pod_name}.previous.log", result.stdout)
 
                 # Get pod description
                 result = kubectl("describe", "pod", pod_name, namespace=namespace)
                 if result.success:
-                    with open(self.artifact_dir / f"network_operand_pod_{pod_name}.descr", 'w') as f:
-                        f.write(result.stdout)
+                    self.write_artifact(f"network_operand_pod_{pod_name}.descr", result.stdout)
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse pods JSON: {e}")
@@ -226,14 +246,12 @@ class NetworkOperatorMustGather:
         # Get DaemonSets status
         result = kubectl("get", "ds", namespace=namespace)
         if result.success:
-            with open(self.artifact_dir / "network_operand_ds.status", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("network_operand_ds.status", result.stdout)
         
         # Get DaemonSets YAML
         result = kubectl("get", "ds", "-oyaml", namespace=namespace)
         if result.success:
-            with open(self.artifact_dir / "network_operand_ds.yaml", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("network_operand_ds.yaml", result.stdout)
         
         # Get individual DaemonSet descriptions
         result = kubectl("get", "ds", namespace=namespace, output="name")
@@ -243,8 +261,7 @@ class NetworkOperatorMustGather:
                     ds_short_name = ds_name.replace('daemonset/', '')
                     result = kubectl("describe", "ds", ds_short_name, namespace=namespace)
                     if result.success:
-                        with open(self.artifact_dir / f"network_operand_ds_{ds_short_name}.descr", 'w') as f:
-                            f.write(result.stdout)
+                        self.write_artifact(f"network_operand_ds_{ds_short_name}.descr", result.stdout)
         
         return True
     
@@ -268,8 +285,7 @@ class NetworkOperatorMustGather:
             # Get CRD instances
             result = kubectl("get", crd, "-A", output="yaml")
             if result.success and result.stdout.strip():
-                with open(self.artifact_dir / f"custom_resource_{crd}.yaml", 'w') as f:
-                    f.write(result.stdout)
+                self.write_artifact(f"custom_resource_{crd}.yaml", result.stdout)
                 logger.debug(f"Gathered {crd} custom resources")
         
         return True
@@ -281,14 +297,12 @@ class NetworkOperatorMustGather:
         # Get nodes
         result = kubectl("get", "nodes", "-owide")
         if result.success:
-            with open(self.artifact_dir / "nodes.status", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("nodes.status", result.stdout)
         
         # Get nodes YAML
         result = kubectl("get", "nodes", "-oyaml")
         if result.success:
-            with open(self.artifact_dir / "nodes.yaml", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("nodes.yaml", result.stdout)
         
         # Get node descriptions
         result = kubectl("get", "nodes", output="name")
@@ -298,8 +312,7 @@ class NetworkOperatorMustGather:
                     node_short_name = node_name.replace('node/', '')
                     result = kubectl("describe", "node", node_short_name)
                     if result.success:
-                        with open(self.artifact_dir / f"node_{node_short_name}.descr", 'w') as f:
-                            f.write(result.stdout)
+                        self.write_artifact(f"node_{node_short_name}.descr", result.stdout)
         
         return True
     
@@ -310,14 +323,12 @@ class NetworkOperatorMustGather:
         # Get events in operator namespace
         result = kubectl("get", "events", namespace=namespace, output="yaml")
         if result.success:
-            with open(self.artifact_dir / "events_operator_namespace.yaml", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("events_operator_namespace.yaml", result.stdout)
         
         # Get cluster-wide events
         result = kubectl("get", "events", "-A", output="yaml")
         if result.success:
-            with open(self.artifact_dir / "events_all_namespaces.yaml", 'w') as f:
-                f.write(result.stdout)
+            self.write_artifact("events_all_namespaces.yaml", result.stdout)
         
         return True
     
@@ -329,10 +340,12 @@ class NetworkOperatorMustGather:
             "netop_tools_version": "1.0.0"
         }
         try:
-            with open(self.artifact_dir / "version", 'w') as f:
-                f.write("Network Operator\n")
-                f.write(f"{version_info['network_operator_version']}\n")
-                f.write(f"Collection time: {version_info['collection_time']}\n")
+            self.write_artifact(
+                "version",
+                "Network Operator\n"
+                f"{version_info['network_operator_version']}\n"
+                f"Collection time: {version_info['collection_time']}\n",
+            )
         except OSError as e:
             logger.warning(f"Failed to write version file: {e}")
     
@@ -403,7 +416,7 @@ Examples:
     
     parser.add_argument(
         "--output-dir",
-        help="Output directory for collected artifacts"
+        help="New output directory for collected artifacts; must not already exist"
     )
     
     parser.add_argument(
@@ -438,4 +451,4 @@ Examples:
         return 1
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())

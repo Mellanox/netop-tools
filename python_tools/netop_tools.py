@@ -264,7 +264,7 @@ def create_rundev_parser():
 def create_must_gather_parser():
     """Create must-gather parser"""
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--output-dir", help="Output directory")
+    parser.add_argument("--output-dir", help="New output directory; must not already exist")
     return parser
 
 def handle_config_command(args):
@@ -448,4 +448,4 @@ def main():
         return 1
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())
