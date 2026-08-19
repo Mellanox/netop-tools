@@ -89,8 +89,18 @@ apt-get install -y ${K8CL} kubelet kubeadm jq
 # install default plugins
 #
 PLUGINS="cni-plugins-linux-amd64-${CNI_PLUGINS_VERSION}.tgz"
+CNI_TMP_DIR=$(mktemp -d)
+trap 'rm -rf "${CNI_TMP_DIR}"' EXIT
+curl -fL -o "${CNI_TMP_DIR}/${PLUGINS}" "https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/${PLUGINS}"
+curl -fL -o "${CNI_TMP_DIR}/${PLUGINS}.sha256" "https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/${PLUGINS}.sha256"
+EXPECTED_SHA256=$(awk '{print $1; exit}' "${CNI_TMP_DIR}/${PLUGINS}.sha256")
+if [ -z "${EXPECTED_SHA256}" ];then
+  echo "ERROR: Missing SHA256 checksum for ${PLUGINS}"
+  exit 1
+fi
+echo "${EXPECTED_SHA256}  ${CNI_TMP_DIR}/${PLUGINS}" | sha256sum -c -
 [ ! -d /opt/cni/bin ] && mkdir -p /opt/cni/bin
-curl -L --insecure -o - https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/${PLUGINS} | tar xfz - -C /opt/cni/bin
+tar xfz "${CNI_TMP_DIR}/${PLUGINS}" -C /opt/cni/bin
 
 #
 # install go
