@@ -70,8 +70,16 @@ lldpcli show neighbors
 #
 if [ -f "/etc/selinux/config" ];then
 #
-# Set SELinux in permissive mode (effectively disabling it)
+# SELinux permissive mode is used only when this Ubuntu host has SELinux
+# configured. Kubernetes CNIs, kube-proxy, and container runtimes need to
+# manage host networking state; enforcing SELinux without Kubernetes-specific
+# policy can block those operations. Compensating controls should include
+# Calico NetworkPolicy for pod traffic and host/perimeter firewall rules.
+# Prefer targeted Kubernetes SELinux policy on hardened hosts instead of this
+# permissive fallback.
 #
+echo "WARNING: Setting SELinux to permissive for Kubernetes/CNI host networking compatibility."
+echo "WARNING: Use Calico NetworkPolicy and host/perimeter firewall controls as compensating controls."
 setenforce 0
 sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 #
