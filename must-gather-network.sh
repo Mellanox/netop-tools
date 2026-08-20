@@ -2,6 +2,7 @@
 # author: Vinod Eswaraprasad
 set -o nounset
 set -x
+umask 077
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 export NETOP_ROOT_DIR=${NETOP_ROOT_DIR:-"${SCRIPT_DIR}"}
@@ -16,14 +17,27 @@ fi
 if [[ "$0" == "/usr/bin/gather" ]]; then
     echo "Running as must-gather plugin image"
     export ARTIFACT_DIR=/must-gather
+    mkdir -p -- "$ARTIFACT_DIR" || { echo "FATAL: could not create ARTIFACT_DIR: $ARTIFACT_DIR"; exit 1; }
 else
     if [ -z "${ARTIFACT_DIR:-}" ]; then
-        export ARTIFACT_DIR="/tmp/nvidia-network-operator_$(date +%Y%m%d_%H%M)"
+        ARTIFACT_DIR=$(mktemp -d "/tmp/nvidia-network-operator_$(date +%Y%m%d_%H%M)_XXXXXX") ||
+            { echo "FATAL: could not create temporary ARTIFACT_DIR"; exit 1; }
+        export ARTIFACT_DIR
+    elif [ -e "$ARTIFACT_DIR" ]; then
+        echo "FATAL: ARTIFACT_DIR already exists: $ARTIFACT_DIR"
+        exit 1
+    else
+        mkdir -m 700 -- "$ARTIFACT_DIR" ||
+            { echo "FATAL: could not create ARTIFACT_DIR: $ARTIFACT_DIR"; exit 1; }
     fi
     echo "Using ARTIFACT_DIR=$ARTIFACT_DIR"
 fi
 
-mkdir -p "$ARTIFACT_DIR"
+if [ ! -d "$ARTIFACT_DIR" ] || [ -L "$ARTIFACT_DIR" ]; then
+    echo "FATAL: ARTIFACT_DIR is not a regular directory: $ARTIFACT_DIR"
+    exit 1
+fi
+chmod 700 "$ARTIFACT_DIR" 2>/dev/null || true
 
 echo
 
