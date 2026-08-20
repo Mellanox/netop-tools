@@ -427,7 +427,13 @@ RHEL/CentOS:
 ./install/ins-nerdctl.sh           # nerdctl (containerd CLI)
 ```
 
-#### 4.5 Verify cluster readiness
+#### 4.5 Host Security Controls
+
+Some host bootstrap scripts set SELinux to permissive mode when SELinux is configured, and the Ubuntu restart helper disables UFW. These changes are made because Kubernetes, kube-proxy, container runtimes, and Calico need to manage host networking rules for pod and service traffic. Leaving host firewalls or SELinux enforcing without Kubernetes-specific policy can break CNI setup and pod networking.
+
+Treat these as operational compatibility changes, not hardening guidance. Use Calico `NetworkPolicy` for pod ingress and egress controls, maintain required node-level restrictions with host/perimeter firewalls or Kubernetes-aware firewall rules, and prefer targeted SELinux policy for Kubernetes on hardened RHEL-derived hosts instead of a broad permissive fallback.
+
+#### 4.6 Verify cluster readiness
 
 ```bash
 kubectl get nodes
