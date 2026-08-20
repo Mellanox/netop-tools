@@ -3,10 +3,44 @@
 # Container Runtime Detection for Kubernetes
 # Detects and configures the appropriate container runtime
 #
-source ${NETOP_ROOT_DIR}/global_ops.cfg
+source "${NETOP_ROOT_DIR}/global_ops.cfg"
 
 # Returns 0 (true) if version $1 is greater than $2 using sort -V
 function version_gt() { test "$(printf '%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" && test "$1" != "$2"; }
+
+function require_cri_dockerd_integrity_config() {
+    local name="${1}"
+    local value="${2}"
+
+    if [ -z "${value}" ]; then
+        echo "ERROR: ${name} is required for cri-dockerd ${CRI_DOCKERD_VERSION}.${CRI_DOCKERD_ARCH}"
+        echo "ERROR: Set ${name} to a pinned upstream value before installing this cri-dockerd version"
+        exit 1
+    fi
+}
+
+function set_cri_dockerd_integrity_defaults() {
+    case "${CRI_DOCKERD_VERSION}.${CRI_DOCKERD_ARCH}" in
+        0.3.15.amd64)
+            CRI_DOCKERD_COMMIT_SHA="${CRI_DOCKERD_COMMIT_SHA:-c1c566e0cc84abe6972f0bf857ecd8fe306258d9}"
+            CRI_DOCKERD_TARBALL_SHA256="${CRI_DOCKERD_TARBALL_SHA256:-4779b7c3663f002871e79ecf6aa8eb48d0bb74df035baecf56b816deb21d12c4}"
+            CRI_DOCKERD_SERVICE_SHA256="${CRI_DOCKERD_SERVICE_SHA256:-1600eaa78186ecd068be61bb589ed23eca8f07d4dc6032e0ab84d7e9c9bb22d0}"
+            CRI_DOCKERD_SOCKET_SHA256="${CRI_DOCKERD_SOCKET_SHA256:-01d2ea8973c71de9369f188773854e9f23d9359c4549c119508976649918ca86}"
+            ;;
+    esac
+
+    require_cri_dockerd_integrity_config CRI_DOCKERD_COMMIT_SHA "${CRI_DOCKERD_COMMIT_SHA:-}"
+    require_cri_dockerd_integrity_config CRI_DOCKERD_TARBALL_SHA256 "${CRI_DOCKERD_TARBALL_SHA256:-}"
+    require_cri_dockerd_integrity_config CRI_DOCKERD_SERVICE_SHA256 "${CRI_DOCKERD_SERVICE_SHA256:-}"
+    require_cri_dockerd_integrity_config CRI_DOCKERD_SOCKET_SHA256 "${CRI_DOCKERD_SOCKET_SHA256:-}"
+}
+
+function verify_sha256() {
+    local expected_sha256="${1}"
+    local file_path="${2}"
+
+    echo "${expected_sha256}  ${file_path}" | sha256sum -c -
+}
 
 function detect_container_runtime() {
     echo "Detecting container runtime..."
@@ -93,6 +127,8 @@ function install_cri_dockerd() {
         
         # Use version from global configuration, fallback to default
         CRI_DOCKERD_VERSION="${CRI_DOCKERD_VERSION:-0.3.15}"
+        CRI_DOCKERD_ARCH="${CRI_DOCKERD_ARCH:-amd64}"
+        set_cri_dockerd_integrity_defaults
         
         # Check if already installed
         if command -v cri-dockerd >/dev/null 2>&1; then
@@ -101,20 +137,77 @@ function install_cri_dockerd() {
         fi
         
         # Download and install cri-dockerd
-        cd /tmp
-        wget -q https://github.com/Mirantis/cri-dockerd/releases/download/v${CRI_DOCKERD_VERSION}/cri-dockerd-${CRI_DOCKERD_VERSION}.amd64.tgz
-        if [ $? -ne 0 ]; then
+        CRI_DOCKERD_TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/netop-cri-dockerd.XXXXXX")
+        CRI_DOCKERD_TARBALL="cri-dockerd-${CRI_DOCKERD_VERSION}.${CRI_DOCKERD_ARCH}.tgz"
+        CRI_DOCKERD_TARBALL_PATH="${CRI_DOCKERD_TMP_DIR}/${CRI_DOCKERD_TARBALL}"
+        CRI_DOCKERD_SERVICE_PATH="${CRI_DOCKERD_TMP_DIR}/cri-docker.service"
+        CRI_DOCKERD_SOCKET_PATH="${CRI_DOCKERD_TMP_DIR}/cri-docker.socket"
+
+        if ! curl -fL -o "${CRI_DOCKERD_TARBALL_PATH}" "https://github.com/Mirantis/cri-dockerd/releases/download/v${CRI_DOCKERD_VERSION}/${CRI_DOCKERD_TARBALL}"; then
             echo "ERROR: Failed to download cri-dockerd"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
+            exit 1
+        fi
+        if ! verify_sha256 "${CRI_DOCKERD_TARBALL_SHA256}" "${CRI_DOCKERD_TARBALL_PATH}"; then
+            echo "ERROR: cri-dockerd archive checksum verification failed"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
+            exit 1
+        fi
+
+        if ! curl -fL -o "${CRI_DOCKERD_SERVICE_PATH}" "https://raw.githubusercontent.com/Mirantis/cri-dockerd/${CRI_DOCKERD_COMMIT_SHA}/packaging/systemd/cri-docker.service"; then
+            echo "ERROR: Failed to download cri-docker.service"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
+            exit 1
+        fi
+        if ! verify_sha256 "${CRI_DOCKERD_SERVICE_SHA256}" "${CRI_DOCKERD_SERVICE_PATH}"; then
+            echo "ERROR: cri-docker.service checksum verification failed"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
+            exit 1
+        fi
+
+        if ! curl -fL -o "${CRI_DOCKERD_SOCKET_PATH}" "https://raw.githubusercontent.com/Mirantis/cri-dockerd/${CRI_DOCKERD_COMMIT_SHA}/packaging/systemd/cri-docker.socket"; then
+            echo "ERROR: Failed to download cri-docker.socket"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
+            exit 1
+        fi
+        if ! verify_sha256 "${CRI_DOCKERD_SOCKET_SHA256}" "${CRI_DOCKERD_SOCKET_PATH}"; then
+            echo "ERROR: cri-docker.socket checksum verification failed"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
             exit 1
         fi
         
-        tar -xf cri-dockerd-${CRI_DOCKERD_VERSION}.amd64.tgz
-        sudo mv cri-dockerd/cri-dockerd /usr/local/bin/
-        sudo chmod +x /usr/local/bin/cri-dockerd
+        if ! tar -xf "${CRI_DOCKERD_TARBALL_PATH}" -C "${CRI_DOCKERD_TMP_DIR}"; then
+            echo "ERROR: Failed to extract cri-dockerd archive"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
+            exit 1
+        fi
+        if [ ! -x "${CRI_DOCKERD_TMP_DIR}/cri-dockerd/cri-dockerd" ]; then
+            echo "ERROR: cri-dockerd binary missing from verified archive"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
+            exit 1
+        fi
+        if ! sudo install -m 0755 "${CRI_DOCKERD_TMP_DIR}/cri-dockerd/cri-dockerd" /usr/local/bin/cri-dockerd; then
+            echo "ERROR: Failed to install cri-dockerd binary"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
+            exit 1
+        fi
         
         # Install systemd service files
-        sudo curl -sL https://raw.githubusercontent.com/Mirantis/cri-dockerd/master/packaging/systemd/cri-docker.service -o /etc/systemd/system/cri-docker.service
-        sudo curl -sL https://raw.githubusercontent.com/Mirantis/cri-dockerd/master/packaging/systemd/cri-docker.socket -o /etc/systemd/system/cri-docker.socket
+        if ! sudo install -m 0644 "${CRI_DOCKERD_SERVICE_PATH}" /etc/systemd/system/cri-docker.service; then
+            echo "ERROR: Failed to install cri-docker.service"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
+            exit 1
+        fi
+        if ! sudo install -m 0644 "${CRI_DOCKERD_SOCKET_PATH}" /etc/systemd/system/cri-docker.socket; then
+            echo "ERROR: Failed to install cri-docker.socket"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
+            exit 1
+        fi
+        if ! sudo sed -i -e 's,/usr/bin/cri-dockerd,/usr/local/bin/cri-dockerd,' /etc/systemd/system/cri-docker.service; then
+            echo "ERROR: Failed to update cri-docker.service binary path"
+            rm -rf "${CRI_DOCKERD_TMP_DIR}"
+            exit 1
+        fi
         
         # Enable and start services
         sudo systemctl daemon-reload
@@ -131,8 +224,7 @@ function install_cri_dockerd() {
         fi
         
         echo "cri-dockerd installed and running successfully"
-        rm -f /tmp/cri-dockerd-${CRI_DOCKERD_VERSION}.amd64.tgz
-        rm -rf /tmp/cri-dockerd
+        rm -rf "${CRI_DOCKERD_TMP_DIR}"
     fi
 }
 
