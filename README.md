@@ -893,7 +893,7 @@ uncordon                          # Uncordon all worker nodes
 ./must-gather-network.sh
 ```
 
-Collects all diagnostic data into `/tmp/nvidia-network-operator_YYYYMMDD_HHMM/`:
+Collects all diagnostic data into a private, unique directory matching `/tmp/nvidia-network-operator_YYYYMMDD_HHMM_XXXXXX/`:
 
 | Artifact | Contents |
 |---|---|

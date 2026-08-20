@@ -10,7 +10,7 @@ Systematic diagnostic flow for Network Operator issues.
 ## Step 1: Collect Diagnostics
 
 ```bash
-# Full must-gather (saves to /tmp/nvidia-network-operator_YYYYMMDD_HHMM/)
+# Full must-gather (saves to /tmp/nvidia-network-operator_YYYYMMDD_HHMM_XXXXXX/)
 ./must-gather-network.sh
 ```
 
