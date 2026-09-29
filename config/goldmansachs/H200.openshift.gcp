@@ -17,6 +17,7 @@
 # the customer's already-assigned 10.30.0.0/24 .. 10.30.7.0/24 exactly (one /24 per NIC).
 #
 NETOP_VERSION="26.7.0"
+HOST_OS="RHCOS"                       # selects OpenShift-specific defaults (e.g. skips secondaryNetwork; OCP ships Multus by default)
 NETOP_NAMESPACE="nvidia-network-operator"
 USECASE="hostdev_rdma_sriov"
 DEVICE_TYPES=( "connectx-7" )

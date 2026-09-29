@@ -3,7 +3,6 @@ apiVersion: mellanox.com/v1alpha1
 kind: MacvlanNetwork
 metadata:
   name: macvlan-rdma-shared-device-default-a
-  namespace: nvidia-network-operator
 spec:
   networkNamespace: "default"
   master: "ens2f0np0"

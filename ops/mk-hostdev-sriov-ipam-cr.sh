@@ -33,7 +33,6 @@ apiVersion: mellanox.com/v1alpha1
 kind: ${NETOP_NETWORK_TYPE}
 metadata:
   name: ${NETWORK_NAME}
-  namespace: ${NETOP_NAMESPACE}
 spec:
   networkNamespace: "${NETOP_APP_NAMESPACE}"
   resourceName: "${NETOP_RESOURCE}_${NIDX}"
