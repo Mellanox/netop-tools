@@ -34,6 +34,13 @@ function crds()
   ${NETOP_ROOT_DIR}/install/applycrds.sh
   ${docmd} ${K8CL} apply -f ${USECASE_DIR}/${NETOP_NICCLUSTER_FILE}
   if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
+    if [[ "${NETOP_VERSION}" == 26.7.* ]] && [ -n "${SPECTRUM_X_PROFILE_CONFIGMAP}" ] && [ -n "${SPECTRUM_X_PROFILE_FILE}" ];then
+      if [ ! -f "${SPECTRUM_X_PROFILE_FILE}" ];then
+        echo "ERROR: Spectrum-X profile file not found: ${SPECTRUM_X_PROFILE_FILE}" >&2
+        return 1
+      fi
+      ${docmd} ${K8CL} apply -f "${SPECTRUM_X_PROFILE_FILE}" || return 1
+    fi
     for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
       ${docmd} ${K8CL} apply -f ${USECASE_DIR}/nic-config-crd-${DEVICE_TYPE}.yaml
     done

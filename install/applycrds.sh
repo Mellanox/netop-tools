@@ -8,7 +8,7 @@ ${docmd} ${K8CL} apply -f ${DIRCRD}/crds
 case "${USECASE}" in
 sriovnet_rdma|sriovibnet_rdma|sriovnet_dra)
   case ${NETOP_VERSION} in
-  25.10.*|26.1.*|26.4.*)
+  25.10.*|26.1.*|26.4.*|26.7.*)
     ${docmd} ${K8CL} apply -f ${DIRCRD}/charts/sriov-network-operator/crds
      ;;
   *)
@@ -28,7 +28,7 @@ if [ "${MAINTENANCE_OPERATOR_ENABLE}" = "true" ];then
 fi
 if [ "${NIC_NODE_POLICY_ENABLE}" = "true" ];then
   case ${NETOP_VERSION} in
-    26.4.*)
+    26.4.*|26.7.*)
       NNP_CRD="${DIRCRD}/crds/mellanox.com_nicnodepolicies.yaml"
       if [ -f "${NNP_CRD}" ];then
         ${docmd} ${K8CL} apply -f "${NNP_CRD}"
