@@ -10,7 +10,7 @@
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 
 case ${NETOP_VERSION} in
-  26.4.*)
+  26.4.*|26.7.*)
     ;;
   *)
     echo "ERROR: NicNodePolicy requires NETOP_VERSION 26.4.x or later (current: ${NETOP_VERSION})"

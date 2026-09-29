@@ -80,7 +80,7 @@ function validate_required_containers()
     esac
   fi
   case ${NETOP_VERSION} in
-    26.4.*)
+    26.4.*|26.7.*)
       if [ "${NCP_GLOBAL_CONFIG}" = "true" ];then
         REQUIRED_CONTAINERS+=(network-operator-init-container)
       fi
@@ -100,7 +100,7 @@ function validate_required_containers()
 function globalConfig()
 {
 case ${NETOP_VERSION} in
-  26.4.*)
+  26.4.*|26.7.*)
     ;;
   *)
     return
@@ -186,7 +186,7 @@ OFED_DRIVER6
     fi
     if [ "${UNLOAD_THIRD_PARTY_RDMA}" = "true" ];then
       case ${NETOP_VERSION} in
-        26.4.*)
+        26.4.*|26.7.*)
 cat << OFED_DRIVER9
     - name: UNLOAD_THIRD_PARTY_RDMA_MODULES
       value: "true"
@@ -448,7 +448,7 @@ NIC_CONFIGURATION
 
 if [ "${FW_UPGRADE_ENABLE}" = "true" ];then
   case "${NETOP_VERSION}" in
-    25.4.0|25.7.0|25.10.*|26.1.*|26.4.*)
+    25.4.0|25.7.0|25.10.*|26.1.*|26.4.*|26.7.*)
 cat << NIC_CONFIGURATION
     nicFirmwareStorage:
       create: ${NETOP_BCM_CONFIG}
@@ -469,7 +469,7 @@ if [ "${SPECTRUM_X_ENABLE}" != "true" ];then
   return
 fi
 case ${NETOP_VERSION} in
-  26.4.*)
+  26.4.*|26.7.*)
     ;;
   *)
     return

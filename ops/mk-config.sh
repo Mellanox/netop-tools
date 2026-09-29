@@ -6,7 +6,7 @@ source ${NETOP_ROOT_DIR}/global_ops.cfg
 ${NETOP_ROOT_DIR}/ops/mk-values.sh
 ${NETOP_ROOT_DIR}/ops/mk-nic-cluster-policy.sh
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
-  ${NETOP_ROOT_DIR}/ops/mk-nic-config.sh
+  ${NETOP_ROOT_DIR}/ops/mk-nic-config.sh || exit 1
 else
   for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
     rm -f "nic-config-crd-${DEVICE_TYPE}.yaml"
@@ -62,7 +62,7 @@ if [ ${#NETOP_NODEPOOLS[@]} -gt 0 ]; then
     export NIC_NODE_POLICY_FILE="nic-node-policy${POOL_ID:+-${POOL_ID}}.yaml"
     export NETOP_SRIOV_NODE_POOL_FILE="sriov-node-pool-config${POOL_ID:+-${POOL_ID}}.yaml"
     case ${NETOP_VERSION} in
-      26.4.*)
+      26.4.*|26.7.*)
         ${NETOP_ROOT_DIR}/ops/mk-nic-node-policy.sh
         NETOP_NICNODE_FILES+=("${NIC_NODE_POLICY_FILE}")
         ;;
@@ -96,7 +96,7 @@ else
   ${NETOP_ROOT_DIR}/ops/mk-network-cr.sh
   ${NETOP_ROOT_DIR}/ops/mk-sriov-node-pool.sh
   case ${NETOP_VERSION} in
-    26.4.*)
+    26.4.*|26.7.*)
       if [ "${NIC_NODE_POLICY_ENABLE}" = "true" ];then
         ${NETOP_ROOT_DIR}/ops/mk-nic-node-policy.sh
         NETOP_NICNODE_FILES+=("${NIC_NODE_POLICY_FILE}")
@@ -116,7 +116,7 @@ else
 fi
 if [ "${DRA_ENABLE}" = "true" ]; then
   case ${NETOP_VERSION} in
-    26.4.*)
+    26.4.*|26.7.*)
       ${NETOP_ROOT_DIR}/ops/mk-dra-cr.sh
       ;;
   esac

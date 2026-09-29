@@ -21,6 +21,16 @@ NIC_TYPE_MAP=(
 source ${NETOP_ROOT_DIR}/global_ops.cfg
 function mk_nic_cfgs()
 {
+if [[ "${NETOP_VERSION}" == 26.7.* ]];then
+  if [ -n "${SPECTRUM_X_RA_VERSION}" ] && [ -z "${SPECTRUM_X_PROFILE_CONFIGMAP}" ];then
+    echo "ERROR: 26.7.0 requires SPECTRUM_X_PROFILE_CONFIGMAP, not a built-in SPECTRUM_X_RA_VERSION" >&2
+    return 1
+  fi
+  if [ -n "${SPECTRUM_X_PROFILE_CONFIGMAP}" ] && [ "${NUM_VFS}" != "1" ];then
+    echo "ERROR: Spectrum-X profile requires NUM_VFS=1" >&2
+    return 1
+  fi
+fi
 for DEVICE_TYPE in ${DEVICE_TYPES[@]};do
   NIC_TYPE=${NIC_TYPE_MAP[${DEVICE_TYPE}]:-"unknown"}
   case ${USECASE} in
@@ -76,17 +86,34 @@ cat << NIC_CONFIG2 >> ${FILE}
          enabled: true
          env: Baremetal
 NIC_CONFIG2
-  if [ "${SPECTRUM_X_RA_VERSION}" != "" ];then
-    case ${NETOP_VERSION} in
-      26.4.*)
+  case ${NETOP_VERSION} in
+    26.7.*)
+      if [ -n "${SPECTRUM_X_RA_VERSION}" ] && [ -z "${SPECTRUM_X_PROFILE_CONFIGMAP}" ];then
+        echo "ERROR: 26.7.0 requires SPECTRUM_X_PROFILE_CONFIGMAP, not a built-in SPECTRUM_X_RA_VERSION" >&2
+        exit 1
+      fi
+      if [ -n "${SPECTRUM_X_PROFILE_CONFIGMAP}" ];then
+        if [ "${LINK_TYPE}" != "Ethernet" ] || [ "${NUM_VFS}" != "1" ];then
+          echo "ERROR: Spectrum-X profile requires Ethernet and NUM_VFS=1" >&2
+          exit 1
+        fi
+cat << NIC_CONFIG3 >> ${FILE}
+      spectrumXOptimized:
+         enabled: true
+         version: "${SPECTRUM_X_PROFILE_CONFIGMAP}"
+NIC_CONFIG3
+      fi
+      ;;
+    26.4.*)
+      if [ -n "${SPECTRUM_X_RA_VERSION}" ];then
 cat << NIC_CONFIG3 >> ${FILE}
       spectrumXOptimized:
          enabled: true
          version: ${SPECTRUM_X_RA_VERSION}
 NIC_CONFIG3
-        ;;
-    esac
-  fi
+      fi
+      ;;
+  esac
 done
 }
 function fw_update_pv()
@@ -95,5 +122,5 @@ if [ "${NIC_CONFIG_ENABLE}" == true ] && [ "${FW_UPGRADE_ENABLE}" == true ];then
   ${NETOP_ROOT_DIR}/ops/mk-nic-fw-pv.sh
 fi
 }
-mk_nic_cfgs
+mk_nic_cfgs || exit 1
 fw_update_pv

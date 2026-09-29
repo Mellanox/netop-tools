@@ -112,7 +112,7 @@ SRIOV_NETWORK_OPERATOR0
 
 if [ "${NIC_CONFIG_ENABLE}" = "true" ];then
   case ${NETOP_VERSION} in
-    25.10.*|26.1.*|26.4.*)
+    25.10.*|26.1.*|26.4.*|26.7.*)
 cat << SRIOV_NETWORK_OPERATOR0
       network.nvidia.com/operator.mofed.wait: "false"
       # Enable when using together with NIC Configuration Operator to wait until
@@ -132,7 +132,7 @@ cat << SRIOV_NETWORK_OPERATOR0
 SRIOV_NETWORK_OPERATOR0
 if [ "${DRA_ENABLE}" = "true" ];then
   case ${NETOP_VERSION} in
-    26.4.*)
+    26.4.*|26.7.*)
 cat << SRIOV_DRA_FG
       dynamicResourceAllocation: true
 SRIOV_DRA_FG
@@ -165,7 +165,7 @@ SRIOV_IMAGES
   echo "    resourcesInjector: ${RESOURCES_INJECTOR_IMAGE}"
   emit_image_uri webhook sriov-network-operator-webhook
   case ${NETOP_VERSION} in
-    26.4.*)
+    26.4.*|26.7.*)
 cat << SRIOV_IMAGES_METRICS
     metricsExporter: $(netop_resolve_image_uri ghcr.io/k8snetworkplumbingwg/sriov-network-metrics-exporter)
     metricsExporterKubeRbacProxy: $(netop_resolve_image_uri quay.io/brancz/kube-rbac-proxy:v0.21.2)
@@ -175,7 +175,7 @@ SRIOV_IMAGES_METRICS
 fi
 if [ "${DRA_ENABLE}" = "true" ];then
   case ${NETOP_VERSION} in
-    26.4.*)
+    26.4.*|26.7.*)
       if [ -z "${NETOP_REGISTRY}" ];then
 cat << SRIOV_DRA
   images:
@@ -227,7 +227,7 @@ nfd:
   enabled: ${NFD_ENABLE}
 VALUES_YAML0
 case "${NETOP_VERSION}" in
-25.4.0|25.7.0|25.10.*|26.1.*|26.4.*)
+25.4.0|25.7.0|25.10.*|26.1.*|26.4.*|26.7.*)
 cat << VALUES_YAML1
   deployNodeFeatureRules: ${NFD_ENABLE}
 VALUES_YAML1
@@ -237,7 +237,7 @@ VALUES_YAML1
 esac
 if [ "${NFD_ENABLE}" = "true" ] && [ "${PROD_VER}" = "0" ]; then
   case "${NETOP_VERSION}" in
-  26.4.*)
+  26.4.*|26.7.*)
     NFD_PULL_SECRET="true"
     ;;
   esac
@@ -280,7 +280,7 @@ nvIpam:
 VALUES_YAML2
 if [ "${MAINTENANCE_OPERATOR_ENABLE}" = "true" ] && [ "${PROD_VER}" = "0" ]; then
   case "${NETOP_VERSION}" in
-  26.4.*)
+  26.4.*|26.7.*)
     MAINT_PULL_SECRET="true"
     ;;
   esac
@@ -532,7 +532,7 @@ function 26_4_0()
 }
 
 case ${NETOP_VERSION} in
-  26.4.*)
+  26.4.*|26.7.*)
     NETOP_FUNCT=26_4_0
     ;;
   26.1.*)
