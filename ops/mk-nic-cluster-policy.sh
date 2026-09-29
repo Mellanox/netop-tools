@@ -569,7 +569,9 @@ if [ ${#NETOP_NODEPOOLS[@]} -eq 0 ] && [ "${NIC_NODE_POLICY_ENABLE}" != "true" ]
     ;;
   esac
 fi
-secondaryNetwork >> ${FILE}
+if [ "${NETOP_SECONDARY_NETWORK_ENABLE}" != "false" ];then
+  secondaryNetwork >> ${FILE}
+fi
 nvIpam >> ${FILE}
 nodeFeatureDiscovery >> ${FILE}
 nicFeatureDiscovery >> ${FILE}

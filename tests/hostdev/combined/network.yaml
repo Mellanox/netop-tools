@@ -3,7 +3,6 @@ apiVersion: mellanox.com/v1alpha1
 kind: HostDeviceNetwork
 metadata:
   name: hostdev-rdma-device-default-a
-  namespace: nvidia-network-operator
 spec:
   networkNamespace: "default"
   resourceName: "rdma_device_a"
@@ -24,7 +23,6 @@ apiVersion: mellanox.com/v1alpha1
 kind: HostDeviceNetwork
 metadata:
   name: hostdev-rdma-device-default-b
-  namespace: nvidia-network-operator
 spec:
   networkNamespace: "default"
   resourceName: "rdma_device_b"
