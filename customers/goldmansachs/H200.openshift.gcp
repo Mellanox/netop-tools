@@ -1,0 +1,50 @@
+# Customer: Goldman Sachs
+# Platform:  GCP a3-ultragpu-8g (H200), Red Hat OpenShift (RHCOS)
+# NIC:       8x NVIDIA ConnectX-7 SuperNIC (RoCE)
+# Use case:  hostdev_rdma_sriov — required because pods need VFs passed
+#            through directly (HostDeviceNetwork), not shared/netdevice mode.
+#
+# Node PCIe topology (from customer sysfs dump on a3-ultragpu-8g), for reference:
+#   Island 0 (NUMA 0): GPU0 0000:8f:00.0, GPU1 0000:90:00.0 -> NIC 0000:91:00.0 (mlx5_0), NIC 0000:92:00.0 (mlx5_1)
+#   Island 1 (NUMA 0): GPU2 0000:96:00.0, GPU3 0000:97:00.0 -> NIC 0000:98:00.0 (mlx5_2), NIC 0000:99:00.0 (mlx5_3)
+#   Island 2 (NUMA 1): GPU4 0000:c4:00.0, GPU5 0000:c5:00.0 -> NIC 0000:c6:00.0 (mlx5_4), NIC 0000:c7:00.0 (mlx5_5)
+#   Island 3 (NUMA 1): GPU6 0000:cb:00.0, GPU7 0000:cc:00.0 -> NIC 0000:cd:00.0 (mlx5_6), NIC 0000:ce:00.0 (mlx5_7)
+#
+# GCP RoCE VPC secondary ranges already provisioned per NIC subnet (pod-range-0..7,
+# robv-roce-test-net-sub-0..7): 10.20.<n>.0/24 primary / 10.30.<n>.0/24 secondary.
+# NETOP_NETWORK_RANGE below is the base of the RDMA (secondary) pool range; netop-tools
+# walks it forward one block per NETOP_NETLIST entry, so 10.30.0.0/24 here reproduces
+# the customer's already-assigned 10.30.0.0/24 .. 10.30.7.0/24 exactly (one /24 per NIC).
+#
+NETOP_VERSION="26.7.0"
+NETOP_NAMESPACE="nvidia-network-operator"
+USECASE="hostdev_rdma_sriov"
+DEVICE_TYPES=( "connectx-7" )
+NUM_VFS=8
+NETOP_MTU=9000
+
+# One NETLIST entry per physical NIC (not paired by island) so each device gets
+# its own IPPool/subnet and resource name, matching the 8 pre-assigned subnets.
+# index,,,pci_bdf
+NETOP_NETLIST=( a,,,0000:91:00.0 b,,,0000:92:00.0 c,,,0000:98:00.0 d,,,0000:99:00.0 e,,,0000:c6:00.0 f,,,0000:c7:00.0 g,,,0000:cd:00.0 h,,,0000:ce:00.0 )
+
+# RDMA secondary network (L2, per-NIC /24, matches GCP-assigned 10.30.0-7.0/24)
+NETOP_NETWORK_RANGE="10.30.0.0/24"
+IPAM_TYPE="nv-ipam"
+NVIPAM_POOL_TYPE="IPPool"
+#NETOP_PERNODE_BLOCKSIZE=32           # default; raise if the node count per pool grows
+
+NETOP_COMBINED=true                   # combine per-device YAML into fewer files
+
+# OFED: container-managed MOFED (default). Set to false if RHCOS nodes already
+# have the driver installed via GCP's image/host path instead of the operator.
+OFED_ENABLE=true
+NFD_ENABLE=false                      # assumes gpu-operator already runs NFD on these nodes
+
+NIC_CONFIG_ENABLE=false
+CREATE_CONFIG_ONLY=1                  # flip to 0 once generated YAML is reviewed and ready to deploy
+
+# nodeSelector defaults to node-role.kubernetes.io/worker (Exists). Narrow this
+# if the a3-ultragpu-8g nodes carry a distinct OpenShift MachineSet/worker label, e.g.:
+#NETOP_NODESELECTOR="node-role.kubernetes.io/gpu-worker"
+#NETOP_NODESELECTOR_VAL=""
