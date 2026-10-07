@@ -43,5 +43,14 @@ for CONF in ${CONFIGS};do
   done
 done
 
-exit ${res}
+# mk-app.sh generates pod yaml outside of ins-network-operator.sh, so the
+# app tests have their own runner (tests/*/app_test.sh)
+if [[ $# -eq 0 ]];then
+  for APPTEST in $(find ${NETOP_ROOT_DIR}/tests -type f -name 'app_test.sh' | sort);do
+    echo "Running ${APPTEST}"
+    ${APPTEST}
+    res=$((res + $?))
+  done
+fi
 
+exit ${res}
