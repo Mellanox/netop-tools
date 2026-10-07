@@ -21,6 +21,8 @@ CREATE_CONFIG_ONLY=0
 USECASE="sriovnet_rdma"
 DEVICE_TYPES=( "connectx-7" )
 NETOP_APP_NAMESPACES=( "osmo-workflows" )
+#SBRMODE=true
+SYSCTL_CONFIG="net.ipv4.conf.all.rp_filter=0,net.ipv4.conf.all.arp_announce=2,net.ipv4.conf.all.arp_ignore=1"
 NUM_VFS=8
 #NUM_GPUS=1
 NUM_GPUS=0
