@@ -23,6 +23,7 @@ USECASE="hostdev_rdma_sriov"
 DEVICE_TYPES=( "connectx-7" )
 NUM_VFS=8
 NETOP_MTU=9000
+ENTRYPOINT_DEBUG=true
 
 # One NETLIST entry per physical NIC (not paired by island) so each device gets
 # its own IPPool/subnet and resource name, matching the 8 pre-assigned subnets.

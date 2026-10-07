@@ -152,6 +152,54 @@ HOSTSEL
     fi
   fi
 }
+#
+# Optional on-link routes between fabrics that share one L2 domain.
+# With SBRMODE=true each secondary interface gets its own routing table
+# (SBR_TABLE_BASE + interface index: net1 -> 100, net2 -> 101, ...). Traffic to
+# the other subnets is dropped unless those tables have a route for them.
+# Enable with CROSS_SUBNET_ROUTING=true: the per-device subnets are derived from
+# NETOP_NETWORK_RANGE exactly as the pools are (192.168.0.0/16 x2 devices ->
+# 192.168.0.0/16, 192.169.0.0/16). To override, list one CIDR per
+# NETOP_NETLIST entry, in order:
+#   NETOP_APP_ROUTE_CIDRS=( "192.168.0.0/16" "192.169.0.0/16" )
+#
+function set_app_command()
+{
+  local CIDRS=()
+  local NUM=${#APP_NETLIST[@]}
+  if declare -p NETOP_APP_ROUTE_CIDRS >/dev/null 2>&1; then
+    CIDRS=( "${NETOP_APP_ROUTE_CIDRS[@]}" )
+  elif [ "${CROSS_SUBNET_ROUTING:-false}" = "true" ];then
+    # same split mk-network-cr.sh uses to build the per-device pools
+    CIDRS=( $("${NETOP_ROOT_DIR}/ops/generate_subnets.sh" "${NETOP_NETWORK_RANGE}" "${NUM}" | cut -d' ' -f1) )
+  fi
+  if [ ${#CIDRS[@]} -gt 0 ] && [ ${#CIDRS[@]} -ne ${NUM} ];then
+    echo "WARNING: NETOP_APP_ROUTE_CIDRS has ${#CIDRS[@]} entries, expected ${NUM}; skipping routes" >&2
+    CIDRS=()
+  fi
+  if [ ${#CIDRS[@]} -eq 0 ];then
+cat << CMD0
+    command:
+    - sh
+    - -c
+    - sleep inf
+CMD0
+    return
+  fi
+  local BASE=${SBR_TABLE_BASE:-100}
+  echo "    command:"
+  echo "    - sh"
+  echo "    - -c"
+  echo "    - |"
+  local i j
+  for ((i=0;i<NUM;i++));do
+    for ((j=0;j<NUM;j++));do
+      [ ${i} -eq ${j} ] && continue
+      echo "      ip route replace ${CIDRS[j]} dev net$((i+1)) table $((BASE+i))"
+    done
+  done
+  echo "      exec sleep inf"
+}
 function emit_pod()
 {
   local POD_NAME="${1}"
@@ -215,12 +263,7 @@ sriovnet_dra)
   set_container_claims >> ./${NAME}.yaml
   ;;
 esac
-cat << HEREDOC5 >> ./${NAME}.yaml
-    command:
-    - sh
-    - -c
-    - sleep inf
-HEREDOC5
+set_app_command >> ./${NAME}.yaml
 case ${USECASE} in
 sriovnet_dra)
   set_pod_resource_claims >> ./${NAME}.yaml

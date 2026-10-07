@@ -1,0 +1,33 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-1
+  annotations:
+    k8s.v1.cni.cncf.io/networks: sriovnet-rdma-default-a,sriovnet-rdma-default-b
+  namespace: default
+spec:
+  containers:
+  - name: appcntr1
+    #image: mellanox/rping-test
+    image: harbor.runailabs-ps.com/netop/rdmadbg_cuda_x86_64:latest
+    #image: harbor.runailabs-ps.com/netop/rdmadbg_cuda_aarch64:latest
+    imagePullPolicy: IfNotPresent
+    env:
+       - name: SYSCTL_CONFIG
+         value: ""
+    securityContext:
+      privileged: true
+      capabilities:
+        add: ["IPC_LOCK"]
+    resources:
+      requests:
+        nvidia.com/sriov_resource_a: '1'
+        nvidia.com/sriov_resource_b: '1'
+      limits:
+        nvidia.com/sriov_resource_a: '1'
+        nvidia.com/sriov_resource_b: '1'
+    command:
+    - sh
+    - -c
+    - sleep inf
